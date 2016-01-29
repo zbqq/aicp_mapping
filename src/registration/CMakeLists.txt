@@ -3,7 +3,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations"
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(registration)
 
-
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+ 
 ##############
 add_library(icp-registration SHARED icp_testing_routine.cpp icp_3Dreg_and_plot.cpp icp_utils.cpp cloud_accumulate.cpp clouds_io_utils.cpp)
 pods_use_pkg_config_packages(icp-registration path-util ${REQUIRED_PACKAGES} pcl_io-1.7
@@ -36,5 +38,12 @@ pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} pcl_io-
 target_link_libraries(drc-icp-plot icp-registration lcm pronto_math 
                         boost_system boost_thread)
 pods_install_executables(drc-icp-plot)
+
+###############
+if(VTK_LIBRARIES)
+  target_link_libraries(drc-icp-plot ${VTK_LIBRARIES})
+else()
+  target_link_libraries(drc-icp-plot vtkHybrid vtkWidgets)
+endif()
 
 

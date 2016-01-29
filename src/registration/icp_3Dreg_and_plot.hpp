@@ -43,7 +43,9 @@ class Registration{
     Registration(boost::shared_ptr<lcm::LCM> &lcm_, const RegistrationConfig& reg_cfg_);
     
     ~Registration(){
-    }    
+    }   
+
+    PM::ICP getIcp(){ return icp_; } 
     
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud(int idx){ 
       if (idx == 0) 
@@ -52,19 +54,26 @@ class Registration{
         return transformed_input_cloud_; }
     
     PM::TransformationParameters getTransform(){ return out_transform_; }
+    DP getDataOut(){ return out_cloud_; }
     
     void publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
     void getICPTransform(DP &cloud_in, DP &cloud_ref);
+    float hausdorffDistance(DP &ref, DP &out);
+    float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp);
 
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
     RegistrationConfig reg_cfg_;
     
     pronto_vis* pc_vis_ ;
+
+    // Create the default ICP algorithm
+    PM::ICP icp_;
   
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr reference_cloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_input_cloud_;
-    PM::TransformationParameters out_transform_;     
+    PM::TransformationParameters out_transform_;    
+    DP out_cloud_; 
 };
 
 #endif

@@ -95,6 +95,19 @@ int main(int argc, const char *argv[])
   
   PM::TransformationParameters T = app->registr_->getTransform();
   cout << "3D Transformation:" << endl << T << endl;
+
+  //=================================
+  // ERROR
+  //=================================
+  DP out = app->registr_->getDataOut();
+  float hausDist = app->registr_->hausdorffDistance(ref, out);
+  
+  cout << "Hausdorff distance: " << hausDist << " m" << endl;
+
+  PM::ICP icp = app->registr_->getIcp();
+  float meanDist = app->registr_->pairedPointsMeanDistance(ref, out, icp);
+  
+  cout << "Paired points mean distance: " << meanDist << " m" << endl;
   
   return 0;
 }
@@ -113,7 +126,7 @@ int validateArgs(const int argc, const char *argv[], RegistrationConfig& reg_cfg
     }
     if (opt == "-c" || opt == "-config") {
       reg_cfg.configFile3D_.append(reg_cfg.homedir);
-      reg_cfg.configFile3D_.append("/main-distro/software/perception/registeration/filters_config/");
+      reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/");
       reg_cfg.configFile3D_.append(argv[i+1]);
     }
     else if (opt == "-i" || opt == "--initT") {

@@ -1,4 +1,5 @@
 #include "icp_3Dreg_and_plot.hpp"
+#include "vtkUtils.h"
 
 RegistrationConfig::RegistrationConfig(){
   if ((homedir = getenv("HOME")) == NULL) {
@@ -38,15 +39,13 @@ Registration::Registration(boost::shared_ptr<lcm::LCM> &lcm_, const Registration
   transformed_input_cloud_ = cloud_in_ptr;
 }
 
+// Get transform after ICP alignment of reference and input cloud. Publish to LCM channel. 
 void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
 {
   // Transform input clouds into a pcl PointXYZRGB and publish for visualization
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB (new pcl::PointCloud<pcl::PointXYZRGB> ());
   fromDataPointsToPCL(cloud_ref, *reference_cloud_);
   fromDataPointsToPCL(cloud_in, *cloudB);
-
-  // Create the default ICP algorithm
-  PM::ICP icp;
 
   int cloudDimension = cloud_ref.getEuclideanDim();
   
@@ -60,7 +59,7 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
   if (reg_cfg_.configFile3D_.empty())
   {
     // See the implementation of setDefault() to create a custom ICP algorithm
-    icp.setDefault();
+    icp_.setDefault();
   }
   else
   {
@@ -70,7 +69,7 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
     {
       cerr << "Cannot open config file " << reg_cfg_.configFile3D_ << endl; exit(1);
     }
-    icp.loadFromYaml(ifs);
+    icp_.loadFromYaml(ifs);
     cerr << "Loaded pre-filtering chain from yaml..." << endl;
   }
 
@@ -90,15 +89,18 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
     cout << "Initialization: " << reg_cfg_.initTrans_ << endl;
 
   // Compute the transformation to express input in ref
-  PM::TransformationParameters T = icp(cloud_in, cloud_ref, initT);
-  cout << "Match ratio: " << icp.errorMinimizer->getWeightedPointUsedRatio() << endl;
+  PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT);
+  //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
+  cout << "Matches used for minimization: " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
   // Transform input to express it in ref
   DP data_out(cloud_in);
-  icp.transformations.apply(data_out, T);
+  icp_.transformations.apply(data_out, T);
+
+  out_cloud_ = data_out;
 
   // Plot input after initialization and after final transformation
-  fromDataPointsToPCL(data_out, *transformed_input_cloud_);
+  fromDataPointsToPCL(out_cloud_, *transformed_input_cloud_);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_trans (new pcl::PointCloud<pcl::PointXYZRGB> ());
   DP initializedInput = rigidTrans->compute(cloud_in, initT);
   fromDataPointsToPCL(initializedInput, *cloud_trans);
@@ -110,6 +112,151 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
   publishCloud(60007, cloud_trans);
 
   out_transform_ = T;
+}
+
+float Registration::hausdorffDistance(DP &ref, DP &out)
+{
+  // Test for retrieving Haussdorff distance (with outliers). We generate new matching module 
+  // specifically for this purpose. 
+  //
+  // INPUTS:
+  // ref: point cloud used as reference
+  // out: aligned point cloud (using the transformation outputted by icp)
+  
+  // Structure to hold future match results
+  PM::Matches matches;
+
+  Parametrizable::Parameters params;
+  params["knn"] =  toParam(1); // for Hausdorff distance, we only need the first closest point
+  params["epsilon"] =  toParam(0);
+
+  PM::Matcher* matcherHausdorff = PM::get().MatcherRegistrar.create("KDTreeMatcher", params);
+
+  float quantile = 0.60;
+  
+  // max. distance from reading to reference
+  matcherHausdorff->init(ref);
+  matches = matcherHausdorff->findClosests(out);
+  float maxDist1 = matches.getDistsQuantile(1.0);
+  float maxDistRobust1 = matches.getDistsQuantile(quantile);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Store to VTK output cloud with distances from reference. 
+  PM::Matrix values1(matches.dists.rows(), matches.dists.cols()); // (1 X nbPoints)
+  for (int i = 0; i < matches.dists.cols(); i++)
+  {
+    if (matches.dists(0, i) != numeric_limits<float>::infinity())
+    {
+      values1(0, i) = sqrt(matches.dists(0, i));
+    }
+  }
+  savePointCloudVTK("readHausdMatched.vtp", out, values1);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  // max. distance from reference to reading
+  matcherHausdorff->init(out);
+  matches = matcherHausdorff->findClosests(ref);
+  float maxDist2 = matches.getDistsQuantile(1.0);
+  float maxDistRobust2 = matches.getDistsQuantile(quantile);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Store to VTK reference cloud with distances from output. 
+  PM::Matrix values2(matches.dists.rows(), matches.dists.cols()); // (1 X nbPoints)
+  for (int i = 0; i < matches.dists.cols(); i++)
+  {
+    if (matches.dists(0, i) != numeric_limits<float>::infinity())
+    {
+      values2(0, i) = sqrt(matches.dists(0, i));
+    }
+  }
+  savePointCloudVTK("refHausdMatched.vtp", ref, values2);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  float haussdorffDist = std::max(maxDist1, maxDist2);
+  float haussdorffQuantileDist = std::max(maxDistRobust1, maxDistRobust2);
+
+  //cout << "Haussdorff distance: " << std::sqrt(haussdorffDist) << " m" << endl;
+  cout << "Haussdorff quantile distance (" << quantile << "): " << std::sqrt(haussdorffQuantileDist) <<  " m" << endl;  
+
+  return std::sqrt(haussdorffDist);
+}
+
+float Registration::pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp)
+{
+  // Test for retrieving paired point mean distance without outliers. We reuse the same module used for 
+  // the icp object.
+  //
+  // INPUTS:
+  // ref: point cloud used as reference
+  // data_out: aligned point cloud (using the transformation outputted by icp)
+  // icp: icp object used to aligned the point clouds
+
+  // Structure to hold future match results
+  PM::Matches matches;
+  
+  // initiate the matching with unfiltered point cloud
+  icp.matcher->init(ref);
+
+  // extract closest points
+  matches = icp.matcher->findClosests(out);
+
+  /* An outlier filter removes or weights links between points in reading 
+  and their matched points in reference, depending on some criteria.
+  Criteria can be a fixed maximum authorized distance, a factor of the median distance, etc. 
+  Points with zero weights are ignored in the subsequent minimization step. 
+  So, once points have been matched and are linked, the outlier filter step attempts to remove links which do not correspond to true point correspondences. 
+  The trimmed distance outlier filter does so by sorting links by their distance. 
+  Points that are matched with a closer distance are less likely to be outliers. 
+  The high distance matches in the upper 25% quantile are rejected (if ratio in config file set to 75%).
+  */
+  // weight paired points
+  const PM::OutlierWeights outlierWeights = icp.outlierFilters.compute(out, ref, matches);
+  
+  // generate tuples of matched points and remove pairs with zero weight
+  const PM::ErrorMinimizer::ErrorElements matchedPoints = icp.errorMinimizer->getMatchedPoints(out, ref, matches, outlierWeights);
+
+  // extract relevant information for convenience
+  const int dim = matchedPoints.reading.getEuclideanDim();
+  const int nbMatchedPoints = matchedPoints.reading.getNbPoints(); 
+  const PM::Matrix matchedRead = matchedPoints.reading.features.topRows(dim);
+  const PM::Matrix matchedRef = matchedPoints.reference.features.topRows(dim);
+  
+  // compute mean distance
+  const PM::Matrix dist = (matchedRead - matchedRef).colwise().norm(); // replace that by squaredNorm() to save computation time
+  const float meanDist = dist.sum()/nbMatchedPoints;
+  //cout << "Robust mean distance: " << meanDist << " m" << endl; 
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Cloud which contains points belonging to the reference cloud. A matching point in the input cloud is associated to each of these. 
+  DP matchedPointsRef = matchedPoints.reference;
+  // Viceversa...
+  DP matchedPointsRead = matchedPoints.reading;
+
+  savePointCloudVTK("referenceMatched.vtp", matchedPointsRef, dist);
+  savePointCloudVTK("readingMatched.vtp", matchedPointsRead);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Cloud which contains the points belonging to the input cloud which do not exist in the reference (non matching points).
+  // store tuples of removed points (zero weight)
+  PM::OutlierWeights notOutlierWeights(outlierWeights.rows(), outlierWeights.cols());
+  for(int k = 0; k < outlierWeights.rows(); k++) // knn
+  {
+    for (int i = 0; i < outlierWeights.cols(); i++)
+    {
+      if (outlierWeights(k,i) != 0.0)
+        notOutlierWeights(k,i) = 0;
+      else
+        notOutlierWeights(k,i) = 1;
+    }
+  }
+  const PM::ErrorMinimizer::ErrorElements nonMatchedPoints = icp.errorMinimizer->getMatchedPoints(out, ref, matches, notOutlierWeights);
+  DP nonMatchedPointsInput = nonMatchedPoints.reading;
+  savePointCloudVTK("readingNonMatched.vtp", nonMatchedPointsInput);
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+  return meanDist;
 }
 
 void Registration::publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud)
