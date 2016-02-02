@@ -12,10 +12,10 @@ pods_use_pkg_config_packages(icp-registration path-util ${REQUIRED_PACKAGES} pcl
     laser-util
     pronto_vis eigen3 bot2-frames)
 
-target_link_libraries(icp-registration pointmatcher)
+target_link_libraries(icp-registration pointmatcher ${VTK_LIBRARIES})
 set_target_properties(icp-registration PROPERTIES SOVERSION 1)
 pods_install_libraries(icp-registration)
-pods_install_headers(icp_3Dreg_and_plot.hpp icp_testing_routine.hpp icp_utils.h cloud_accumulate.hpp clouds_io_utils.h DESTINATION icp-registration)
+pods_install_headers(icp_3Dreg_and_plot.hpp icp_testing_routine.hpp icp_utils.h vtkUtils.h cloud_accumulate.hpp clouds_io_utils.h DESTINATION icp-registration)
 
 pods_install_pkg_config_file(icp-registration
     LIBS -licp-registration 
@@ -35,15 +35,15 @@ pods_install_executables(drc-lidar-accumulate)
 add_executable(drc-icp-plot icp_registration_app.cpp icp_3Dreg_and_plot.cpp)
 pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} pcl_io-1.7
     pronto_vis eigen3 bot2-frames)
-target_link_libraries(drc-icp-plot icp-registration lcm pronto_math 
+target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRARIES}
                         boost_system boost_thread)
 pods_install_executables(drc-icp-plot)
 
 ###############
-if(VTK_LIBRARIES)
-  target_link_libraries(drc-icp-plot ${VTK_LIBRARIES})
-else()
-  target_link_libraries(drc-icp-plot vtkHybrid vtkWidgets)
-endif()
+#if(VTK_LIBRARIES)
+#  target_link_libraries(drc-icp-plot ${VTK_LIBRARIES})
+#else()
+#  target_link_libraries(drc-icp-plot vtkHybrid vtkWidgets)
+#endif()
 
 

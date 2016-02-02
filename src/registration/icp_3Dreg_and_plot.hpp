@@ -19,6 +19,7 @@
 #include <pcl/point_types.h>
 #include <pcl/io/vtk_io.h>
 
+#include <icp-registration/vtkUtils.h>
 #include <icp-registration/icp_utils.h>
 #include <icp-registration/cloud_accumulate.hpp>
 
@@ -58,8 +59,6 @@ class Registration{
     
     void publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
     void getICPTransform(DP &cloud_in, DP &cloud_ref);
-    float hausdorffDistance(DP &ref, DP &out);
-    float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp);
 
   private:
     boost::shared_ptr<lcm::LCM> lcm_;

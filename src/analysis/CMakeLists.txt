@@ -3,6 +3,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations"
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(registration)
 
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+
 ##############################################
 
 add_executable (doMatching2D doMatching2D.cpp)

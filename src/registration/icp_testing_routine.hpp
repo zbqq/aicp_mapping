@@ -44,7 +44,7 @@ class RegistrationRoutine
   
     RoutineConfig cfg_;
   private:
-    void getICPTransform(DP &cloud_in, DP &cloud_ref, PM::TransformationParameters &T);
+    void getICPTransform(DP &cloud_in, DP &cloud_ref, PM::TransformationParameters &T, DP &cloud_out, PM::ICP &icp);
 };
 
 #endif

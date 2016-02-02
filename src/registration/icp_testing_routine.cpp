@@ -1,5 +1,5 @@
 // Code for registration of 10 clouds 
-//in all of their possible combinations.
+// in all of their possible combinations.
 
 #include "icp_testing_routine.hpp"
 
@@ -43,6 +43,7 @@ void RegistrationRoutine::doRoutine(Eigen::MatrixXf &transf_matrix)
 
   int transf_index = 0;
   string cloud_name_A, cloud_name_B;
+  string save_A, save_B;
 
   cout << "initFilename: " << cfg_.initFilename <<endl;
 
@@ -66,20 +67,27 @@ void RegistrationRoutine::doRoutine(Eigen::MatrixXf &transf_matrix)
       cout << "initTrans: " << cfg_.initTrans <<endl;
       if (cfg_.initTrans.empty())
         cfg_.initTrans.append("0,0,0");
-      else
-        transf_index++;
+      
+      transf_index++;
 
       //cout << "initTrans_: " << initTrans_ << endl;
-
+      
       // Load input cloud from file
       cloud_name_B.clear();
       cloud_name_B.append(cfg_.homedir);
       cloud_name_B.append("/logs/multisenselog__2015-11-16/pointclouds/multisense_0");
       cloud_name_B.append(to_string(j));
       cloud_name_B.append(".vtk");
-
-      //cout << "cloud_name_A: " << cloud_name_A <<endl;
-      //cout << "cloud_name_B: " << cloud_name_B <<endl;
+      
+      /*
+      // Load input cloud from file
+      cloud_name_B.clear();
+      cloud_name_B.append(cfg_.homedir);
+      cloud_name_B.append("/logs/multisenselog__2015-11-16/test_registration/test_data_original_input/readHausdMatched_");
+      cloud_name_B.append(to_string(i));
+      cloud_name_B.append(to_string(j));
+      cloud_name_B.append(".vtk");
+      */
 
       ref = DP::load(cloud_name_A);
       DP data = DP::load(cloud_name_B);
@@ -90,25 +98,45 @@ void RegistrationRoutine::doRoutine(Eigen::MatrixXf &transf_matrix)
 
       cloudDim = ref.getEuclideanDim();
 
+      // Create the default ICP algorithm
+      PM::ICP icp;
+      DP out_cloud;
       PM::TransformationParameters T = PM::TransformationParameters::Identity(4,4);
-      getICPTransform(data, ref, T);
+      getICPTransform(data, ref, T, out_cloud, icp);
 
       cout << "3D Transformation:" << endl << T << endl; 
 
       transf_matrix(0, transf_index-1) = T(0,cloudDim);
       transf_matrix(1, transf_index-1) = T(1,cloudDim);
       transf_matrix(2, transf_index-1) = atan2 (T(1,0),T(0,0)) * 180 / M_PI;
+
+      //=================================
+      // ERROR
+      //=================================
+
+      save_A.clear();
+      save_A.append("readHausdMatched_");
+      save_A.append(to_string(i));
+      save_A.append(to_string(j));
+      save_A.append(".vtk");
+      float hausDist = hausdorffDistance(ref, out_cloud, save_A.c_str());
+      //cout << "Hausdorff distance: " << hausDist << " m" << endl;
+
+      save_B.clear();
+      save_B.append("referenceMatched_");
+      save_B.append(to_string(i));
+      save_B.append(to_string(j));
+      save_B.append(".vtk");
+      float meanDist = pairedPointsMeanDistance(ref, out_cloud, icp, save_B.c_str());
+      //cout << "Paired points mean distance: " << meanDist << " m" << endl;
     }
   }
 
   cout << "Completed!" << endl;
 }
 
-void RegistrationRoutine::getICPTransform(DP &cloud_in, DP &cloud_ref, PM::TransformationParameters &T)
-{
-  // Create the default ICP algorithm
-  PM::ICP icp;
-  
+void RegistrationRoutine::getICPTransform(DP &cloud_in, DP &cloud_ref, PM::TransformationParameters &T, DP &cloud_out, PM::ICP &icp)
+{  
   if (!(cloudDim == 2 || cloudDim == 3)) 
   {
     cerr << "Invalid input point clouds dimension." << endl;
@@ -184,11 +212,9 @@ void RegistrationRoutine::getICPTransform(DP &cloud_in, DP &cloud_ref, PM::Trans
   DP data_out(cloud_in);
   icp.transformations.apply(data_out, T);
 
-  //cout << "Final 3D transformation:" << endl << T << endl;
+  cloud_out = data_out;
 
-  //======================== Errors............... ==========================
-  //computeCloudsDistance (icp, cloud_ref, data_out);
-  //=========================================================================
+  //cout << "Final 3D transformation:" << endl << T << endl;
 }
 
 // Make sure that the command arguments make sense
@@ -213,12 +239,12 @@ int RegistrationRoutine::validateArgs(const int argc, const char *argv[])
     }
     if (opt == "--config2D") {
       configFile2D.append(getenv("DRC_BASE"));
-      configFile2D.append("/software/perception/registeration/filters_config/");
+      configFile2D.append("/software/perception/registration/filters_config/");
       configFile2D.append(argv[i+1]);
     }
     else if (opt == "--config3D") {
       configFile3D.append(getenv("DRC_BASE"));
-      configFile3D.append("/main-distro/software/perception/registeration/filters_config/");
+      configFile3D.append("/software/perception/registration/filters_config/");
       configFile3D.append(argv[i+1]);
     }
     else

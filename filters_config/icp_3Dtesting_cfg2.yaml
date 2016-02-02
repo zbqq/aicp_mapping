@@ -19,22 +19,27 @@ matcher:
 outlierFilters:
   - TrimmedDistOutlierFilter:
       ratio: 0.75
+#   - MaxDistOutlierFilter:
+#       maxDist: 0.025
 
 errorMinimizer:
   PointToPlaneErrorMinimizer
 
 transformationCheckers:
   - CounterTransformationChecker:
-      maxIterationCount: 30
+      maxIterationCount: 100
   - DifferentialTransformationChecker:
       minDiffRotErr: 0.001
-      minDiffTransErr: 0.01
+      minDiffTransErr: 0.001
       smoothLength: 4   
       
 inspector:
   NullInspector
 #  VTKFileInspector
-#  PerformanceInspector
+#     baseFileName : vissteps
+#     dumpReading : 1
+#     dumpReference : 1
+#     dumpDataLinks : 1
 
 logger:
   NullLogger

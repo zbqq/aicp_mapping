@@ -15,6 +15,8 @@
 
 #include <pcl/common/io.h>
 
+#include <icp-registration/vtkUtils.h>
+
 using namespace std;
 using namespace PointMatcherSupport;
 
@@ -22,7 +24,11 @@ typedef PointMatcher<float> PM;
 typedef PM::DataPoints DP;
 typedef PM::Parameters Parameters;
 
-void computeCloudsDistance (PM::ICP &icp, DP &cloud_ref, DP &data_out);
+float hausdorffDistance(DP &ref, DP &out);
+float hausdorffDistance(DP &ref, DP &out, const char *filename);
+
+float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp);
+float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filename);
 
 string readLineFromFile(string& filename, int line_number);
 

@@ -100,12 +100,12 @@ int main(int argc, const char *argv[])
   // ERROR
   //=================================
   DP out = app->registr_->getDataOut();
-  float hausDist = app->registr_->hausdorffDistance(ref, out);
+  float hausDist = hausdorffDistance(ref, out);
   
   cout << "Hausdorff distance: " << hausDist << " m" << endl;
 
   PM::ICP icp = app->registr_->getIcp();
-  float meanDist = app->registr_->pairedPointsMeanDistance(ref, out, icp);
+  float meanDist = pairedPointsMeanDistance(ref, out, icp);
   
   cout << "Paired points mean distance: " << meanDist << " m" << endl;
   

@@ -19,6 +19,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkPolyDataWriter.h>
 #include <vtkPolyData.h>
 #include <vtkPointData.h>
 #include <vtkPoints.h>
@@ -88,7 +89,8 @@ DataArrays createData(vtkIdType numberOfPoints)
   return arrays;
 }
 
-void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints data, PM::Matrix distance = PM::Matrix::Zero(1,1))
+// ASCII
+void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints data, PointMatcher<float>::Matrix distance = PointMatcher<float>::Matrix::Zero(1,1))
 {
   const int nbPoints = data.getNbPoints();
 
@@ -96,7 +98,45 @@ void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints dat
 
   if ((distance.rows() == 1) && (distance.cols() == 1))// If filled, distance is (1 X nbPoints).
   {
-    PM::Matrix distance(1, nbPoints);  
+    PointMatcher<float>::Matrix distance(1, nbPoints);  
+    for (int i = 0; i < nbPoints; i++)
+    {  
+      distance(0, i) = -1;
+    }
+  }
+
+  for ( unsigned int i = 0; i < nbPoints; ++i )
+  {
+    dataArrays.Points->InsertNextPoint( data.features(0,i), data.features(1,i), data.features(2,i) );
+
+    dataArrays.Distance->InsertNextValue(distance(i));
+  }
+
+  dataArrays.Dataset->SetVerts(NewVertexCells(nbPoints));
+
+  // Write to file
+  vtkSmartPointer<vtkPolyDataWriter> writer =  vtkSmartPointer<vtkPolyDataWriter>::New();
+  writer->SetFileName(filename);
+  #if VTK_MAJOR_VERSION <= 5
+    writer->SetInput(dataArrays.Dataset);
+  #else
+    writer->SetInputData(dataArrays.Dataset);
+  #endif
+  
+  std::cout << "Writing to " << filename << "..." << std::endl;
+  writer->Write();
+}
+
+// Binary
+void savePointCloudVTP(const char *filename, PointMatcher<float>::DataPoints data, PointMatcher<float>::Matrix distance = PointMatcher<float>::Matrix::Zero(1,1))
+{
+  const int nbPoints = data.getNbPoints();
+
+  DataArrays dataArrays = createData(nbPoints);
+
+  if ((distance.rows() == 1) && (distance.cols() == 1))// If filled, distance is (1 X nbPoints).
+  {
+    PointMatcher<float>::Matrix distance(1, nbPoints);  
     for (int i = 0; i < nbPoints; i++)
     {  
       distance(0, i) = -1;
@@ -120,10 +160,6 @@ void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints dat
   #else
     writer->SetInputData(dataArrays.Dataset);
   #endif
- 
-  // Optional - set the mode. The default is binary.
-  //writer->SetDataModeToBinary();
-  //writer->SetDataModeToAscii();
   
   std::cout << "Writing to " << filename << "..." << std::endl;
   writer->Write();
