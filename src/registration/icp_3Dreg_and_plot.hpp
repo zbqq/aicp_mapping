@@ -47,6 +47,7 @@ class Registration{
     }   
 
     PM::ICP getIcp(){ return icp_; } 
+    void setDefaultIcp(){ icp_.setDefault(); }
     
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud(int idx){ 
       if (idx == 0) 
