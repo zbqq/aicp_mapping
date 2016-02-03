@@ -40,10 +40,11 @@ target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRAR
 pods_install_executables(drc-icp-plot)
 
 ###############
-#if(VTK_LIBRARIES)
-#  target_link_libraries(drc-icp-plot ${VTK_LIBRARIES})
-#else()
-#  target_link_libraries(drc-icp-plot vtkHybrid vtkWidgets)
-#endif()
+add_executable(drc-icp-plot-advanced icp_registration_advanced_app.cpp icp_3Dreg_and_plot.cpp)
+pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+    pronto_vis eigen3 bot2-frames)
+target_link_libraries(drc-icp-plot-advanced icp-registration lcm pronto_math ${VTK_LIBRARIES}
+                        boost_system boost_thread)
+pods_install_executables(drc-icp-plot-advanced)
 
 
