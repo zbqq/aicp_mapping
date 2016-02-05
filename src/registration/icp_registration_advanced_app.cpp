@@ -69,19 +69,20 @@ int main(int argc, const char *argv[])
   AppConfig app_cfg;
 
   const int ret = validateArgs(argc, argv, reg_cfg);
-
   if (ret == -1)
     return ret;
 
+  // Load first config file (trimmed distance outlier filter)
+  reg_cfg.configFile3D_.append(reg_cfg.homedir);
+  reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_3D_cfg_trimmed.yaml");
+
   if (reg_cfg.cloud_name_A.empty())
   {
-    reg_cfg.cloud_name_A.append(reg_cfg.homedir);
-    reg_cfg.cloud_name_A.append("/logs/multisenselog__2015-11-16/pointclouds/multisense_00.vtk");	
+    std::cerr <<"ERROR: reference point cloud missing." <<std::endl;	
   }
-  if (reg_cfg.cloud_name_B.empty())
+  else if (reg_cfg.cloud_name_B.empty())
   {    
-  	reg_cfg.cloud_name_B.append(reg_cfg.homedir);
-    reg_cfg.cloud_name_B.append("/logs/multisenselog__2015-11-16/pointclouds/multisense_01.vtk");	
+  	std::cerr <<"ERROR: reading point cloud missing." <<std::endl;	
   }
 
   //Set up LCM channel for visualization
@@ -99,22 +100,32 @@ int main(int argc, const char *argv[])
   //=================================
   // TRANSFORM 3D CLOUD
   //=================================
-
+  // First ICP loop
   app->registr_->getICPTransform(data, ref);
-  
-  PM::TransformationParameters T = app->registr_->getTransform();
-  cout << "3D Transformation:" << endl << T << endl;
+  PM::TransformationParameters T1 = app->registr_->getTransform();
+  cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
+
+  // Second ICP loop
+  DP out1 = app->registr_->getDataOut();
+  string configName2;
+  configName2.append(reg_cfg.homedir);
+  configName2.append("/oh-distro/software/perception/registration/filters_config/icp_3D_cfg_max.yaml");
+  app->registr_->setConfigFile(configName2);
+
+  app->registr_->getICPTransform(out1, ref);
+  PM::TransformationParameters T2 = app->registr_->getTransform();
+  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
 
   //=================================
   // ERROR
   //=================================
-  DP out = app->registr_->getDataOut();
-  float hausDist = hausdorffDistance(ref, out);
+  DP out2 = app->registr_->getDataOut();
+  float hausDist = hausdorffDistance(ref, out2);
   
   cout << "Hausdorff distance: " << hausDist << " m" << endl;
 
   PM::ICP icp = app->registr_->getIcp();
-  float meanDist = pairedPointsMeanDistance(ref, out, icp);
+  float meanDist = pairedPointsMeanDistance(ref, out2, icp);
   
   cout << "Paired points mean distance: " << meanDist << " m" << endl;
   
@@ -133,12 +144,7 @@ int validateArgs(const int argc, const char *argv[], RegistrationConfig& reg_cfg
     {
       cerr << "Incorrect use of option " << opt << ", usage:"; usage(argv); exit(1);
     }
-    if (opt == "-c" || opt == "-config") {
-      reg_cfg.configFile3D_.append(reg_cfg.homedir);
-      reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/");
-      reg_cfg.configFile3D_.append(argv[i+1]);
-    }
-    else if (opt == "-i" || opt == "--initT") {
+    if (opt == "-i" || opt == "--initT") {
       reg_cfg.initTrans_.clear();
       reg_cfg.initTrans_ = argv[i+1];
     }
@@ -172,7 +178,6 @@ void usage(const char *argv[])
   cerr << "  " << argv[0] << " [OPTIONS]" << endl;
   cerr << endl;
   cerr << "OPTIONS can be a combination of:" << endl;
-  cerr << "-c or --config --> YAML_3DCLOUD_CONFIG_FILE  Load the config from a YAML file located in filters_config (default: default parameters)" << endl;
   cerr << "-i or --initT --> [x,y,theta]  Initial transformation applyed to input cloud (default: 0,0,0)" << endl;
   cerr << "-a or --reference --> Reference cloud name  Load the .vtk file from current folder (default: multisense_00.vtk)" << endl;
   cerr << "-b or --input --> Reference cloud name  Load the .vtk file from current folder (default: multisense_01.vtk)" << endl;

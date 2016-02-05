@@ -47,7 +47,6 @@ class Registration{
     }   
 
     PM::ICP getIcp(){ return icp_; } 
-    void setDefaultIcp(){ icp_.setDefault(); }
     
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud(int idx){ 
       if (idx == 0) 
@@ -60,6 +59,12 @@ class Registration{
     
     void publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
     void getICPTransform(DP &cloud_in, DP &cloud_ref);
+
+    void setDefaultIcp(){ icp_.setDefault(); }
+
+    void setConfigFile(string configName){ 
+        reg_cfg_.configFile3D_.clear();
+        reg_cfg_.configFile3D_.append(configName); }
 
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
