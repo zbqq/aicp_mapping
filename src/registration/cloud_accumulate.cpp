@@ -4,10 +4,23 @@
 
 CloudAccumulate::CloudAccumulate(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_):
     lcm_(lcm_), ca_cfg_(ca_cfg_){
-  botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
-  botframes_= bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
-  
-  
+  BotParam* botparam = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
+  BotFrames* botframes = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam);
+  init(lcm_, ca_cfg_, botparam, botframes);
+}
+
+CloudAccumulate::CloudAccumulate(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_,
+  BotParam* botparam, BotFrames* botframes):
+    lcm_(lcm_), ca_cfg_(ca_cfg_){
+  init(lcm_, ca_cfg_, botparam, botframes);
+}
+
+void CloudAccumulate::init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_,
+  BotParam* botparam, BotFrames* botframes)
+{  
+  botparam_ = botparam;
+  botframes_ = botframes;
+
   bool reset =0;
   pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
   // obj: id name type reset

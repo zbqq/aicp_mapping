@@ -27,7 +27,9 @@ struct CloudAccumulateConfig
 class CloudAccumulate{
   public:
     CloudAccumulate(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_);
-    
+    CloudAccumulate(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_,
+                    BotParam* botparam, BotFrames* botframes);
+
     ~CloudAccumulate(){
     }    
     
@@ -46,10 +48,11 @@ class CloudAccumulate{
     void processLidar(const  bot_core::planar_lidar_t* msg);
 
   private:
+    void init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_,
+                          BotParam* botparam, BotFrames* botframes);
+
     boost::shared_ptr<lcm::LCM> lcm_;
-    const CloudAccumulateConfig& ca_cfg_;
-    
-    
+    const CloudAccumulateConfig& ca_cfg_;    
     
     pronto_vis* pc_vis_ ;
     BotParam* botparam_;
