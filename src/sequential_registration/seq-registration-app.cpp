@@ -18,12 +18,31 @@
 #include <pcl/io/vtk_io.h>
 
 #include <icp-registration/cloud_accumulate.hpp>
+#include <icp-registration/icp_3Dreg_and_plot.hpp>
 #include <icp-registration/icp_utils.h>
 #include <icp-registration/vtkUtils.h>
 
 //#include "lidar-odometry.hpp"
 
-#include "sweep_scan.hpp"
+#include "aligned_sweeps_collection.hpp"
+
+// Get utime %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#include <errno.h>
+#include <linux/unistd.h>       /* for _syscallX macros/related stuff */
+#include <linux/kernel.h>       /* for struct sysinfo */
+#include <sys/sysinfo.h>
+
+long get_uptime()
+{
+    struct sysinfo s_info;
+    int error = sysinfo(&s_info);
+    if(error != 0)
+    {
+        printf("code error = %d\n", error);
+    }
+    return s_info.uptime;
+}
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 using namespace std;
 
@@ -37,12 +56,13 @@ struct CommandLineConfig
 class App{
   public:
     App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_, 
-        CloudAccumulateConfig ca_cfg_);
+        CloudAccumulateConfig ca_cfg_, RegistrationConfig reg_cfg_);
     
     ~App(){
     }
 
     CloudAccumulateConfig ca_cfg_;
+    RegistrationConfig reg_cfg_;
 
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
@@ -55,11 +75,11 @@ class App{
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
                       const std::string& channel, const  bot_core::planar_lidar_t* msg);  
     CloudAccumulate* accu_; 
+    Registration* registr_;
 
     // Data structures for storage
     vector<LidarScan> lidar_scans_list_;
-    SweepScan* sweep_scan_;
-    vector<SweepScan> sweep_scans_list_;
+    AlignedSweepsCollection* sweep_scans_list_;
 
     //void lidarHandler(const lcm::ReceiveBuffer* rbuf, 
     //                  const std::string& channel, const  bot_core::planar_lidar_t* msg);
@@ -87,11 +107,12 @@ class App{
 };    
 
 App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_, 
-         CloudAccumulateConfig ca_cfg_) : lcm_(lcm_), 
+         CloudAccumulateConfig ca_cfg_, RegistrationConfig reg_cfg_) : lcm_(lcm_), 
          cl_cfg_(cl_cfg_),
-         ca_cfg_(ca_cfg_){
+         ca_cfg_(ca_cfg_),
+         reg_cfg_(reg_cfg_){
   // Storage
-  sweep_scan_ = new SweepScan();
+  sweep_scans_list_ = new AlignedSweepsCollection();
 
   // Set up frames and config:
   botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
@@ -125,6 +146,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
     }  
   }
 
+  registr_ = new Registration(lcm_, reg_cfg_);
   //lidarOdom_ = new LidarOdom(lcm_);
 }
 
@@ -197,46 +219,50 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     fromPCLToDataPoints(dp_cloud, *cloud);
 
     SweepScan* current_sweep = new SweepScan();
-    current_sweep->populateSweepScan(lidar_scans_list_, dp_cloud, sweep_scans_list_.size());
     
-    sweep_scans_list_.push_back(*current_sweep);    
-    
+    if(sweep_scans_list_->isEmpty())
+    {
+      current_sweep->populateSweepScan(lidar_scans_list_, dp_cloud, sweep_scans_list_->getNbClouds());
+      sweep_scans_list_->initializeCollection(*current_sweep);
+    }
+    else
+    {
+      DP ref = sweep_scans_list_->getReference().getCloud();
+      // ............call registration.............
+      // First ICP loop
+      registr_->getICPTransform(dp_cloud, ref);
+      PM::TransformationParameters T1 = registr_->getTransform();
+      cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
+      
+      // Second ICP loop
+      DP out1 = registr_->getDataOut();
+      string configName2;
+      configName2.append(reg_cfg_.homedir);
+      configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
+      registr_->setConfigFile(configName2);
+
+      registr_->getICPTransform(out1, ref);
+      PM::TransformationParameters T2 = registr_->getTransform();
+      cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
+      DP out2 = registr_->getDataOut();
+      
+      current_sweep->populateSweepScan(lidar_scans_list_, out2, sweep_scans_list_->getNbClouds());
+      // TO_DO: T1 as argument not correct: concatenate T1, T2............
+      sweep_scans_list_->addSweep(*current_sweep, T1);
+    }
+       
     // To file
     std::stringstream vtk_fname;
     vtk_fname << "accum_cloud_";
-    vtk_fname << to_string(sweep_scans_list_.size());
+    vtk_fname << to_string(sweep_scans_list_->getNbClouds());
     vtk_fname << ".vtk";
-    savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_.back().getCloud());
+    savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
     
+    lidar_scans_list_.clear();
     current_sweep->~SweepScan(); 
       
-    // publish PCL cloud
-    accu_->publishCloud(cloud);
-
-
-
-
-/*
-    maps::PointCloudView view;
-    maps::PointCloud::Ptr maps_cloud(new maps::PointCloud());
-    const int size = 1000000;
-    maps_cloud->reserve(size);
-    for (int i = 0; i < size; ++i) {
-      maps::PointType pt;
-      pt.x = 3*i; pt.y = 3*i+1; pt.z = 3*i+2;
-      maps_cloud->push_back(pt);
-    }
-    view.setResolution(0);
-    view.set(maps_cloud);
-    drc::map_cloud_t msg_out;
-    maps::LcmTranslator::toLcm(view, msg_out, 0);
-    drc::LcmWrapper::Ptr mLcmWrapper;
-    //mLcmWrapper->get()->publish("TEST_CLOUD", &msg_out);
-    mLcmWrapper->get()->publish("MAP_CLOUD", &msg_out);
-    std::cout << "SENT " << cloud->size() << " POINTS" << std::endl;
-*/
-
-
+    // publish PCL cloud (PRONTO-VIEWER)
+    // accu_->publishCloud(cloud); 
 
 
 
@@ -311,7 +337,15 @@ int main(int argc, char **argv){
   ca_cfg.lidar_channel ="SCAN";
   ca_cfg.batch_size = 240; // about 1 sweep
   ca_cfg.min_range = 0.30;//1.85; // remove all the short range points
-  ca_cfg.max_range = 30.0;
+  ca_cfg.max_range = 15.0;
+
+  RegistrationConfig reg_cfg;
+  reg_cfg.configFile3D_.clear();
+  // Load first config file (trimmed distance outlier filter)
+  reg_cfg.configFile3D_.append(reg_cfg.homedir);
+  reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  reg_cfg.initTrans_.clear();
+  reg_cfg.initTrans_.append("0,0,0"); 
 
   ConciseArgs parser(argc, argv, "simple-fusion");
   parser.add(cl_cfg.init_with_message, "g", "init_with_message", "Bootstrap internal estimate using VICON or POSE_BODY");
@@ -326,6 +360,6 @@ int main(int argc, char **argv){
   if(!lcm->good()){
     std::cerr <<"ERROR: lcm is not good()" <<std::endl;
   }
-  App app= App(lcm, cl_cfg, ca_cfg);
+  App app= App(lcm, cl_cfg, ca_cfg, reg_cfg);
   while(0 == lcm->handle());
 }

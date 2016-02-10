@@ -74,7 +74,8 @@ int main(int argc, const char *argv[])
 
   // Load first config file (trimmed distance outlier filter)
   reg_cfg.configFile3D_.append(reg_cfg.homedir);
-  reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_3D_cfg_trimmed.yaml");
+  //reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_3D_cfg_trimmed.yaml");
+  reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
 
   if (reg_cfg.cloud_name_A.empty())
   {

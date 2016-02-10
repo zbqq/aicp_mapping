@@ -23,8 +23,8 @@ class LidarScan
     float rad0; // Initial angle in radians
     float radstep; // Angular resolution in radians
 
-    std::vector< float > ranges;
+    std::vector< float > ranges;  // in lidar reference frame
     std::vector< float > intensities;
 
-    Eigen::Isometry3d world_to_head;
+    Eigen::Isometry3d world_to_head;  // current head pose (w <-- h)
 };

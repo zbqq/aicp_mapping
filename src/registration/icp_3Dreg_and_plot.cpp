@@ -90,7 +90,7 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
   // Compute the transformation to express input in ref
   PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT);
   //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
-  cout << "Matches used for minimization: " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
+  cout << "Discarded matches (outlaiers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
   // Transform input to express it in ref
   DP data_out(cloud_in);

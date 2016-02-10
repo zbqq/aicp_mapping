@@ -7,7 +7,7 @@ find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
 ##############################################
-add_executable (sequential-registration seq-registration-app.cpp sweep_scan.cpp lidar_scan.cpp)
+add_executable (sequential-registration seq-registration-app.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
 target_link_libraries(sequential-registration boost_system pointmatcher ${VTK_LIBRARIES})
 pods_use_pkg_config_packages(sequential-registration eigen3
   lcm    bot2-frames icp-registration drc-lcmtypes
