@@ -51,13 +51,17 @@ class Registration{
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud(int idx){ 
       if (idx == 0) 
         return reference_cloud_; 
-      else
-        return transformed_input_cloud_; }
+      else if (idx == 1)
+        return transformed_input_cloud_;
+      else if (idx == 2)
+        return input_cloud_;
+      else //idx == 3
+        return initialized_input_cloud_; }
     
     PM::TransformationParameters getTransform(){ return out_transform_; }
     DP getDataOut(){ return out_cloud_; }
     
-    void publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
+    void publishCloud(pronto_vis* vis, int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
     void getICPTransform(DP &cloud_in, DP &cloud_ref);
 
     void setDefaultIcp(){ icp_.setDefault(); }
@@ -69,13 +73,13 @@ class Registration{
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
     RegistrationConfig reg_cfg_;
-    
-    pronto_vis* pc_vis_ ;
 
     // Create the default ICP algorithm
     PM::ICP icp_;
   
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr reference_cloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr initialized_input_cloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_input_cloud_;
     PM::TransformationParameters out_transform_;    
     DP out_cloud_; 

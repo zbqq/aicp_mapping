@@ -34,6 +34,8 @@ class App{
     boost::shared_ptr<lcm::LCM> lcm_;
     Registration* registr_;  
 
+    pronto_vis* pc_vis_;
+
   private:
     
 };
@@ -44,7 +46,24 @@ App::App(boost::shared_ptr< lcm::LCM >& lcm_,
          app_cfg_(app_cfg_){
 
   registr_ = new Registration(lcm_, reg_cfg_);
-  std::cout << "Clouds matching at launch.\n";  
+  std::cout << "Clouds matching at launch.\n"; 
+
+  //================ Set up pronto visualizer ===============
+  bool reset = 0;  
+  pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+  // obj: id name type reset
+  // pts: id name type reset objcoll usergb rgb
+  pc_vis_->obj_cfg_list.push_back( obj_cfg(60000, "Pose - Null", 5, reset) );
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60001, "Cloud_Ref - Null", 1, reset, 60000, 1, {0.0, 0.1, 0.0}) );
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60002, "Cloud_In - Null", 1, reset, 60000, 1, {0.0, 0.0, 1.0}) );  
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60003, "Cloud_Result - Null", 1, reset, 60000, 1, {1.0, 0.0, 0.0}) );
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60004, "Scan_Ref - Null", 1, reset, 60000, 1, {0.0, 0.1, 0.0}) );
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60005, "Scan_In - Null", 1, reset, 60000, 1, {0.0, 0.0, 1.0}) );  
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60006, "Scan_Result - Null", 1, reset, 60000, 1, {1.0, 0.0, 0.0}) );
+
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60007, "Cloud_Trans - Null", 1, reset, 60000, 1, {0.0, 1.0, 0.0}) );
+  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60008, "Scan_Trans - Null", 1, reset, 60000, 1, {0.0, 1.0, 0.0}) );
+  //========================================================== 
 }
 
 int validateArgs(const int argc, const char *argv[], RegistrationConfig& reg_cfg);
@@ -108,6 +127,17 @@ int main(int argc, const char *argv[])
   float meanDist = pairedPointsMeanDistance(ref, out, icp);
   
   cout << "Paired points mean distance: " << meanDist << " m" << endl;
+
+  // Publish clouds: plot in pronto visualizer
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_plot = app->registr_->getCloud(0);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr in_plot = app->registr_->getCloud(2);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr result_plot = app->registr_->getCloud(1);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr init_in_plot = app->registr_->getCloud(3);
+
+  app->registr_->publishCloud(app->pc_vis_, 60001, ref_plot);
+  app->registr_->publishCloud(app->pc_vis_, 60002, in_plot);
+  app->registr_->publishCloud(app->pc_vis_, 60003, result_plot);
+  app->registr_->publishCloud(app->pc_vis_, 60007, init_in_plot);
   
   return 0;
 }

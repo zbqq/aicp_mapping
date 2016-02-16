@@ -32,7 +32,7 @@ void CloudAccumulate::init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumul
   pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60012,"Cloud (full sweep) - Null"         ,1,1, 60010,1, {1.0, 0.0, 0.0} ));
   
   counter_ =0;  
-  verbose_=3; // 1 important, 2 useful 3, lots
+  verbose_=1; // 1 important, 2 useful 3, lots
   
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
   combined_cloud_ = cloud_ptr;    
@@ -157,9 +157,10 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr  CloudAccumulate::convertPlanarScanToClou
 
 void CloudAccumulate::processLidar(const  bot_core::planar_lidar_t* msg){
   
-//  if (!frame_check_tools_.isLocalToScanValid(botframes_)){
-//    return;
-//  }
+  if (!frame_check_tools_.isLocalToScanValid(botframes_)){
+    cout << "Is local to scan valid? NO." << endl; 
+    return;
+  }
   
   // Convert Scan to local frame:
   std::shared_ptr<bot_core::planar_lidar_t>  this_msg;

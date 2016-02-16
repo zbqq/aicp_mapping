@@ -13,38 +13,26 @@ RegistrationConfig::RegistrationConfig(){
 
 Registration::Registration(boost::shared_ptr<lcm::LCM> &lcm_, const RegistrationConfig& reg_cfg_):
     lcm_(lcm_), reg_cfg_(reg_cfg_){
-  
-  //================ Set up pronto visualizer ===============
-  bool reset = 0;  
-  pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
-  // obj: id name type reset
-  // pts: id name type reset objcoll usergb rgb
-  pc_vis_->obj_cfg_list.push_back( obj_cfg(60000, "Pose - Null", 5, reset) );
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60001, "Cloud_Ref - Null", 1, reset, 60000, 1, {0.0, 0.1, 0.0}) );
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60002, "Cloud_In - Null", 1, reset, 60000, 1, {0.0, 0.0, 1.0}) );  
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60003, "Cloud_Result - Null", 1, reset, 60000, 1, {1.0, 0.0, 0.0}) );
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60004, "Scan_Ref - Null", 1, reset, 60000, 1, {0.0, 0.1, 0.0}) );
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60005, "Scan_In - Null", 1, reset, 60000, 1, {0.0, 0.0, 1.0}) );  
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60006, "Scan_Result - Null", 1, reset, 60000, 1, {1.0, 0.0, 0.0}) );
-
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60007, "Cloud_Trans - Null", 1, reset, 60000, 1, {0.0, 1.0, 0.0}) );
-  pc_vis_->ptcld_cfg_list.push_back( ptcld_cfg(60008, "Scan_Trans - Null", 1, reset, 60000, 1, {0.0, 1.0, 0.0}) );
-  //==========================================================
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
   reference_cloud_ = cloud_ref_ptr;
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  transformed_input_cloud_ = cloud_in_ptr;
+  input_cloud_ = cloud_in_ptr;
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_trans_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
+  initialized_input_cloud_ = cloud_trans_ptr;
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_intransf_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
+  transformed_input_cloud_ = cloud_intransf_ptr;
 }
 
 // Get transform after ICP alignment of reference and input cloud. Publish to LCM channel. 
 void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
 {
   // Transform input clouds into a pcl PointXYZRGB and publish for visualization
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudB (new pcl::PointCloud<pcl::PointXYZRGB> ());
   fromDataPointsToPCL(cloud_ref, *reference_cloud_);
-  fromDataPointsToPCL(cloud_in, *cloudB);
+  fromDataPointsToPCL(cloud_in, *input_cloud_);
 
   int cloudDimension = cloud_ref.getEuclideanDim();
   
@@ -90,7 +78,7 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
   // Compute the transformation to express input in ref
   PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT);
   //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
-  cout << "Discarded matches (outlaiers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
+  cout << "Discarded matches (outliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
   // Transform input to express it in ref
   DP data_out(cloud_in);
@@ -98,26 +86,19 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
 
   out_cloud_ = data_out;
 
-  // Plot input after initialization and after final transformation
+  // Store input after initialization and after final transformation
   fromDataPointsToPCL(out_cloud_, *transformed_input_cloud_);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_trans (new pcl::PointCloud<pcl::PointXYZRGB> ());
   DP initializedInput = rigidTrans->compute(cloud_in, initT);
-  fromDataPointsToPCL(initializedInput, *cloud_trans);
-
-  // Publish clouds: plot in pronto visualizer
-  publishCloud(60001, reference_cloud_);
-  publishCloud(60002, cloudB);
-  publishCloud(60003, transformed_input_cloud_);
-  publishCloud(60007, cloud_trans);
+  fromDataPointsToPCL(initializedInput, *initialized_input_cloud_);
 
   out_transform_ = T;
 }
 
-void Registration::publishCloud(int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud)
+void Registration::publishCloud(pronto_vis* vis, int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 {
   Isometry3dTime null_T = Isometry3dTime(1, Eigen::Isometry3d::Identity());
-  pc_vis_->pose_to_lcm_from_list(60000, null_T);
-  pc_vis_->ptcld_to_lcm_from_list(cloud_id, *cloud, 1, 1);
+  vis->pose_to_lcm_from_list(60000, null_T);
+  vis->ptcld_to_lcm_from_list(cloud_id, *cloud, 1, 1);
 }
 
 
