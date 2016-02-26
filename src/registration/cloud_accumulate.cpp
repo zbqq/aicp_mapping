@@ -143,6 +143,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr  CloudAccumulate::convertPlanarScanToClou
   
   // 3. Visualize the scan:
   Eigen::Isometry3d body_to_local;
+  // bot_frames_structure,from_frame,to_frame,utime,result
   get_trans_with_utime( botframes_ , "body", "local"  , this_msg->utime, body_to_local);
   
   // 4. Project the scan into local frame:
@@ -154,8 +155,15 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr  CloudAccumulate::convertPlanarScanToClou
   return scan_local;
 }
 
-
 void CloudAccumulate::processLidar(const  bot_core::planar_lidar_t* msg){
+  
+  std::shared_ptr<bot_core::planar_lidar_t>  this_msg;
+  this_msg = std::shared_ptr<bot_core::planar_lidar_t>(new bot_core::planar_lidar_t(*msg));
+  processLidar(this_msg);
+}
+
+
+void CloudAccumulate::processLidar(std::shared_ptr<bot_core::planar_lidar_t> this_msg){
   
   if (!frame_check_tools_.isLocalToScanValid(botframes_)){
     cout << "Is local to scan valid? NO." << endl; 
@@ -163,8 +171,6 @@ void CloudAccumulate::processLidar(const  bot_core::planar_lidar_t* msg){
   }
   
   // Convert Scan to local frame:
-  std::shared_ptr<bot_core::planar_lidar_t>  this_msg;
-  this_msg = std::shared_ptr<bot_core::planar_lidar_t>(new bot_core::planar_lidar_t(*msg));
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_local (new pcl::PointCloud<pcl::PointXYZRGB> ());
   scan_local = convertPlanarScanToCloud( this_msg );
     
@@ -176,5 +182,4 @@ void CloudAccumulate::processLidar(const  bot_core::planar_lidar_t* msg){
     std::cout << "Finished Collecting: " << this_msg->utime << "\n";
     finished_ = true;
   }
-
 }

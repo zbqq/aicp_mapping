@@ -31,11 +31,14 @@ class CloudAccumulate{
                     BotParam* botparam, BotFrames* botframes);
 
     ~CloudAccumulate(){
+      delete laser_projector_;
+      delete projected_laser_scan_;
     }    
     
     int getCounter(){ return counter_; }
     bool getFinished(){ return finished_; }
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud(){ return combined_cloud_; }
+    Laser_projector* getLaserProjector(){ return laser_projector_; }
     
     void clearCloud(){ 
       combined_cloud_->points.clear(); 
@@ -46,6 +49,7 @@ class CloudAccumulate{
     
     void publishCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
     void processLidar(const  bot_core::planar_lidar_t* msg);
+    void processLidar(std::shared_ptr<bot_core::planar_lidar_t> this_msg);
 
   private:
     void init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumulateConfig& ca_cfg_,
