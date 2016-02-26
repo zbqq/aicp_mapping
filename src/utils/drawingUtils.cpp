@@ -110,9 +110,9 @@ void drawPointCloud(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
 	bot_lcmgl_end(lcmgl);
 	bot_lcmgl_switch_buffer(lcmgl);
 }
-/*
-void drawFrames(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
-{
+
+void drawFrame(bot_lcmgl_t *lcmgl)
+{/*
 	bot_lcmgl_point_size(lcmgl, 2);
 	srand (time(NULL));
 	float r = (rand() % 101)/100.0;
@@ -126,7 +126,10 @@ void drawFrames(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
 		bot_lcmgl_vertex3f(lcmgl, point(0), point(1), point(2));
 	}
 	bot_lcmgl_end(lcmgl);
-	bot_lcmgl_switch_buffer(lcmgl);
+	bot_lcmgl_switch_buffer(lcmgl);*/
+
+  bot_lcmgl_point_size(lcmgl, 3);
+  bot_lcmgl_begin(lcmgl, LCMGL_LINES);
 
   //x-axis
   lcmglBegin(LCMGL_LINES);
@@ -148,4 +151,7 @@ void drawFrames(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
   lcmglVertex3f(0, 0, 1);
   lcmglVertex3f(0, 0, 0);
   lcmglEnd();
-}*/
+
+  bot_lcmgl_end(lcmgl);
+  bot_lcmgl_switch_buffer(lcmgl);
+}

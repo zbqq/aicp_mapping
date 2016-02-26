@@ -11,5 +11,6 @@ void draw3dLine(bot_lcmgl_t *lcmgl, double start_x, double start_y, double start
 void HSVtoRGB( float &r, float &g, float &b, float h, float s, float v );
 void drawPointCloud(bot_lcmgl_t *lcmgl, std::vector<Eigen::Vector3f> point_cloud);
 void drawPointCloud(bot_lcmgl_t *lcmgl, DP &dp_cloud);
+void drawFrame(bot_lcmgl_t *lcmgl);
 
 #endif
