@@ -12,5 +12,8 @@ void HSVtoRGB( float &r, float &g, float &b, float h, float s, float v );
 void drawPointCloud(bot_lcmgl_t *lcmgl, std::vector<Eigen::Vector3f> point_cloud);
 void drawPointCloud(bot_lcmgl_t *lcmgl, DP &dp_cloud);
 void drawFrame(bot_lcmgl_t *lcmgl);
+void drawFrame(bot_lcmgl_t *lcmgl, Eigen::Isometry3d transform);
+void drawFrame(bot_lcmgl_t *lcmgl, Eigen::Vector3d origin, 
+	           Eigen::Vector3d x_tip, Eigen::Vector3d y_tip, Eigen::Vector3d z_tip);
 
 #endif

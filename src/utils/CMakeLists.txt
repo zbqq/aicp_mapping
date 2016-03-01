@@ -16,3 +16,15 @@ pods_install_pkg_config_file(drawingUtils
   LIBS 
   REQUIRES eigen3 
   VERSION 0.0.1)
+
+add_library(timingUtils SHARED timingUtils.cpp)
+set_target_properties(timingUtils PROPERTIES SOVERSION 1)
+pods_install_libraries(timingUtils)
+pods_install_headers( timingUtils.hpp
+              DESTINATION timingUtils)
+pods_use_pkg_config_packages(timingUtils eigen3
+  lcm    bot2-frames ${REQUIRED_PACKAGES})
+pods_install_pkg_config_file(timingUtils 
+  LIBS 
+  REQUIRES eigen3 
+  VERSION 0.0.1)

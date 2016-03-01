@@ -18,6 +18,7 @@
 #include <icp-registration/vtkUtils.h>
 
 #include "drawingUtils/drawingUtils.hpp"
+#include "timingUtils/timingUtils.hpp"
 #include "aligned_sweeps_collection.hpp"
 
 using namespace std;
@@ -40,8 +41,7 @@ class App{
     CloudAccumulateConfig ca_cfg_;
     RegistrationConfig reg_cfg_;
 
-    void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
-                            const std::string& channel, const  bot_core::planar_lidar_t* msg);
+    void plotBotFrames(BotFrames *frames, int64_t utime);
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
     const CommandLineConfig cl_cfg_;
@@ -70,11 +70,10 @@ class App{
 
     bool pose_initialized_;
 
-    // MOVED TO PUBLIC (SEE lidar_accumulate.cpp), TRYING TO FIX ERRORS IN ACCUMULATION
-    // ALSO NEW CLOUDACCUMULATE MOVED FROM APP CONSTRUCTOR TO MAIN...
     // Init handlers:
-    //void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
-      //                const std::string& channel, const  bot_core::planar_lidar_t* msg);
+    void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
+                            const std::string& channel, const  bot_core::planar_lidar_t* msg);
+    void doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T);
 
     void rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
@@ -91,27 +90,27 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
          cl_cfg_(cl_cfg_),
          ca_cfg_(ca_cfg_),
          reg_cfg_(reg_cfg_){
-
-  // Storage
-  sweep_scans_list_ = new AlignedSweepsCollection();
+  pose_initialized_ = FALSE;
 
   // Set up frames and config:
   botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0); // 1 means keep updated, 0 would ignore updates
   botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 
-  accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
-
-  // Laser projector
-  laser_projector_ = accu_->getLaserProjector();
-  
-  //lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);  
-  // bot_frames_structure,from_frame,to_frame,utime,result
-  /*int body_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body"  , 0, body_to_lidar_);
-  int head_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head"  , 0, head_to_lidar_);
+  lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);
+  int body_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body", 0, body_to_lidar_);
+  int head_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head", 0, head_to_lidar_);
   if (body_status != 1 || head_status != 1)
-    cerr << "Compute rigid body Transformation: FAILED." << endl;*/
+    cerr << "Compute lidar current pose: FAILED." << endl;
 
-  pose_initialized_ = FALSE;
+  // Storage
+  sweep_scans_list_ = new AlignedSweepsCollection();
+
+  // Accumulator
+  accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
+  // Laser projector create during accumulation
+  laser_projector_ = accu_->getLaserProjector();
+
+  // Pose initialization
   if (!cl_cfg_.init_with_message){
     std::cout << "Initialize estimate using default.\n";
     world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -121,19 +120,19 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   else{
     if(cl_cfg_.vicon_available)
     {
-      lcm_->subscribe("VICON_BODY|VICON_FRONTPLATE",&App::rigidTransformInitHandler,this);
-      lcm_->subscribe("POSE_VICON",&App::poseInitHandler,this);
+      lcm_->subscribe("VICON_BODY|VICON_FRONTPLATE", &App::rigidTransformInitHandler, this);
+      lcm_->subscribe("POSE_VICON", &App::poseInitHandler, this);
       std::cout << "Initialization of LIDAR pose using VICON...\n";
     }
     else
     {
-      lcm_->subscribe("POSE_BODY",&App::poseInitHandler,this); 
+      lcm_->subscribe("POSE_BODY", &App::poseInitHandler, this); 
       std::cout << "Initialization of LIDAR pose...\n";
     }  
   }
 
+  // ICP chain
   registr_ = new Registration(lcm_, reg_cfg_);
-  //lidarOdom_ = new LidarOdom(lcm_);
 }
 
 int App::get_trans_with_utime(BotFrames *bot_frames,
@@ -165,6 +164,22 @@ bot_core::pose_t App::getPoseAsBotPose(Eigen::Isometry3d pose, int64_t utime){
   return pose_msg;
 }
 
+void App::plotBotFrames(BotFrames *frames, int64_t utime)
+{
+  Eigen::Isometry3d local_to_body, local_to_head, local_to_laser;
+  get_trans_with_utime( frames, "body", "local", utime, local_to_body); 
+  get_trans_with_utime( frames, "head", "local", utime, local_to_head); 
+  get_trans_with_utime( frames, (ca_cfg_.lidar_channel).c_str(), "local", utime, local_to_laser);
+
+  //To director
+  bot_lcmgl_t* lcmgl_fr1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Body Frame BOT");
+  drawFrame(lcmgl_fr1, local_to_body);
+  bot_lcmgl_t* lcmgl_fr2 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Head Frame BOT");
+  drawFrame(lcmgl_fr2, local_to_head);
+  bot_lcmgl_t* lcmgl_fr3 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Laser Frame BOT");
+  drawFrame(lcmgl_fr3, local_to_laser);
+}
+
 bot_core_planar_lidar_t* convertPlanarLidarCppToC(std::shared_ptr<bot_core::planar_lidar_t> this_msg){
 
   bot_core_planar_lidar_t * laser_msg_c = new bot_core_planar_lidar_t;
@@ -182,20 +197,44 @@ bot_core_planar_lidar_t* convertPlanarLidarCppToC(std::shared_ptr<bot_core::plan
   return laser_msg_c;
 }
 
+void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
+{
+  // ............do registration.............
+  // First ICP loop
+  registr_->getICPTransform(reading, reference);
+  PM::TransformationParameters T1 = registr_->getTransform();
+  cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
+      
+  // Second ICP loop
+  DP out1 = registr_->getDataOut();
+  string configName2;
+  configName2.append(reg_cfg_.homedir);
+  configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
+  registr_->setConfigFile(configName2);
+
+  registr_->getICPTransform(out1, reference);
+  PM::TransformationParameters T2 = registr_->getTransform();
+  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
+  output = registr_->getDataOut();
+
+  T = T2 * T1; 
+}
+
 void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::planar_lidar_t* msg){
     
   if (!pose_initialized_){
     std::cout << "Estimate not initialized, exiting planarLidarHandler.\n";
     return;
   }
+  plotBotFrames(botframes_, msg->utime);
     
   // Populate SweepScan with current LidarScan data structure
   // 1. Get lidar pose
   // bot_frames_structure,from_frame,to_frame,utime,result
-  int body_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body"  , 0, body_to_lidar_);
-  int head_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head"  , 0, head_to_lidar_);
-  if (body_status != 1 || head_status != 1)
-    cerr << "Compute lidar current pose: FAILED." << endl;
+  /*
+  get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body"  , msg->utime, body_to_lidar_);
+  get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head"  , msg->utime, head_to_lidar_);
+  */
   // 2. Compute current_world_to_head
   Eigen::Isometry3d world_to_lidar_now = world_to_body_msg_ * body_to_lidar_;
   world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
@@ -255,40 +294,32 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
       sweep_scans_list_->initializeCollection(*current_sweep);
 
       //To director
-      bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Point Cloud");
+      bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
       drawPointCloud(lcmgl_pc, dp_cloud);
     }
     else
     {
+      TimingUtils::tic();
+
       DP ref = sweep_scans_list_->getReference().getCloud();
-      // ............call registration.............
-      // First ICP loop
-      registr_->getICPTransform(dp_cloud, ref);
-      PM::TransformationParameters T1 = registr_->getTransform();
-      cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
-      
-      // Second ICP loop
-      DP out1 = registr_->getDataOut();
-      string configName2;
-      configName2.append(reg_cfg_.homedir);
-      configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
-      registr_->setConfigFile(configName2);
+      DP out;
+      PM::TransformationParameters Ttot;
 
-      registr_->getICPTransform(out1, ref);
-      PM::TransformationParameters T2 = registr_->getTransform();
-      cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
-      DP out2 = registr_->getDataOut();
+      this->doRegistration(ref, dp_cloud, out, Ttot);
 
-      PM::TransformationParameters Ttot = T2 * T1;      
-      current_sweep->populateSweepScan(lidar_scans_list_, out2, sweep_scans_list_->getNbClouds());
+      TimingUtils::toc();
+
+      current_sweep->populateSweepScan(lidar_scans_list_, out, sweep_scans_list_->getNbClouds());
       // Ttot is the full transform to move the input on the reference cloud
       // Project current sweep in head frame
       // Store current sweep 
       sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
+      TimingUtils::tic();
       //To director
       bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-      drawPointCloud(lcmgl_pc, out2);      
+      drawPointCloud(lcmgl_pc, out);  
+      TimingUtils::toc();    
     }
  
     // To file
@@ -312,30 +343,13 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
 }
 
-// TO BE UPDATED: POINT CLOUD HANDLER
-/*
-void App::lidarHandler(const lcm::ReceiveBuffer* rbuf,
-     const std::string& channel, const  bot_core::planar_lidar_t* msg){
-  if (!pose_initialized_){
-    std::cout << "Estimate not initialised, exiting lidarHandler\n";
-    return;
-  }
+void App::rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
+  initState(msg->trans, msg->quat);
+}
 
-  // 1. Update LIDAR Odometry
-  std::vector<float> ranges_copy = msg->ranges;
-  float* ranges = &ranges_copy[0];
-  lidarOdom_->doOdometry(ranges, msg->nranges, msg->rad0, msg->radstep, msg->utime);
-
-  // 2. Determine the body position using the LIDAR motion estimate:
-  Eigen::Isometry3d lidar_init_to_lidar_now = lidarOdom_->getCurrentPose();
-  Eigen::Isometry3d world_to_lidar_now = world_to_body_init_*body_to_lidar_*lidar_init_to_lidar_now;
-  world_to_body_now_ = world_to_lidar_now * body_to_lidar_.inverse();
-
-  //bot_core::pose_t pose_msg = getPoseAsBotPose( lidar_init_to_lidar_now , msg->utime);
-  //lcm_->publish("POSE_BODY_ALT", &pose_msg );
-  bot_core::pose_t pose_msg_body = getPoseAsBotPose( world_to_body_now_ , msg->utime);
-  lcm_->publish(cl_cfg_.output_channel, &pose_msg_body );
-}*/
+void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
+  initState(msg->pos, msg->orientation);
+}
 
 void App::initState(const double trans[3], const double quat[4]){
   if ( !cl_cfg_.init_with_message ){
@@ -352,15 +366,11 @@ void App::initState(const double trans[3], const double quat[4]){
                                                quat[2], quat[3]);
   world_to_body_msg_.rotate(quatE);
 
+  //To director
+  bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Body Frame");
+  drawFrame(lcmgl_fr, world_to_body_msg_);
+
   pose_initialized_ = TRUE;
-}
-
-void App::rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
-  initState(msg->trans, msg->quat);
-}
-
-void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
-  initState(msg->pos, msg->orientation);
 }
 
 int main(int argc, char **argv){
@@ -399,7 +409,11 @@ int main(int argc, char **argv){
   //App app = App(lcm, cl_cfg, ca_cfg, reg_cfg);
   App* app= new App(lcm, cl_cfg, ca_cfg, reg_cfg);
 
-  lcm->subscribe(ca_cfg.lidar_channel, &App::planarLidarHandler, app);
+  //To director
+  bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm->getUnderlyingLCM(), "Local Frame");
+  drawFrame(lcmgl_fr);
+
+  //lcm->subscribe(ca_cfg.lidar_channel, &App::planarLidarHandler, app);
 
   while(0 == lcm->handle());
 }
