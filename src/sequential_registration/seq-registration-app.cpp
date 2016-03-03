@@ -4,7 +4,11 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include <lcmtypes/bot_core.hpp>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 #include <boost/shared_ptr.hpp>
+#include <boost/assign/std/vector.hpp>
 #include <ConciseArgs>
 
 #include <bot_param/param_client.h>
@@ -42,12 +46,26 @@ class App{
     RegistrationConfig reg_cfg_;
 
     void plotBotFrames(BotFrames *frames, int64_t utime);
+
+    // thread function for doing actual work
+    void operator()();
   private:
     boost::shared_ptr<lcm::LCM> lcm_;
     const CommandLineConfig cl_cfg_;
   
     CloudAccumulate* accu_; 
     Registration* registr_;
+
+    // %%% Thread variables %%%
+    bool running_;
+    std::thread worker_thread_;
+    std::condition_variable worker_condition_;
+    std::mutex worker_mutex_;
+    //std::list<std::shared_ptr<bot_core::planar_lidar_t> > data_queue_;
+    std::list<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> data_queue_;
+    std::mutex data_mutex_;
+    std::mutex robot_state_mutex_;
+    // %%%%%%%%%%%%%%%%%%%%%%%%
 
     BotParam* botparam_;
     BotFrames* botframes_;
@@ -65,7 +83,7 @@ class App{
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
     Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch 
                                           // without drift correction
-    Eigen::Isometry3d world_to_body_now_; // running position estimate
+    //Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
 
     bool pose_initialized_;
@@ -95,6 +113,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   // Set up frames and config:
   botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0); // 1 means keep updated, 0 would ignore updates
   botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
+
+  worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
+  //worker_thread_.join();
 
   lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);
   int body_status = get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body", 0, body_to_lidar_);
@@ -220,6 +241,77 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   T = T2 * T1; 
 }
 
+void App::operator()() {
+  running_ = true;
+  while (running_) {
+    std::unique_lock<std::mutex> lock(worker_mutex_);
+    worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
+
+    // copy current workload from data queue to work queue
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> work_queue;
+    {
+      std::unique_lock<std::mutex> lock(data_mutex_);
+      while (!data_queue_.empty()) {
+        work_queue.push_back(data_queue_.front());
+        data_queue_.pop_front();
+      }
+    }
+
+    // process workload
+    for (auto cloud : work_queue) {
+      // For storing current cloud
+      DP dp_cloud;
+      fromPCLToDataPoints(dp_cloud, *cloud);
+
+      SweepScan* current_sweep = new SweepScan();
+
+      // To file and drawing
+      std::stringstream vtk_fname;
+      vtk_fname << "accum_cloud_";
+      vtk_fname << to_string(sweep_scans_list_->getNbClouds());
+        
+      if(sweep_scans_list_->isEmpty())
+      {
+        current_sweep->populateSweepScan(lidar_scans_list_, dp_cloud, sweep_scans_list_->getNbClouds());
+        sweep_scans_list_->initializeCollection(*current_sweep);
+
+        //To director
+        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
+        drawPointCloud(lcmgl_pc, dp_cloud);
+      }
+      else
+      {
+        TimingUtils::tic();
+
+        DP ref = sweep_scans_list_->getReference().getCloud();
+        DP out;
+        PM::TransformationParameters Ttot;
+
+        this->doRegistration(ref, dp_cloud, out, Ttot);
+
+        TimingUtils::toc();
+
+        current_sweep->populateSweepScan(lidar_scans_list_, out, sweep_scans_list_->getNbClouds());
+        // Ttot is the full transform to move the input on the reference cloud
+        // Project current sweep in head frame
+        // Store current sweep 
+        sweep_scans_list_->addSweep(*current_sweep, Ttot);
+
+        //To director
+        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
+        drawPointCloud(lcmgl_pc, out);  
+      }
+     
+      // To file
+      vtk_fname << ".vtk";
+      savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+        
+      lidar_scans_list_.clear();
+      current_sweep->~SweepScan(); 
+    }
+  }
+}
+
 void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::planar_lidar_t* msg){
     
   if (!pose_initialized_){
@@ -228,17 +320,27 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
   plotBotFrames(botframes_, msg->utime);
     
+  // 0. copy robot state
+  Eigen::Isometry3d world_to_body_last;
+  {
+    std::unique_lock<std::mutex> lock(robot_state_mutex_);
+    world_to_body_last = world_to_body_msg_;
+  } 
   // Populate SweepScan with current LidarScan data structure
   // 1. Get lidar pose
   // bot_frames_structure,from_frame,to_frame,utime,result
-  /*
   get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body"  , msg->utime, body_to_lidar_);
   get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head"  , msg->utime, head_to_lidar_);
-  */
+  /*
+  if (frame_check_tools_.isLocalToScanUpdated(botframes_, msg->utime)){
+    cout << "Current msg utime: " << msg->utime << endl;
+    cout << "Is local to scan chain udated? NO.%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl; 
+  }*/
   // 2. Compute current_world_to_head
-  Eigen::Isometry3d world_to_lidar_now = world_to_body_msg_ * body_to_lidar_;
+  Eigen::Isometry3d world_to_lidar_now = world_to_body_last * body_to_lidar_;
   world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
   // 3. Get scan projected to head
+  /*
   std::shared_ptr<bot_core::planar_lidar_t> converted_msg;
   converted_msg = std::shared_ptr<bot_core::planar_lidar_t>(new bot_core::planar_lidar_t(*msg));
   bot_core_planar_lidar_t* laser_msg_c = convertPlanarLidarCppToC(converted_msg);
@@ -249,7 +351,9 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     ranges.push_back(projected_laser_scan_->rawScan->ranges[i]);
   }
   LidarScan* current_scan = new LidarScan(msg->utime,msg->rad0,msg->radstep,
-                                           ranges,msg->intensities,world_to_head_now_);
+                                          ranges,msg->intensities,world_to_head_now_);*/
+  LidarScan* current_scan = new LidarScan(msg->utime,msg->rad0,msg->radstep,
+                                          msg->ranges,msg->intensities,world_to_head_now_);
   lidar_scans_list_.push_back(*current_scan);
 
   // DEBUG %%%%%%%% they should not be the same... where I am wrong??
@@ -259,87 +363,44 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     cout << "i: " << projected_laser_scan_->rawScan->ranges[i] << " j: " << msg->ranges[i] << endl;
   }*/
   // %%%%%%%%%%%%
-
+      
   delete current_scan;
 
   ////////////////////////////////////%%%%%%%%%%%%%%%%%%
 
   // Accumulate current scan in point cloud (projection to default reference "local")
-  if ( accu_->getCounter() % 200 == 0)
+  if ( accu_->getCounter() % 240 == 0)
     cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
-  accu_->processLidar(converted_msg);
- 
-  if ( accu_->getFinished() ){ //finished accumulating?
+  //accu_->processLidar(converted_msg);
+  accu_->processLidar(msg);
 
+  if ( accu_->getFinished() ){ //finished accumulating?
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
     cloud = accu_->getCloud();
     cloud->width = cloud->points.size();
     cloud->height = 1;
     cout << "Processing cloud with " << cloud->points.size() << " points." << endl;
 
-    // For storing current cloud
-    DP dp_cloud;
-    fromPCLToDataPoints(dp_cloud, *cloud);
-
-    SweepScan* current_sweep = new SweepScan();
-
-    // To file and drawing
-    std::stringstream vtk_fname;
-    vtk_fname << "accum_cloud_";
-    vtk_fname << to_string(sweep_scans_list_->getNbClouds());
-    
-    if(sweep_scans_list_->isEmpty())
+    // push this cloud onto the work queue
+    // TODO: can increase max size if necessary
+    const int max_queue_size = 100;
     {
-      current_sweep->populateSweepScan(lidar_scans_list_, dp_cloud, sweep_scans_list_->getNbClouds());
-      sweep_scans_list_->initializeCollection(*current_sweep);
-
-      //To director
-      bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
-      drawPointCloud(lcmgl_pc, dp_cloud);
+      std::unique_lock<std::mutex> lock(data_mutex_);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr data (new pcl::PointCloud<pcl::PointXYZRGB>);
+      data = cloud;
+      data_queue_.push_back(data);
+      if (data_queue_.size() > max_queue_size) {
+        std::cout << "WARNING: dropping " << 
+          (data_queue_.size()-max_queue_size) << " scans" << std::endl;
+      }
+      while (data_queue_.size() > max_queue_size) {
+        data_queue_.pop_front();
+      }
     }
-    else
-    {
-      TimingUtils::tic();
 
-      DP ref = sweep_scans_list_->getReference().getCloud();
-      DP out;
-      PM::TransformationParameters Ttot;
-
-      this->doRegistration(ref, dp_cloud, out, Ttot);
-
-      TimingUtils::toc();
-
-      current_sweep->populateSweepScan(lidar_scans_list_, out, sweep_scans_list_->getNbClouds());
-      // Ttot is the full transform to move the input on the reference cloud
-      // Project current sweep in head frame
-      // Store current sweep 
-      sweep_scans_list_->addSweep(*current_sweep, Ttot);
-
-      TimingUtils::tic();
-      //To director
-      bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-      drawPointCloud(lcmgl_pc, out);  
-      TimingUtils::toc();    
-    }
- 
-    // To file
-    vtk_fname << ".vtk";
-    savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
-    
-    lidar_scans_list_.clear();
-    current_sweep->~SweepScan(); 
-
-
-
-    accu_->clearCloud();/*
-    while (!frame_check_tools_.isLocalToScanUpdated(botframes_, msg->utime)){
-      cout << "Current msg utime: " << msg->utime << endl;
-      cout << "Is local to scan chain udated? NO.%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl; 
-    }*/
-    //delete accu_;
-    //accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
-
-    //cin.get();
+    std::cout << "# of queued clouds: " << data_queue_.size() << std::endl;
+    worker_condition_.notify_one();
+    accu_->clearCloud();
   }
 }
 
@@ -359,18 +420,21 @@ void App::initState(const double trans[3], const double quat[4]){
     std::cout << "Initialize state estimate using rigid transform or pose.\n";
   }
 
-  // Update world to body transform (from kinematics msg) 
-  world_to_body_msg_.setIdentity();
-  world_to_body_msg_.translation()  << trans[0], trans[1] , trans[2];
-  Eigen::Quaterniond quatE = Eigen::Quaterniond(quat[0], quat[1], 
-                                               quat[2], quat[3]);
-  world_to_body_msg_.rotate(quatE);
+  std::unique_lock<std::mutex> lock(robot_state_mutex_);
+  {
+    // Update world to body transform (from kinematics msg) 
+    world_to_body_msg_.setIdentity();
+    world_to_body_msg_.translation()  << trans[0], trans[1] , trans[2];
+    Eigen::Quaterniond quatE = Eigen::Quaterniond(quat[0], quat[1], 
+                                                 quat[2], quat[3]);
+    world_to_body_msg_.rotate(quatE);
 
-  //To director
-  bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Body Frame");
-  drawFrame(lcmgl_fr, world_to_body_msg_);
+    //To director
+    bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Body Frame");
+    drawFrame(lcmgl_fr, world_to_body_msg_);
 
-  pose_initialized_ = TRUE;
+    pose_initialized_ = TRUE;
+  }
 }
 
 int main(int argc, char **argv){
@@ -380,7 +444,7 @@ int main(int argc, char **argv){
   cl_cfg.output_channel = "POSE_BODY"; // CREATE NEW CHANNEL... ("POSE_BODY_ICP")
 
   CloudAccumulateConfig ca_cfg;
-  ca_cfg.batch_size = 240; // about 1 sweep
+  ca_cfg.batch_size = 300; // 240 is about 1 sweep
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
   ca_cfg.lidar_channel ="SCAN";
