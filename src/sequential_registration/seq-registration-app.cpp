@@ -111,8 +111,12 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   pose_initialized_ = FALSE;
 
   // Set up frames and config:
-  botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0); // 1 means keep updated, 0 would ignore updates
-  botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
+  //botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0); 
+  //botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
+  do {
+    botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0); // 1 means keep updated, 0 would ignore updates
+  } while (botparam_ == NULL);
+  botframes_= bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 
   worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
   //worker_thread_.join();
@@ -245,24 +249,35 @@ void App::operator()() {
   running_ = true;
   while (running_) {
     std::unique_lock<std::mutex> lock(worker_mutex_);
-    worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
+    worker_condition_.wait_for(lock, std::chrono::milliseconds(2000));
 
     // copy current workload from data queue to work queue
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> work_queue;
+    std::list<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> work_queue;
     {
       std::unique_lock<std::mutex> lock(data_mutex_);
+
+      if (!data_queue_.empty())
+      {
+        std::stringstream fname1;
+        fname1 << "cloud_";
+        fname1 << TimingUtils::currentDateTime();
+        bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), fname1.str().c_str());
+        drawPointCloud(lcmgl_pc1, *data_queue_.front());
+      }
       while (!data_queue_.empty()) {
         work_queue.push_back(data_queue_.front());
         data_queue_.pop_front();
       }
     }
 
+
+
     // process workload
-    for (auto cloud : work_queue) {
-      // For storing current cloud
+    for (auto cloud : work_queue) {      
       DP dp_cloud;
       fromPCLToDataPoints(dp_cloud, *cloud);
 
+      // For storing current cloud
       SweepScan* current_sweep = new SweepScan();
 
       // To file and drawing
@@ -276,8 +291,8 @@ void App::operator()() {
         sweep_scans_list_->initializeCollection(*current_sweep);
 
         //To director
-        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
-        drawPointCloud(lcmgl_pc, dp_cloud);
+        //bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
+        //drawPointCloud(lcmgl_pc, dp_cloud);
       }
       else
       {
@@ -298,8 +313,8 @@ void App::operator()() {
         sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
         //To director
-        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-        drawPointCloud(lcmgl_pc, out);  
+        //bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
+        //drawPointCloud(lcmgl_pc, out);  
       }
      
       // To file
@@ -367,12 +382,14 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   delete current_scan;
 
   ////////////////////////////////////%%%%%%%%%%%%%%%%%%
-
+{
+  std::unique_lock<std::mutex> lock(data_mutex_);
   // Accumulate current scan in point cloud (projection to default reference "local")
   if ( accu_->getCounter() % 240 == 0)
     cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
   //accu_->processLidar(converted_msg);
   accu_->processLidar(msg);
+}
 
   if ( accu_->getFinished() ){ //finished accumulating?
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -385,10 +402,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     // TODO: can increase max size if necessary
     const int max_queue_size = 100;
     {
-      std::unique_lock<std::mutex> lock(data_mutex_);
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr data (new pcl::PointCloud<pcl::PointXYZRGB>);
-      data = cloud;
-      data_queue_.push_back(data);
+      //std::unique_lock<std::mutex> lock(data_mutex_);
+      data_queue_.push_back(cloud);
       if (data_queue_.size() > max_queue_size) {
         std::cout << "WARNING: dropping " << 
           (data_queue_.size()-max_queue_size) << " scans" << std::endl;
@@ -396,11 +411,16 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
       while (data_queue_.size() > max_queue_size) {
         data_queue_.pop_front();
       }
+      accu_->clearCloud();
+      
+      std::stringstream fname1;
+      fname1 << "cloudA_";
+      fname1 << TimingUtils::currentDateTime();
+      bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), fname1.str().c_str());
+      drawPointCloud(lcmgl_pc1, *data_queue_.front());
+      std::cout << "# of queued clouds: " << data_queue_.size() << std::endl;
     }
-
-    std::cout << "# of queued clouds: " << data_queue_.size() << std::endl;
     worker_condition_.notify_one();
-    accu_->clearCloud();
   }
 }
 
@@ -421,7 +441,7 @@ void App::initState(const double trans[3], const double quat[4]){
   }
 
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
-  {
+  //{
     // Update world to body transform (from kinematics msg) 
     world_to_body_msg_.setIdentity();
     world_to_body_msg_.translation()  << trans[0], trans[1] , trans[2];
@@ -434,7 +454,7 @@ void App::initState(const double trans[3], const double quat[4]){
     drawFrame(lcmgl_fr, world_to_body_msg_);
 
     pose_initialized_ = TRUE;
-  }
+  //}
 }
 
 int main(int argc, char **argv){

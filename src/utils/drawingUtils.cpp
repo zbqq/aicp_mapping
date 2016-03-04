@@ -71,6 +71,24 @@ void HSVtoRGB( float &r, float &g, float &b, float h, float s, float v )
   }
 }
 
+void drawPointCloud(bot_lcmgl_t *lcmgl, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud)
+{
+  vector<Eigen::Vector3f> point_cloud;
+  int cloud_size = pcl_cloud.points.size();
+  float n_supp_points = 75000.0; // max number of floats supported by lcm channel
+  int step = round(cloud_size/n_supp_points);
+  point_cloud.resize(n_supp_points);
+  int j = 0;
+  for (int point = 0; point < cloud_size; point=point+step)
+  {
+    if (j < point_cloud.size())
+      point_cloud.at(j) << pcl_cloud.points[point].x, pcl_cloud.points[point].y, pcl_cloud.points[point].z; 
+    j++;
+  }
+    
+  drawPointCloud(lcmgl, point_cloud);
+}
+
 void drawPointCloud(bot_lcmgl_t *lcmgl, DP &dp_cloud)
 {
   VectorXf x_values = (dp_cloud.getFeatureCopyByName("x"));
@@ -94,7 +112,7 @@ void drawPointCloud(bot_lcmgl_t *lcmgl, DP &dp_cloud)
 
 void drawPointCloud(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
 {
-  bot_lcmgl_point_size(lcmgl, 2);
+  bot_lcmgl_point_size(lcmgl, 1);
   srand (time(NULL));
   float r = (rand() % 101)/100.0;
   float g = (rand() % 101)/100.0;

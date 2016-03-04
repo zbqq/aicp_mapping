@@ -9,6 +9,7 @@ class TimingUtils{
 
     static void tic();
     static void toc();
+    static std::string currentDateTime();
 
   private:
     static std::stack<clock_t> tictoc_stack;    
