@@ -41,7 +41,7 @@ class CloudAccumulate{
     Laser_projector* getLaserProjector(){ return laser_projector_; }
     
     void clearCloud(){ 
-      combined_cloud_->points.clear(); 
+      combined_cloud_.reset(new pcl::PointCloud<pcl::PointXYZRGB> ());
       counter_ = 0;
       finished_ = false;
       std::cout << "Empty previous map\n";

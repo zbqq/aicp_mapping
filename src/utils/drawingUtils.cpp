@@ -75,7 +75,7 @@ void drawPointCloud(bot_lcmgl_t *lcmgl, pcl::PointCloud<pcl::PointXYZRGB>& pcl_c
 {
   vector<Eigen::Vector3f> point_cloud;
   int cloud_size = pcl_cloud.points.size();
-  float n_supp_points = 75000.0; // max number of floats supported by lcm channel
+  float n_supp_points = 70000.0; // max number of floats supported by lcm channel
   int step = round(cloud_size/n_supp_points);
   point_cloud.resize(n_supp_points);
   int j = 0;
@@ -96,7 +96,7 @@ void drawPointCloud(bot_lcmgl_t *lcmgl, DP &dp_cloud)
   VectorXf z_values = (dp_cloud.getFeatureCopyByName("z"));
   vector<Eigen::Vector3f> point_cloud;
   int cloud_size = x_values.size();
-  float n_supp_points = 75000.0; // max number of floats supported by lcm channel
+  float n_supp_points = 70000.0; // max number of floats supported by lcm channel
   int step = round(cloud_size/n_supp_points);
   point_cloud.resize(n_supp_points);
   int j = 0;

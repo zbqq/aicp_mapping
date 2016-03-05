@@ -34,8 +34,7 @@ void CloudAccumulate::init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumul
   counter_ =0;  
   verbose_=1; // 1 important, 2 useful 3, lots
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  combined_cloud_ = cloud_ptr;    
+  combined_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());    
   
   finished_ = false;
   
@@ -109,7 +108,6 @@ void transformPointCloud(pronto::PointCloud &cloud_in, pronto::PointCloud &cloud
     cloud_out.points[j].b = cloud_in.points[j].b;
   }
 }
-
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr  CloudAccumulate::convertPlanarScanToCloud(std::shared_ptr<bot_core::planar_lidar_t> this_msg){
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_local (new pcl::PointCloud<pcl::PointXYZRGB> ());

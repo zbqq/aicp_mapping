@@ -226,6 +226,10 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 {
   // ............do registration.............
   // First ICP loop
+  string configName1;
+  configName1.append(reg_cfg_.homedir);
+  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  registr_->setConfigFile(configName1);
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
@@ -249,28 +253,17 @@ void App::operator()() {
   running_ = true;
   while (running_) {
     std::unique_lock<std::mutex> lock(worker_mutex_);
-    worker_condition_.wait_for(lock, std::chrono::milliseconds(2000));
+    worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
     // copy current workload from data queue to work queue
     std::list<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> work_queue;
     {
       std::unique_lock<std::mutex> lock(data_mutex_);
-
-      if (!data_queue_.empty())
-      {
-        std::stringstream fname1;
-        fname1 << "cloud_";
-        fname1 << TimingUtils::currentDateTime();
-        bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), fname1.str().c_str());
-        drawPointCloud(lcmgl_pc1, *data_queue_.front());
-      }
       while (!data_queue_.empty()) {
         work_queue.push_back(data_queue_.front());
         data_queue_.pop_front();
       }
     }
-
-
 
     // process workload
     for (auto cloud : work_queue) {      
@@ -290,9 +283,11 @@ void App::operator()() {
         current_sweep->populateSweepScan(lidar_scans_list_, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
 
-        //To director
-        //bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
-        //drawPointCloud(lcmgl_pc, dp_cloud);
+        // To director (NOTE: Visualization using lcmgl shows (sometimes) imperfections
+        // in clouds (random lines). The clouds are actually correct, but lcm cannot manage 
+        // so many points and introduces mistakes in visualization.
+        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
+        drawPointCloud(lcmgl_pc, dp_cloud);
       }
       else
       {
@@ -312,9 +307,9 @@ void App::operator()() {
         // Store current sweep 
         sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
-        //To director
-        //bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-        //drawPointCloud(lcmgl_pc, out);  
+        // To director
+        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
+        drawPointCloud(lcmgl_pc, out);  
       }
      
       // To file
@@ -349,13 +344,12 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   /*
   if (frame_check_tools_.isLocalToScanUpdated(botframes_, msg->utime)){
     cout << "Current msg utime: " << msg->utime << endl;
-    cout << "Is local to scan chain udated? NO.%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl; 
+    cout << "Is local to scan chain updated? NO.%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl;
   }*/
   // 2. Compute current_world_to_head
   Eigen::Isometry3d world_to_lidar_now = world_to_body_last * body_to_lidar_;
   world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
   // 3. Get scan projected to head
-  /*
   std::shared_ptr<bot_core::planar_lidar_t> converted_msg;
   converted_msg = std::shared_ptr<bot_core::planar_lidar_t>(new bot_core::planar_lidar_t(*msg));
   bot_core_planar_lidar_t* laser_msg_c = convertPlanarLidarCppToC(converted_msg);
@@ -366,9 +360,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     ranges.push_back(projected_laser_scan_->rawScan->ranges[i]);
   }
   LidarScan* current_scan = new LidarScan(msg->utime,msg->rad0,msg->radstep,
-                                          ranges,msg->intensities,world_to_head_now_);*/
-  LidarScan* current_scan = new LidarScan(msg->utime,msg->rad0,msg->radstep,
-                                          msg->ranges,msg->intensities,world_to_head_now_);
+                                          ranges,msg->intensities,world_to_head_now_);
   lidar_scans_list_.push_back(*current_scan);
 
   // DEBUG %%%%%%%% they should not be the same... where I am wrong??
@@ -382,14 +374,11 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   delete current_scan;
 
   ////////////////////////////////////%%%%%%%%%%%%%%%%%%
-{
-  std::unique_lock<std::mutex> lock(data_mutex_);
   // Accumulate current scan in point cloud (projection to default reference "local")
   if ( accu_->getCounter() % 240 == 0)
     cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
   //accu_->processLidar(converted_msg);
   accu_->processLidar(msg);
-}
 
   if ( accu_->getFinished() ){ //finished accumulating?
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -398,12 +387,12 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     cloud->height = 1;
     cout << "Processing cloud with " << cloud->points.size() << " points." << endl;
 
-    // push this cloud onto the work queue
-    // TODO: can increase max size if necessary
+    // Push this cloud onto the work queue (mutex safe)
     const int max_queue_size = 100;
     {
-      //std::unique_lock<std::mutex> lock(data_mutex_);
-      data_queue_.push_back(cloud);
+      std::unique_lock<std::mutex> lock(data_mutex_);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr data (new pcl::PointCloud<pcl::PointXYZRGB>(*cloud));
+      data_queue_.push_back(data);
       if (data_queue_.size() > max_queue_size) {
         std::cout << "WARNING: dropping " << 
           (data_queue_.size()-max_queue_size) << " scans" << std::endl;
@@ -412,14 +401,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
         data_queue_.pop_front();
       }
       accu_->clearCloud();
-      
-      std::stringstream fname1;
-      fname1 << "cloudA_";
-      fname1 << TimingUtils::currentDateTime();
-      bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), fname1.str().c_str());
-      drawPointCloud(lcmgl_pc1, *data_queue_.front());
-      std::cout << "# of queued clouds: " << data_queue_.size() << std::endl;
     }
+    // Send notification to operator which is waiting for this condition variable 
     worker_condition_.notify_one();
   }
 }
@@ -441,7 +424,7 @@ void App::initState(const double trans[3], const double quat[4]){
   }
 
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
-  //{
+  {
     // Update world to body transform (from kinematics msg) 
     world_to_body_msg_.setIdentity();
     world_to_body_msg_.translation()  << trans[0], trans[1] , trans[2];
@@ -454,7 +437,7 @@ void App::initState(const double trans[3], const double quat[4]){
     drawFrame(lcmgl_fr, world_to_body_msg_);
 
     pose_initialized_ = TRUE;
-  //}
+  }
 }
 
 int main(int argc, char **argv){
@@ -464,16 +447,13 @@ int main(int argc, char **argv){
   cl_cfg.output_channel = "POSE_BODY"; // CREATE NEW CHANNEL... ("POSE_BODY_ICP")
 
   CloudAccumulateConfig ca_cfg;
-  ca_cfg.batch_size = 300; // 240 is about 1 sweep
+  ca_cfg.batch_size = 250; // 240 is about 1 sweep
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
   ca_cfg.lidar_channel ="SCAN";
 
   RegistrationConfig reg_cfg;
-  reg_cfg.configFile3D_.clear();
-  // Load first config file (trimmed distance outlier filter)
-  reg_cfg.configFile3D_.append(reg_cfg.homedir);
-  reg_cfg.configFile3D_.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  // Load initial transform
   reg_cfg.initTrans_.clear();
   reg_cfg.initTrans_.append("0,0,0"); 
 

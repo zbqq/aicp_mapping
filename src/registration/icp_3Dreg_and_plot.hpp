@@ -60,6 +60,7 @@ class Registration{
     
     PM::TransformationParameters getTransform(){ return out_transform_; }
     DP getDataOut(){ return out_cloud_; }
+    string getConfigFileName(){ return reg_cfg_.configFile3D_; }
     
     void publishCloud(pronto_vis* vis, int cloud_id, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
     void getICPTransform(DP &cloud_in, DP &cloud_ref);
