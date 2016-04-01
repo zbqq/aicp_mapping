@@ -8,7 +8,8 @@ class LidarScan
 {
   public:
     LidarScan(long long int t_stamp,float init_angle,float step_angle,
-                     std::vector< float > r,std::vector< float > i, Eigen::Isometry3d head_pose);
+                     std::vector< float > r,std::vector< float > i,
+                     Eigen::Isometry3d head_pose, Eigen::Isometry3d lidar_pose);
     ~LidarScan();
 
     long long int getUtime(){ return utime; };
@@ -27,4 +28,5 @@ class LidarScan
     std::vector< float > intensities;
 
     Eigen::Isometry3d world_to_head;  // current head pose (w <-- h)
+    Eigen::Isometry3d head_to_lidar;  // current lidar pose (h <-- l)
 };

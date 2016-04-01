@@ -39,12 +39,9 @@ void CloudAccumulate::init(boost::shared_ptr<lcm::LCM> &lcm_, const CloudAccumul
   finished_ = false;
   
   const char * laser_name;
-  if(ca_cfg_.lidar_channel == "FIXED_SCAN")
-    laser_name = ca_cfg_.lidar_channel.c_str();
-  else
-    laser_name = "laser";
+  laser_name = ca_cfg_.lidar_channel.c_str();
 
-  laser_projector_ = laser_projector_new(botparam_, botframes_, laser_name, 1); //TODO: "laser" name should be a param
+  laser_projector_ = laser_projector_new(botparam_, botframes_, laser_name, 1);
 }
 
 
@@ -122,6 +119,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr  CloudAccumulate::convertPlanarScanToClou
     std::cout << "projection failed\n";
     return scan_local;
   }
+  // %%%%%%%%%%%%
 
   // 2. Convert set of points into a point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_body (new pcl::PointCloud<pcl::PointXYZRGB> ());
