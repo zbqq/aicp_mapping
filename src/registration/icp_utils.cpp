@@ -46,7 +46,7 @@ float hausdorffDistance(DP &ref, DP &out, const char *filename)
     }
   }
   //savePointCloudVTP("readHausdMatched.vtp", out, values1);
-  savePointCloudVTK(filename, out, values1);
+  //savePointCloudVTK(filename, out, values1);
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -77,6 +77,62 @@ float hausdorffDistance(DP &ref, DP &out, const char *filename)
   //cout << "Haussdorff quantile distance (" << quantile << "): " << std::sqrt(haussdorffQuantileDist) <<  " m" << endl;  
 
   return std::sqrt(haussdorffDist);
+}
+
+PM::Matrix distancesKNN(DP &A, DP &B)
+{
+  const char *filename = "readDistances.vtk";
+  return distancesKNN(A, B, filename);
+}
+
+PM::Matrix distancesKNN(DP &A, DP &B, const char *filename)
+{
+  // Compute distance nearest neighbors between 2 whole clouds. Save to file (.vtp and .vtk extensions) entire point clouds.
+  // A custom field (distance between matches) is associated to each cloud.
+  //
+  // INPUTS:
+  // A: point cloud used as reference
+  // B: stored cloud with distance of each of its points from NN in cloud A
+
+  PM::Matches matches;
+
+  Parametrizable::Parameters params;
+  params["knn"] =  toParam(1); // for Hausdorff distance, we only need the first closest point
+  params["epsilon"] =  toParam(0);
+
+  PM::Matcher* matcher = PM::get().MatcherRegistrar.create("KDTreeMatcher", params);
+
+  // from reading to reference
+  matcher->init(A);
+  matches = matcher->findClosests(B);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Store to VTK output cloud with distances from reference.
+  PM::Matrix values(matches.dists.rows(), matches.dists.cols()); // (1 X nbPoints)
+  for (int i = 0; i < matches.dists.cols(); i++)
+  {
+    if (matches.dists(0, i) != numeric_limits<float>::infinity())
+    {
+      values(0, i) = sqrt(matches.dists(0, i));
+    }
+  }
+  //savePointCloudVTP("readDistances.vtp", out, values);
+  //savePointCloudVTK(filename, out, values);
+
+  int nbValidMatches = 0;
+  float dist = 0;
+  for (int i = 0; i < values.cols(); i++ )
+  {
+    if(values(0, i) <= 0.20) // distances bigger than maxAcceptedDist are not valid
+    {
+      dist = dist + values(0, i);
+      nbValidMatches ++;
+    }
+  }
+  const float meanDist = dist/nbValidMatches;
+  cout << "Mean distance B from KNN in A (maxAcceptedDist = 0.20m): " << meanDist << " m" << endl;
+
+  return values;
 }
 
 float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp)
@@ -141,6 +197,7 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   //savePointCloudVTP("readingMatched.vtp", matchedPointsRead);
 
   savePointCloudVTK(filename, matchedPointsRef, dist);
+  savePointCloudVTK("readingMatched.vtk", matchedPointsRead, dist);
 
   /*
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

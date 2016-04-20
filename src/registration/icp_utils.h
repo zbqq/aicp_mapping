@@ -27,6 +27,9 @@ typedef PM::Parameters Parameters;
 float hausdorffDistance(DP &ref, DP &out);
 float hausdorffDistance(DP &ref, DP &out, const char *filename);
 
+PM::Matrix distancesKNN(DP &A, DP &B);
+PM::Matrix distancesKNN(DP &A, DP &B, const char *filename);
+
 float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp);
 float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filename);
 
