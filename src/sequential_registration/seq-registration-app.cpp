@@ -224,7 +224,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
-      
+  /*
   // Second ICP loop
   DP out1 = registr_->getDataOut();
   string configName2;
@@ -234,10 +234,11 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 
   registr_->getICPTransform(out1, reference);
   PM::TransformationParameters T2 = registr_->getTransform();
-  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
+  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;*/
   output = registr_->getDataOut();
 
-  T = T2 * T1; 
+  //T = T2 * T1;
+  T = registr_->getTransform();
 }
 
 void App::operator()() {
@@ -273,6 +274,10 @@ void App::operator()() {
       std::stringstream vtk_fname;
       vtk_fname << "accum_cloud_";
       vtk_fname << to_string(sweep_scans_list_->getNbClouds());
+
+      std::stringstream vtk_matches;
+      vtk_matches << "ref_matched_";
+      vtk_matches << to_string(sweep_scans_list_->getNbClouds());
         
       if(sweep_scans_list_->isEmpty())
       {
@@ -306,6 +311,18 @@ void App::operator()() {
         // To director
         bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
         drawPointCloud(lcmgl_pc, out);  
+
+        // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+        vtk_matches << ".vtk";
+        PM::ICP icp = this->registr_->getIcp();
+        float meanDist = pairedPointsMeanDistance(ref, out, icp, vtk_matches.str().c_str());
+        //cout << "Paired points mean distance: " << meanDist << " m" << endl;
+
+        // Distance dp_cloud points from KNN in ref
+        PM::Matrix distsRead = distancesKNN(ref, dp_cloud);
+        // Distance out points from KNN in ref
+        PM::Matrix distsOut = distancesKNN(ref, out);
+        //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       }
      
       // To file
@@ -432,8 +449,8 @@ void App::initState(const double trans[3], const double quat[4]){
     world_to_body_msg_.rotate(quatE);
 
     // To director
-    //bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "Body Frame");
-    //drawFrame(lcmgl_fr, world_to_body_msg_);
+    bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
+    drawFrame(lcmgl_fr, world_to_body_msg_);
 
     pose_initialized_ = TRUE;
   }
