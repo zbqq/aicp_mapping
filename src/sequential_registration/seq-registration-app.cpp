@@ -319,9 +319,12 @@ void App::operator()() {
         //cout << "Paired points mean distance: " << meanDist << " m" << endl;
 
         // Distance dp_cloud points from KNN in ref
+        int line_number = sweep_scans_list_->getNbClouds() - 1;
         PM::Matrix distsRead = distancesKNN(ref, dp_cloud);
+        writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
         // Distance out points from KNN in ref
         PM::Matrix distsOut = distancesKNN(ref, out);
+        writeLineToFile(distsOut, "distsAfterRegistration.txt", line_number);
         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       }
      

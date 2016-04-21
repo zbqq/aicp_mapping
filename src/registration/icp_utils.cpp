@@ -399,12 +399,32 @@ void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int
 
   if (file.is_open())
   {
-    //file << "x y theta\n";
+    //file << "# x y theta\n";
     for (int i = 0; i < v.size(); i++)
     {
       file << v[i] << " " << transformations(0,i) << " " << transformations(1,i) 
       << " " << transformations(2,i) << endl;
     }
+    file.close();
+  }
+  else cout << "Unable to open file";
+  cout << "Written file: " << out_file << endl;
+}
+
+void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number)
+{
+  // given values (row vector) store it as a line in a file with line number as first value
+  ofstream file (out_file, std::ios_base::app | std::ios_base::out);
+
+  if (file.is_open())
+  {
+    //file << "# 0 1 ... \n";
+    file << line_number << " ";
+    for (int i = 0; i < values.cols(); i++)
+    {
+      file << values(0,i) << " ";
+    }
+    file << endl;
     file.close();
   }
   else cout << "Unable to open file";
