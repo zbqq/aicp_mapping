@@ -5,6 +5,7 @@
 
 #include <lcmtypes/bot_core.hpp>
 #include <lcmtypes/drc/behavior_t.hpp>
+#include <lcmtypes/drc/controller_status_t.hpp>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -88,7 +89,9 @@ class App{
     bool pose_initialized_;
 
     // Robot behavior
-    int robot_behavior_;
+    bool accumulate_;
+    int robot_behavior_now_;
+    int robot_behavior_previous_;
 
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
@@ -99,7 +102,10 @@ class App{
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
     void initState( const double trans[3], const double quat[4]);
 
-    void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
+    // Valkyrie
+    // void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
+    // Atlas
+    void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
 
     bot_core::pose_t getPoseAsBotPose(Eigen::Isometry3d pose, int64_t utime);
     int get_trans_with_utime(BotFrames *bot_frames,
@@ -113,7 +119,10 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
          ca_cfg_(ca_cfg_),
          reg_cfg_(reg_cfg_){
   pose_initialized_ = FALSE;
-  robot_behavior_ = -1;
+
+  accumulate_ = TRUE;
+  robot_behavior_now_ = -1;
+  robot_behavior_previous_ = -1;
 
   // Set up frames and config:
   do {
@@ -124,7 +133,12 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
 
   lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);
+  // for Valkyrie Unit D
   lcm_->subscribe("ROBOT_BEHAVIOR", &App::behaviorCallback, this);
+  // for Valkyrie January 2016
+  // lcm_->subscribe("ATLAS_BEHAVIOR", &App::behaviorCallback, this);
+  // for Atlas
+  lcm_->subscribe("CONTROLLER_STATUS", &App::behaviorCallback, this);
 
   // Storage
   sweep_scans_list_ = new AlignedSweepsCollection();
@@ -224,9 +238,20 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
-  /*
-  // Second ICP loop
+
+  // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+  // Distance dp_cloud points from KNN in ref
+  int line_number = sweep_scans_list_->getNbClouds();
+  PM::Matrix distsRead = distancesKNN(reference, reading);
+  writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
+  // Distance out_trimmed_filter points from KNN in ref
   DP out1 = registr_->getDataOut();
+  PM::Matrix distsOut1 = distancesKNN(reference, out1);
+  writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  // Second ICP loop
+  // DP out1 = registr_->getDataOut();
   string configName2;
   configName2.append(reg_cfg_.homedir);
   configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
@@ -234,11 +259,16 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 
   registr_->getICPTransform(out1, reference);
   PM::TransformationParameters T2 = registr_->getTransform();
-  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;*/
+  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
   output = registr_->getDataOut();
 
-  //T = T2 * T1;
-  T = registr_->getTransform();
+  // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+  // Distance out_max_filter points from KNN in ref
+  PM::Matrix distsOut2 = distancesKNN(reference, output);
+  writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  T = T2 * T1;
 }
 
 void App::operator()() {
@@ -317,14 +347,6 @@ void App::operator()() {
         PM::ICP icp = this->registr_->getIcp();
         float meanDist = pairedPointsMeanDistance(ref, out, icp, vtk_matches.str().c_str());
         //cout << "Paired points mean distance: " << meanDist << " m" << endl;
-
-        // Distance dp_cloud points from KNN in ref
-        int line_number = sweep_scans_list_->getNbClouds() - 1;
-        PM::Matrix distsRead = distancesKNN(ref, dp_cloud);
-        writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
-        // Distance out points from KNN in ref
-        PM::Matrix distsOut = distancesKNN(ref, out);
-        writeLineToFile(distsOut, "distsAfterRegistration.txt", line_number);
         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       }
      
@@ -367,12 +389,24 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   // Accumulate current scan in point cloud (projection to default reference "local")
   // TO_DO: projection to custom reference, in this case "head"
   // only if robot is not walking or stepping
+  int robot_behavior_previous;
   int robot_behavior_now;
   {
     std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
-    robot_behavior_now = robot_behavior_;
+    robot_behavior_previous = robot_behavior_previous_;
+    robot_behavior_now = robot_behavior_now_;
   }
-  if (robot_behavior_now != 4 && robot_behavior_now != 5) // no walking, no stepping
+
+  // for Atlas
+  if (robot_behavior_now != 2 && robot_behavior_previous == 2)
+  // for Valkyrie
+  //if (robot_behavior_now != 4 && robot_behavior_now != 5 && robot_behavior_previous == 4 && robot_behavior_previous == 5)    
+    accumulate_ = TRUE;
+
+  // for Atlas
+  if (robot_behavior_now != 2 && accumulate_)
+  // for Valkyrie
+  // if (robot_behavior_now != 4 && robot_behavior_now != 5 && accumulate_) // only when transition from walking/stepping to standing happens 
   {
     if ( accu_->getCounter() % 240 == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
@@ -389,6 +423,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   delete current_scan;
 
   if ( accu_->getFinished() ){ //finished accumulating?
+    accumulate_ = FALSE;
+
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
     cloud = accu_->getCloud();
     cloud->width = cloud->points.size();
@@ -418,11 +454,22 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
 }
 
-void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg)
+// Valkyrie
+/*void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg)
 {
   std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
   {
-    robot_behavior_ = msg->behavior;
+    robot_behavior_previous_ = robot_behavior_now_;
+    robot_behavior_now_ = msg->behavior;
+  }
+}*/
+// Atlas
+void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg)
+{
+  std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
+  {
+    robot_behavior_previous_ = robot_behavior_now_;
+    robot_behavior_now_ = msg->state;
   }
 }
 
