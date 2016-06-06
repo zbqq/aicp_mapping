@@ -42,7 +42,7 @@ class SweepScan
     std::vector<LidarScan> planar_scans;
     DP dp_cloud; // Point cloud representation (type from pointmatcher lib). 
                  // Descriptors: colors, normals
-                 // Reference frame: head 
+                 // Reference frame: local 
 
     Eigen::Isometry3d relative_motion; // first_to_last_scan used to accumulate cloud
                                        // without drift correction

@@ -1,5 +1,9 @@
 // sequential-registration (while playing log file)
 
+// Input: POSE_BODY, Output POSE_BODY_CORRECTED
+// Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
+// --> POSE_BODY = POSE_BODY * T_DICP.inverse() 
+
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
@@ -31,9 +35,16 @@ using namespace std;
 
 struct CommandLineConfig
 {
+  std::string robot_name;
   bool init_with_message; // initialize off of a pose or vicon
-  bool vicon_available;
   std::string output_channel;
+};
+
+struct IsometryTime3d{
+  IsometryTime3d(int64_t utime, const Eigen::Isometry3d & pose) : utime(utime), pose(pose) {}
+    int64_t utime;
+    Eigen::Isometry3d pose;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 class App{
@@ -81,7 +92,7 @@ class App{
     // Transformation matrices
     Eigen::Isometry3d body_to_lidar_; // Variable tf from the lidar to the robot's base link
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
-    Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch 
+    IsometryTime3d world_to_body_msg_; // Captures the position of the body frame in world from launch 
                                           // without drift correction
     //Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
@@ -100,24 +111,22 @@ class App{
 
     void rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
-    void initState( const double trans[3], const double quat[4]);
+    void initState( const double trans[3], const double quat[4], long long int t);
 
     // Valkyrie
-    // void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
+    void behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
     // Atlas
-    void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
+    void behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
 
-    bot_core::pose_t getPoseAsBotPose(Eigen::Isometry3d pose, int64_t utime);
-    int get_trans_with_utime(BotFrames *bot_frames,
-        const char *from_frame, const char *to_frame, int64_t utime,
-        Eigen::Isometry3d& mat);
+    bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
+    IsometryTime3d getPoseAsIsometryTime3d(const double trans[3], const double quat[4], long long int t);
+    Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
 };    
 
 App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_, 
          CloudAccumulateConfig ca_cfg_, RegistrationConfig reg_cfg_) : lcm_(lcm_), 
-         cl_cfg_(cl_cfg_),
-         ca_cfg_(ca_cfg_),
-         reg_cfg_(reg_cfg_){
+         cl_cfg_(cl_cfg_), ca_cfg_(ca_cfg_),
+         reg_cfg_(reg_cfg_), world_to_body_msg_(0,Eigen::Isometry3d::Identity()){
   pose_initialized_ = FALSE;
 
   accumulate_ = TRUE;
@@ -134,11 +143,11 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);
   // for Valkyrie Unit D
-  lcm_->subscribe("ROBOT_BEHAVIOR", &App::behaviorCallback, this);
+  lcm_->subscribe("ROBOT_BEHAVIOR", &App::behaviorCallbackValkyrie, this);
   // for Valkyrie January 2016
-  // lcm_->subscribe("ATLAS_BEHAVIOR", &App::behaviorCallback, this);
+  lcm_->subscribe("ATLAS_BEHAVIOR", &App::behaviorCallbackValkyrie, this);
   // for Atlas
-  lcm_->subscribe("CONTROLLER_STATUS", &App::behaviorCallback, this);
+  lcm_->subscribe("CONTROLLER_STATUS", &App::behaviorCallbackAtlas, this);
 
   // Storage
   sweep_scans_list_ = new AlignedSweepsCollection();
@@ -147,31 +156,14 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
 
   // Pose initialization
-  if (!cl_cfg_.init_with_message){
-    cout << "Initialize estimate using default.\n";
-    world_to_body_msg_ = Eigen::Isometry3d::Identity();
-
-    pose_initialized_ = TRUE;
-  }
-  else{
-    if(cl_cfg_.vicon_available)
-    {
-      lcm_->subscribe("VICON_BODY|VICON_FRONTPLATE", &App::rigidTransformInitHandler, this);
-      lcm_->subscribe("POSE_VICON", &App::poseInitHandler, this);
-      cout << "Initialization of LIDAR pose using VICON...\n";
-    }
-    else
-    {
-      lcm_->subscribe("POSE_BODY", &App::poseInitHandler, this); 
-      cout << "Initialization of LIDAR pose...\n";
-    }  
-  }
+  lcm_->subscribe("POSE_BODY", &App::poseInitHandler, this); 
+  cout << "Initialization of LIDAR pose...\n";  
 
   // ICP chain
   registr_ = new Registration(lcm_, reg_cfg_);
 }
 
-int App::get_trans_with_utime(BotFrames *bot_frames,
+int get_trans_with_utime(BotFrames *bot_frames,
         const char *from_frame, const char *to_frame, int64_t utime,
         Eigen::Isometry3d & mat){
   int status;
@@ -186,18 +178,52 @@ int App::get_trans_with_utime(BotFrames *bot_frames,
   return status;
 }
 
-bot_core::pose_t App::getPoseAsBotPose(Eigen::Isometry3d pose, int64_t utime){
-  bot_core::pose_t pose_msg;
-  pose_msg.utime =   utime;
-  pose_msg.pos[0] = pose.translation().x();
-  pose_msg.pos[1] = pose.translation().y();
-  pose_msg.pos[2] = pose.translation().z();
+bot_core::pose_t App::getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime){
+  bot_core::pose_t tf;
+  tf.utime =   utime;
+  tf.pos[0] = pose.translation().x();
+  tf.pos[1] = pose.translation().y();
+  tf.pos[2] = pose.translation().z();
   Eigen::Quaterniond r_x(pose.rotation());
-  pose_msg.orientation[0] =  r_x.w();
-  pose_msg.orientation[1] =  r_x.x();
-  pose_msg.orientation[2] =  r_x.y();
-  pose_msg.orientation[3] =  r_x.z();
-  return pose_msg;
+  tf.orientation[0] =  r_x.w();
+  tf.orientation[1] =  r_x.x();
+  tf.orientation[2] =  r_x.y();
+  tf.orientation[3] =  r_x.z();
+  return tf;
+}
+
+IsometryTime3d App::getPoseAsIsometryTime3d(const double trans[3], const double quat[4], long long int t){
+  Eigen::Isometry3d pose_iso;
+  pose_iso.setIdentity();
+  pose_iso.translation()  << trans[0], trans[1] , trans[2];
+  Eigen::Quaterniond quatE = Eigen::Quaterniond(quat[0], quat[1], 
+                                                 quat[2], quat[3]);
+  pose_iso.rotate(quatE);
+
+  return IsometryTime3d(t, pose_iso);
+}
+
+Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T){
+  Eigen::Isometry3d pose_iso;
+  pose_iso.setIdentity();
+
+  Eigen::Matrix3f rot;
+  rot << T.block(0,0,3,3);
+  Eigen::Quaternionf quat(rot);
+  Eigen::Quaterniond quatd;
+  quatd = quat.cast <double> ();
+
+  Eigen::Vector3f transl;
+  transl << T(0,3), T(1,3), T(2,3);
+  Eigen::Vector3d transld;
+  transld = transl.cast <double> ();
+
+  pose_iso.translation() << transld;
+  Eigen::Quaterniond quatE = Eigen::Quaterniond(quatd.w(), quatd.x(), 
+                                                quatd.y(), quatd.z());
+  pose_iso.rotate(quatE);
+
+  return pose_iso;
 }
 
 void App::plotBotFrame(const char* from_frame, const char* to_frame, int64_t utime)
@@ -208,23 +234,6 @@ void App::plotBotFrame(const char* from_frame, const char* to_frame, int64_t uti
   //To director
   bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), from_frame);
   drawFrame(lcmgl_fr, transform);
-}
-
-bot_core_planar_lidar_t* convertPlanarLidarCppToC(std::shared_ptr<bot_core::planar_lidar_t> this_msg){
-
-  bot_core_planar_lidar_t * laser_msg_c = new bot_core_planar_lidar_t;
-  laser_msg_c->intensities = new float[this_msg->nintensities];
-  laser_msg_c->nintensities = this_msg->nintensities;
-  memcpy(laser_msg_c->intensities, &this_msg->intensities[0], this_msg->nintensities * sizeof(float));
-
-  laser_msg_c->ranges = new float[this_msg->nranges];
-  laser_msg_c->nranges = this_msg->nranges;
-  memcpy(laser_msg_c->ranges, &this_msg->ranges[0], this_msg->nranges * sizeof(float));
-
-  laser_msg_c->rad0 = this_msg->rad0;
-  laser_msg_c->radstep = this_msg->radstep;
-  laser_msg_c->utime = this_msg->utime;  
-  return laser_msg_c;
 }
 
 void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
@@ -238,16 +247,25 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
+  DP out1 = registr_->getDataOut();
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+  /*
   // Distance dp_cloud points from KNN in ref
   int line_number = sweep_scans_list_->getNbClouds();
   PM::Matrix distsRead = distancesKNN(reference, reading);
   writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
   // Distance out_trimmed_filter points from KNN in ref
-  DP out1 = registr_->getDataOut();
   PM::Matrix distsOut1 = distancesKNN(reference, out1);
-  writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);
+  writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
+
+  // To director
+  std::stringstream vtk_simpleICP;
+  vtk_simpleICP << "accum_simpleICP_";
+  vtk_simpleICP << to_string(sweep_scans_list_->getNbClouds());
+  vtk_simpleICP << ".vtk";
+  bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_simpleICP.str().c_str());
+  drawPointCloud(lcmgl_pc1, out1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // Second ICP loop
@@ -263,9 +281,10 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   output = registr_->getDataOut();
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+  /*
   // Distance out_max_filter points from KNN in ref
   PM::Matrix distsOut2 = distancesKNN(reference, output);
-  writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);
+  writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);*/
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   T = T2 * T1;
@@ -302,12 +321,8 @@ void App::operator()() {
 
       // To file and drawing
       std::stringstream vtk_fname;
-      vtk_fname << "accum_cloud_";
+      vtk_fname << "accum_advICP_";
       vtk_fname << to_string(sweep_scans_list_->getNbClouds());
-
-      std::stringstream vtk_matches;
-      vtk_matches << "ref_matched_";
-      vtk_matches << to_string(sweep_scans_list_->getNbClouds());
         
       if(sweep_scans_list_->isEmpty())
       {
@@ -333,21 +348,30 @@ void App::operator()() {
         TimingUtils::toc();
 
         current_sweep->populateSweepScan(first_sweep_scans_list_, out, sweep_scans_list_->getNbClouds());
+
+        // Publish corrected pose estimate:
+        // 1. copy robot state
+        Eigen::Isometry3d world_to_body_last;
+        {
+          std::unique_lock<std::mutex> lock(robot_state_mutex_);
+          world_to_body_last = world_to_body_msg_.pose;
+        } 
+        // 2. compute corrected estimate
+        Eigen::Isometry3d correctedPose;
+        Eigen::Isometry3d correction;
+        correction = getTransfParamAsIsometry3d(Ttot);
+        correctedPose = world_to_body_last * correction.inverse();
+        // 3. publish
+        bot_core::pose_t msg_out = getIsometry3dAsBotPose(correctedPose, current_sweep->getUtimeEnd());
+        lcm_->publish("POSE_BODY_CORRECTED",&msg_out);
+
         // Ttot is the full transform to move the input on the reference cloud
-        // Project current sweep in head frame
         // Store current sweep 
         sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
         // To director
         bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-        drawPointCloud(lcmgl_pc, out);  
-
-        // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
-        vtk_matches << ".vtk";
-        PM::ICP icp = this->registr_->getIcp();
-        float meanDist = pairedPointsMeanDistance(ref, out, icp, vtk_matches.str().c_str());
-        //cout << "Paired points mean distance: " << meanDist << " m" << endl;
-        //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        //drawPointCloud(lcmgl_pc, out);  
       }
      
       // To file
@@ -371,7 +395,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   Eigen::Isometry3d world_to_body_last;
   {
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
-    world_to_body_last = world_to_body_msg_;
+    world_to_body_last = world_to_body_msg_.pose;
   } 
   // Populate SweepScan with current LidarScan data structure
   // 2. Get lidar pose
@@ -387,26 +411,16 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
   // DEBUG: Storage in full sweep structure......%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Accumulate current scan in point cloud (projection to default reference "local")
-  // TO_DO: projection to custom reference, in this case "head"
   // only if robot is not walking or stepping
-  int robot_behavior_previous;
   int robot_behavior_now;
   {
     std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
-    robot_behavior_previous = robot_behavior_previous_;
     robot_behavior_now = robot_behavior_now_;
   }
 
-  // for Atlas
-  if (robot_behavior_now != 2 && robot_behavior_previous == 2)
-  // for Valkyrie
-  //if (robot_behavior_now != 4 && robot_behavior_now != 5 && robot_behavior_previous == 4 && robot_behavior_previous == 5)    
-    accumulate_ = TRUE;
-
-  // for Atlas
-  if (robot_behavior_now != 2 && accumulate_)
-  // for Valkyrie
-  // if (robot_behavior_now != 4 && robot_behavior_now != 5 && accumulate_) // only when transition from walking/stepping to standing happens 
+  if (cl_cfg_.robot_name == "Valkyrie" && robot_behavior_now != 4 && accumulate_
+      || cl_cfg_.robot_name == "Atlas" && robot_behavior_now != 2 && accumulate_) 
+  // only when transition from walking to standing happens 
   {
     if ( accu_->getCounter() % 240 == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
@@ -455,33 +469,39 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 }
 
 // Valkyrie
-/*void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg)
+void App::behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg)
 {
   std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
   {
     robot_behavior_previous_ = robot_behavior_now_;
     robot_behavior_now_ = msg->behavior;
+
+    if (robot_behavior_now_ != 4 && robot_behavior_previous_ == 4)    
+      accumulate_ = TRUE;
   }
-}*/
+}
 // Atlas
-void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg)
+void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg)
 {
   std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
   {
     robot_behavior_previous_ = robot_behavior_now_;
     robot_behavior_now_ = msg->state;
+
+    if (robot_behavior_now_ != 2 && robot_behavior_previous_ == 2)    
+      accumulate_ = TRUE;
   }
 }
 
 void App::rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
-  initState(msg->trans, msg->quat);
+  initState(msg->trans, msg->quat, msg->utime);
 }
 
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
-  initState(msg->pos, msg->orientation);
+  initState(msg->pos, msg->orientation, msg->utime);
 }
 
-void App::initState(const double trans[3], const double quat[4]){
+void App::initState(const double trans[3], const double quat[4], long long int t){
   if ( !cl_cfg_.init_with_message ){
     return;
   }
@@ -492,15 +512,11 @@ void App::initState(const double trans[3], const double quat[4]){
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
   {
     // Update world to body transform (from kinematics msg) 
-    world_to_body_msg_.setIdentity();
-    world_to_body_msg_.translation()  << trans[0], trans[1] , trans[2];
-    Eigen::Quaterniond quatE = Eigen::Quaterniond(quat[0], quat[1], 
-                                                 quat[2], quat[3]);
-    world_to_body_msg_.rotate(quatE);
+    world_to_body_msg_ = getPoseAsIsometryTime3d(trans, quat, t);
 
     // To director
     bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
-    drawFrame(lcmgl_fr, world_to_body_msg_);
+    drawFrame(lcmgl_fr, world_to_body_msg_.pose);
 
     pose_initialized_ = TRUE;
   }
@@ -508,8 +524,7 @@ void App::initState(const double trans[3], const double quat[4]){
 
 int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
-  cl_cfg.init_with_message = TRUE;
-  cl_cfg.vicon_available = FALSE;
+  cl_cfg.robot_name = "Valkyrie";
   cl_cfg.output_channel = "POSE_BODY"; // CREATE NEW CHANNEL... ("POSE_BODY_ICP")
 
   CloudAccumulateConfig ca_cfg;
@@ -524,7 +539,7 @@ int main(int argc, char **argv){
   reg_cfg.initTrans_.append("0,0,0"); 
 
   ConciseArgs parser(argc, argv, "simple-fusion");
-  parser.add(cl_cfg.init_with_message, "g", "init_with_message", "Bootstrap internal estimate using VICON or POSE_BODY");
+  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie?");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
