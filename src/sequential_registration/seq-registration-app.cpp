@@ -36,7 +36,6 @@ using namespace std;
 struct CommandLineConfig
 {
   std::string robot_name;
-  bool init_with_message; // initialize off of a pose or vicon
   std::string output_channel;
 };
 
@@ -99,6 +98,9 @@ class App{
 
     bool pose_initialized_;
 
+    Eigen::Isometry3d correction_;
+    IsometryTime3d correctedPose_;
+
     // Robot behavior
     bool accumulate_;
     int robot_behavior_now_;
@@ -109,9 +111,7 @@ class App{
                             const std::string& channel, const  bot_core::planar_lidar_t* msg);
     void doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T);
 
-    void rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
-    void initState( const double trans[3], const double quat[4], long long int t);
 
     // Valkyrie
     void behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
@@ -119,19 +119,23 @@ class App{
     void behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
 
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
-    IsometryTime3d getPoseAsIsometryTime3d(const double trans[3], const double quat[4], long long int t);
+    IsometryTime3d getPoseAsIsometryTime3d(const bot_core::pose_t* pose);
     Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
 };    
 
 App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_, 
          CloudAccumulateConfig ca_cfg_, RegistrationConfig reg_cfg_) : lcm_(lcm_), 
          cl_cfg_(cl_cfg_), ca_cfg_(ca_cfg_),
-         reg_cfg_(reg_cfg_), world_to_body_msg_(0,Eigen::Isometry3d::Identity()){
+         reg_cfg_(reg_cfg_), world_to_body_msg_(0,Eigen::Isometry3d::Identity()),
+         correctedPose_(0,Eigen::Isometry3d::Identity()){
+
   pose_initialized_ = FALSE;
 
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
+
+  correction_ = Eigen::Isometry3d::Identity();
 
   // Set up frames and config:
   do {
@@ -192,15 +196,15 @@ bot_core::pose_t App::getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t uti
   return tf;
 }
 
-IsometryTime3d App::getPoseAsIsometryTime3d(const double trans[3], const double quat[4], long long int t){
+IsometryTime3d App::getPoseAsIsometryTime3d(const bot_core::pose_t* pose){
   Eigen::Isometry3d pose_iso;
   pose_iso.setIdentity();
-  pose_iso.translation()  << trans[0], trans[1] , trans[2];
-  Eigen::Quaterniond quatE = Eigen::Quaterniond(quat[0], quat[1], 
-                                                 quat[2], quat[3]);
-  pose_iso.rotate(quatE);
+  pose_iso.translation()  <<  pose->pos[0], pose->pos[1] , pose->pos[2];
+  Eigen::Quaterniond quat = Eigen::Quaterniond(pose->orientation[0], pose->orientation[1], 
+                                                pose->orientation[2], pose->orientation[3]);
+  pose_iso.rotate(quat);
 
-  return IsometryTime3d(t, pose_iso);
+  return IsometryTime3d(pose->utime, pose_iso);
 }
 
 Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T){
@@ -349,21 +353,8 @@ void App::operator()() {
 
         current_sweep->populateSweepScan(first_sweep_scans_list_, out, sweep_scans_list_->getNbClouds());
 
-        // Publish corrected pose estimate:
-        // 1. copy robot state
-        Eigen::Isometry3d world_to_body_last;
-        {
-          std::unique_lock<std::mutex> lock(robot_state_mutex_);
-          world_to_body_last = world_to_body_msg_.pose;
-        } 
-        // 2. compute corrected estimate
-        Eigen::Isometry3d correctedPose;
-        Eigen::Isometry3d correction;
-        correction = getTransfParamAsIsometry3d(Ttot);
-        correctedPose = world_to_body_last * correction.inverse();
-        // 3. publish
-        bot_core::pose_t msg_out = getIsometry3dAsBotPose(correctedPose, current_sweep->getUtimeEnd());
-        lcm_->publish("POSE_BODY_CORRECTED",&msg_out);
+        // Compute correction to pose estimate:
+        correction_ = getTransfParamAsIsometry3d(Ttot);
 
         // Ttot is the full transform to move the input on the reference cloud
         // Store current sweep 
@@ -493,26 +484,17 @@ void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::strin
   }
 }
 
-void App::rigidTransformInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
-  initState(msg->trans, msg->quat, msg->utime);
-}
-
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
-  initState(msg->pos, msg->orientation, msg->utime);
-}
-
-void App::initState(const double trans[3], const double quat[4], long long int t){
-  if ( !cl_cfg_.init_with_message ){
-    return;
-  }
   if ( !pose_initialized_ ){
     cout << "Initialize state estimate using rigid transform or pose.\n";
   }
 
+  Eigen::Isometry3d world_to_body_last;
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
   {
     // Update world to body transform (from kinematics msg) 
-    world_to_body_msg_ = getPoseAsIsometryTime3d(trans, quat, t);
+    world_to_body_msg_ = getPoseAsIsometryTime3d(msg);
+    world_to_body_last = world_to_body_msg_.pose;
 
     // To director
     bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
@@ -520,12 +502,20 @@ void App::initState(const double trans[3], const double quat[4], long long int t
 
     pose_initialized_ = TRUE;
   }
+
+  // 1. Compute corrected estimate
+  correctedPose_.pose = world_to_body_last * correction_;
+  correctedPose_.utime = msg->utime;
+  // 2. Publish
+  bot_core::pose_t msg_out = getIsometry3dAsBotPose(correctedPose_.pose, correctedPose_.utime);
+  lcm_->publish(cl_cfg_.output_channel,&msg_out);
 }
+
 
 int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
   cl_cfg.robot_name = "Valkyrie";
-  cl_cfg.output_channel = "POSE_BODY"; // CREATE NEW CHANNEL... ("POSE_BODY_ICP")
+  cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
   CloudAccumulateConfig ca_cfg;
   ca_cfg.batch_size = 250; // 240 is about 1 sweep
@@ -539,7 +529,7 @@ int main(int argc, char **argv){
   reg_cfg.initTrans_.append("0,0,0"); 
 
   ConciseArgs parser(argc, argv, "simple-fusion");
-  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie?");
+  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (Default: Valkyrie)");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
