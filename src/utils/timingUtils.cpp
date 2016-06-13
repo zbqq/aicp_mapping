@@ -27,11 +27,12 @@ std::string TimingUtils::currentDateTime() {
 
     return buf;
 }
-/*
+
 // clock_t is a like typedef unsigned int clock_t. Use clock_t instead of integer in this context
-TimingUtils::sleepSeconds(clock_t sec) 
+void TimingUtils::sleepSeconds(clock_t sec)
 {
-clock_t start_time = clock();
-clock_t end_time = sec * 1000 + start_time
-while(clock() != end_time);
-} */
+  clock_t start_time = clock();
+  clock_t end_time = sec * 1000 + start_time;
+  while(clock() != end_time)
+    {std::cout << "Waiting...\n";}
+}

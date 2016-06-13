@@ -11,6 +11,8 @@ class TimingUtils{
     static void toc();
     static std::string currentDateTime();
 
+    static void sleepSeconds(clock_t sec);
+
   private:
     static std::stack<clock_t> tictoc_stack;    
 };

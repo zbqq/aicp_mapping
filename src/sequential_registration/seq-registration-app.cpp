@@ -37,6 +37,7 @@ struct CommandLineConfig
 {
   std::string robot_name;
   std::string output_channel;
+  std::string working_mode;
 };
 
 struct IsometryTime3d{
@@ -246,7 +247,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // First ICP loop
   string configName1;
   configName1.append(reg_cfg_.homedir);
-  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
+  //configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
   registr_->setConfigFile(configName1);
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
@@ -274,7 +276,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 
   // Second ICP loop
   // DP out1 = registr_->getDataOut();
-  string configName2;
+  /*string configName2;
   configName2.append(reg_cfg_.homedir);
   configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
   registr_->setConfigFile(configName2);
@@ -282,7 +284,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   registr_->getICPTransform(out1, reference);
   PM::TransformationParameters T2 = registr_->getTransform();
   cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
-  output = registr_->getDataOut();
+  output = registr_->getDataOut();*/
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
@@ -291,7 +293,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);*/
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  T = T2 * T1;
+  //T = T2 * T1;
+  T = T1;
 }
 
 void App::operator()() {
@@ -380,7 +383,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     cout << "Estimate not initialized, exiting planarLidarHandler.\n";
     return;
   }
-  plotBotFrame("head", "local", msg->utime);
+  //plotBotFrame("head", "local", msg->utime);
     
   // 1. copy robot state
   Eigen::Isometry3d world_to_body_last;
@@ -401,7 +404,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
                                           msg->ranges,msg->intensities,world_to_head_now_,head_to_lidar_);
 
   // DEBUG: Storage in full sweep structure......%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // Accumulate current scan in point cloud (projection to default reference "local")
+  // Accumulate current scan in point cloud (projection to default reference "body")
   // only if robot is not walking or stepping
   int robot_behavior_now;
   {
@@ -409,11 +412,11 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     robot_behavior_now = robot_behavior_now_;
   }
 
-  if (cl_cfg_.robot_name == "Valkyrie" && robot_behavior_now != 4 && accumulate_
-      || cl_cfg_.robot_name == "Atlas" && robot_behavior_now != 2 && accumulate_) 
+  if (cl_cfg_.robot_name == "val" && robot_behavior_now != 4 && accumulate_
+      || cl_cfg_.robot_name == "atlas" && robot_behavior_now != 2 && accumulate_)
   // only when transition from walking to standing happens 
   {
-    if ( accu_->getCounter() % 240 == 0 )
+    if ( accu_->getCounter() % ca_cfg_.batch_size == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
     accu_->processLidar(msg);
     lidar_scans_list_.push_back(*current_scan);
@@ -468,7 +471,9 @@ void App::behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::st
     robot_behavior_now_ = msg->behavior;
 
     if (robot_behavior_now_ != 4 && robot_behavior_previous_ == 4)    
+    {
       accumulate_ = TRUE;
+    }
   }
 }
 // Atlas
@@ -498,27 +503,37 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
 
     // To director
     bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
-    drawFrame(lcmgl_fr, world_to_body_msg_.pose);
+    //drawFrame(lcmgl_fr, world_to_body_msg_.pose);
 
     pose_initialized_ = TRUE;
   }
 
-  // 1. Compute corrected estimate
-  correctedPose_.pose = world_to_body_last * correction_;
-  correctedPose_.utime = msg->utime;
-  // 2. Publish
-  bot_core::pose_t msg_out = getIsometry3dAsBotPose(correctedPose_.pose, correctedPose_.utime);
+  bot_core::pose_t msg_out;
+  // Compute and publish correction (Simulation or Robot)
+  if (cl_cfg_.working_mode == "robot")
+  {
+    correctedPose_.pose = correction_ * world_to_body_last; // TO DEBUG*********
+    correctedPose_.utime = msg->utime;
+    // To correct robot drift publish CORRECTED POSE
+    msg_out = getIsometry3dAsBotPose(correctedPose_.pose, correctedPose_.utime);
+  }
+  else
+  {
+    // To correct artificial drift (with SCS simulation) publish CORRECTION only
+    msg_out = getIsometry3dAsBotPose(correction_, msg->utime);
+  }
   lcm_->publish(cl_cfg_.output_channel,&msg_out);
 }
 
 
 int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
-  cl_cfg.robot_name = "Valkyrie";
+  cl_cfg.robot_name = "val";
+  cl_cfg.working_mode = "robot";
   cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
   CloudAccumulateConfig ca_cfg;
-  ca_cfg.batch_size = 250; // 240 is about 1 sweep
+  ca_cfg.batch_size = 240; // 240 is about 1 sweep
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
   ca_cfg.lidar_channel ="SCAN";
@@ -529,7 +544,8 @@ int main(int argc, char **argv){
   reg_cfg.initTrans_.append("0,0,0"); 
 
   ConciseArgs parser(argc, argv, "simple-fusion");
-  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (Default: Valkyrie)");
+  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (i.e. atlas or val)");
+  parser.add(cl_cfg.working_mode, "s", "working_mode", "Simulation or Robot? (i.e. sim or robot)");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
@@ -545,7 +561,7 @@ int main(int argc, char **argv){
 
   // To director
   bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm->getUnderlyingLCM(), "local");
-  drawFrame(lcmgl_fr);
+  //drawFrame(lcmgl_fr);
 
   while(0 == lcm->handle());
 }
