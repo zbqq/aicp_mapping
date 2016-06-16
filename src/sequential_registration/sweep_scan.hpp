@@ -47,5 +47,4 @@ class SweepScan
     Eigen::Isometry3d relative_motion; // first_to_last_scan used to accumulate cloud
                                        // without drift correction
     Eigen::Isometry3d world_to_last_scan;  // world_to_current_cloud = world_to_last_scan
-                                           // (head pose once accumulated current cloud)
 };

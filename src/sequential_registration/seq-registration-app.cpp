@@ -8,6 +8,7 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include <lcmtypes/bot_core.hpp>
+#include <lcmtypes/vicon.hpp>
 #include <lcmtypes/drc/behavior_t.hpp>
 #include <lcmtypes/drc/controller_status_t.hpp>
 #include <mutex>
@@ -38,13 +39,6 @@ struct CommandLineConfig
   std::string robot_name;
   std::string output_channel;
   std::string working_mode;
-};
-
-struct IsometryTime3d{
-  IsometryTime3d(int64_t utime, const Eigen::Isometry3d & pose) : utime(utime), pose(pose) {}
-    int64_t utime;
-    Eigen::Isometry3d pose;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 class App{
@@ -92,20 +86,24 @@ class App{
     // Transformation matrices
     Eigen::Isometry3d body_to_lidar_; // Variable tf from the lidar to the robot's base link
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
-    IsometryTime3d world_to_body_msg_; // Captures the position of the body frame in world from launch 
+    Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch
                                           // without drift correction
     //Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
+    Eigen::Isometry3d world_to_frame_vicon_first_; // Ground truth (initialization)
+    Eigen::Isometry3d world_to_frame_vicon_; // Ground truth
+    Eigen::Isometry3d world_to_body_corr_first_;
 
     bool pose_initialized_;
-
-    Eigen::Isometry3d correction_;
-    IsometryTime3d correctedPose_;
+    bool vicon_initialized_;
 
     // Robot behavior
     bool accumulate_;
     int robot_behavior_now_;
     int robot_behavior_previous_;
+
+    // Correction variables
+    Eigen::Isometry3d current_correction_;
 
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
@@ -113,6 +111,7 @@ class App{
     void doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T);
 
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
+    void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  vicon::body_t* msg);
 
     // Valkyrie
     void behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
@@ -120,23 +119,27 @@ class App{
     void behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
 
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
-    IsometryTime3d getPoseAsIsometryTime3d(const bot_core::pose_t* pose);
+    Eigen::Isometry3d getPoseAsIsometry3d(const bot_core::pose_t* pose);
+    Eigen::Isometry3d getBodyAsIsometry3d(const vicon::body_t* pose);
     Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
 };    
 
 App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_, 
          CloudAccumulateConfig ca_cfg_, RegistrationConfig reg_cfg_) : lcm_(lcm_), 
-         cl_cfg_(cl_cfg_), ca_cfg_(ca_cfg_),
-         reg_cfg_(reg_cfg_), world_to_body_msg_(0,Eigen::Isometry3d::Identity()),
-         correctedPose_(0,Eigen::Isometry3d::Identity()){
+         cl_cfg_(cl_cfg_), ca_cfg_(ca_cfg_), reg_cfg_(reg_cfg_){
 
   pose_initialized_ = FALSE;
+  vicon_initialized_ = FALSE;
 
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
 
-  correction_ = Eigen::Isometry3d::Identity();
+  world_to_body_msg_ = Eigen::Isometry3d::Identity();
+  world_to_frame_vicon_ = Eigen::Isometry3d::Identity();
+  world_to_frame_vicon_first_ = Eigen::Isometry3d::Identity();
+  world_to_body_corr_first_ = Eigen::Isometry3d::Identity();
+  current_correction_ = Eigen::Isometry3d::Identity();
 
   // Set up frames and config:
   do {
@@ -162,7 +165,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   // Pose initialization
   lcm_->subscribe("POSE_BODY", &App::poseInitHandler, this); 
-  cout << "Initialization of LIDAR pose...\n";  
+  cout << "Initialization of LIDAR pose...\n";
+  lcm_->subscribe("VICON_pelvis_val", &App::viconInitHandler, this);
+  cout << "Initialization of Vicon pose...\n";
 
   // ICP chain
   registr_ = new Registration(lcm_, reg_cfg_);
@@ -197,7 +202,7 @@ bot_core::pose_t App::getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t uti
   return tf;
 }
 
-IsometryTime3d App::getPoseAsIsometryTime3d(const bot_core::pose_t* pose){
+Eigen::Isometry3d App::getPoseAsIsometry3d(const bot_core::pose_t* pose){
   Eigen::Isometry3d pose_iso;
   pose_iso.setIdentity();
   pose_iso.translation()  <<  pose->pos[0], pose->pos[1] , pose->pos[2];
@@ -205,7 +210,18 @@ IsometryTime3d App::getPoseAsIsometryTime3d(const bot_core::pose_t* pose){
                                                 pose->orientation[2], pose->orientation[3]);
   pose_iso.rotate(quat);
 
-  return IsometryTime3d(pose->utime, pose_iso);
+  return pose_iso;
+}
+
+Eigen::Isometry3d App::getBodyAsIsometry3d(const vicon::body_t* pose){
+  Eigen::Isometry3d pose_iso;
+  pose_iso.setIdentity();
+  pose_iso.translation()  <<  pose->trans[0], pose->trans[1] , pose->trans[2];
+  Eigen::Quaterniond quatern = Eigen::Quaterniond(pose->quat[0], pose->quat[1],
+                                                pose->quat[2], pose->quat[3]);
+  pose_iso.rotate(quatern);
+
+  return pose_iso;
 }
 
 Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T){
@@ -323,7 +339,7 @@ void App::operator()() {
 
       // For storing current cloud
       SweepScan* current_sweep = new SweepScan();
-      vector<LidarScan> first_sweep_scans_list_ = scans_queue.front();
+      vector<LidarScan> first_sweep_scans_list = scans_queue.front();
       scans_queue.pop_front();
 
       // To file and drawing
@@ -333,7 +349,7 @@ void App::operator()() {
         
       if(sweep_scans_list_->isEmpty())
       {
-        current_sweep->populateSweepScan(first_sweep_scans_list_, dp_cloud, sweep_scans_list_->getNbClouds());
+        current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
 
         // To director (NOTE: Visualization using lcmgl shows (sometimes) imperfections
@@ -354,10 +370,10 @@ void App::operator()() {
 
         TimingUtils::toc();
 
-        current_sweep->populateSweepScan(first_sweep_scans_list_, out, sweep_scans_list_->getNbClouds());
+        current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds());
 
         // Compute correction to pose estimate:
-        correction_ = getTransfParamAsIsometry3d(Ttot);
+        current_correction_ = getTransfParamAsIsometry3d(Ttot);
 
         // Ttot is the full transform to move the input on the reference cloud
         // Store current sweep 
@@ -389,7 +405,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   Eigen::Isometry3d world_to_body_last;
   {
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
-    world_to_body_last = world_to_body_msg_.pose;
+    world_to_body_last = world_to_body_msg_;
   } 
   // Populate SweepScan with current LidarScan data structure
   // 2. Get lidar pose
@@ -489,40 +505,77 @@ void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::strin
   }
 }
 
-void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
-  if ( !pose_initialized_ ){
-    cout << "Initialize state estimate using rigid transform or pose.\n";
+void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  vicon::body_t* msg){
+
+  if (!vicon_initialized_)
+  {
+    // Get pose ground truth (vicon initialization)
+    world_to_frame_vicon_first_ = getBodyAsIsometry3d(msg);
+    vicon_initialized_ = TRUE;
   }
+
+  world_to_frame_vicon_ = getBodyAsIsometry3d(msg);
+}
+
+void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
 
   Eigen::Isometry3d world_to_body_last;
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
   {
     // Update world to body transform (from kinematics msg) 
-    world_to_body_msg_ = getPoseAsIsometryTime3d(msg);
-    world_to_body_last = world_to_body_msg_.pose;
+    world_to_body_msg_ = getPoseAsIsometry3d(msg);
+    world_to_body_last = world_to_body_msg_;
 
     // To director
     bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
-    //drawFrame(lcmgl_fr, world_to_body_msg_.pose);
-
-    pose_initialized_ = TRUE;
+    //drawFrame(lcmgl_fr, world_to_body_msg_);
   }
 
   bot_core::pose_t msg_out;
+  Eigen::Isometry3d corrected_pose;
   // Compute and publish correction (Simulation or Robot)
   if (cl_cfg_.working_mode == "robot")
   {
-    correctedPose_.pose = correction_ * world_to_body_last; // TO DEBUG*********
-    correctedPose_.utime = msg->utime;
+    // Apply correction if available (identity otherwise)
+    corrected_pose = current_correction_ * world_to_body_last;
     // To correct robot drift publish CORRECTED POSE
-    msg_out = getIsometry3dAsBotPose(correctedPose_.pose, correctedPose_.utime);
+    msg_out = getIsometry3dAsBotPose(corrected_pose, msg->utime);
+    lcm_->publish(cl_cfg_.output_channel,&msg_out);
   }
   else
   {
     // To correct artificial drift (with SCS simulation) publish CORRECTION only
-    msg_out = getIsometry3dAsBotPose(correction_, msg->utime);
+    msg_out = getIsometry3dAsBotPose(current_correction_, msg->utime);
+    lcm_->publish("POSE_BODY_CORRECTION",&msg_out);
   }
-  lcm_->publish(cl_cfg_.output_channel,&msg_out);
+
+  if ( !pose_initialized_ ){
+    cout << "Initialize state estimate using rigid transform or pose.\n";
+
+    world_to_body_corr_first_ = corrected_pose;
+  }
+
+  // Visualization: compare with Vicon #########
+  // Corrected pose
+  Eigen::Isometry3d corr_to_vicon_first;
+  corr_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
+
+  Eigen::Isometry3d corr_to_vicon_pose;
+  corr_to_vicon_pose = corr_to_vicon_first * corrected_pose;
+  // Estimated pose
+  Eigen::Isometry3d pose_to_vicon_first;
+  pose_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
+
+  Eigen::Isometry3d pose_to_vicon_pose;
+  pose_to_vicon_pose = pose_to_vicon_first * world_to_body_last;
+
+  // To visualize corrected pose wrt Vicon
+  bot_core::pose_t msg_out_vic = getIsometry3dAsBotPose(pose_to_vicon_pose, msg->utime);
+  lcm_->publish("POSE_BODY_VICON",&msg_out_vic);
+  bot_core::pose_t msg_out_corr_vic = getIsometry3dAsBotPose(corr_to_vicon_pose, msg->utime);
+  lcm_->publish("POSE_BODY_CORRECTED_VICON",&msg_out_corr_vic);
+
+  pose_initialized_ = TRUE;
 }
 
 
