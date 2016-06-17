@@ -2,7 +2,7 @@
 
 // Input: POSE_BODY, Output POSE_BODY_CORRECTED
 // Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
-// --> POSE_BODY = POSE_BODY * T_DICP.inverse() 
+
 
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
