@@ -299,8 +299,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 
   registr_->getICPTransform(out1, reference);
   PM::TransformationParameters T2 = registr_->getTransform();
-  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
-  output = registr_->getDataOut();*/
+  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;*/
+  output = registr_->getDataOut();
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
@@ -374,6 +374,8 @@ void App::operator()() {
 
         // Compute correction to pose estimate:
         current_correction_ = getTransfParamAsIsometry3d(Ttot);
+        //bot_core::pose_t msg_out2 = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
+        //lcm_->publish("POSE_BODY_CORRECTION",&msg_out2);
 
         // Ttot is the full transform to move the input on the reference cloud
         // Store current sweep 
@@ -507,14 +509,22 @@ void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::strin
 
 void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  vicon::body_t* msg){
 
+  Eigen::Isometry3d body_to_vicon_frame;
+  get_trans_with_utime( botframes_, "body_vicon", "vicon_frame", msg->utime, body_to_vicon_frame);
+
   if (!vicon_initialized_)
   {
     // Get pose ground truth (vicon initialization)
     world_to_frame_vicon_first_ = getBodyAsIsometry3d(msg);
+    world_to_frame_vicon_first_ = world_to_frame_vicon_first_ * body_to_vicon_frame;
     vicon_initialized_ = TRUE;
   }
 
   world_to_frame_vicon_ = getBodyAsIsometry3d(msg);
+  world_to_frame_vicon_ = world_to_frame_vicon_ * body_to_vicon_frame;
+
+  bot_core::pose_t msg_out_vic = getIsometry3dAsBotPose(world_to_frame_vicon_, msg->utime);
+  lcm_->publish("POSE_VICON",&msg_out_vic);
 }
 
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
@@ -569,11 +579,12 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   Eigen::Isometry3d pose_to_vicon_pose;
   pose_to_vicon_pose = pose_to_vicon_first * world_to_body_last;
 
-  // To visualize corrected pose wrt Vicon
+  // To visualize pose_body and pose corrected wrt Vicon
   bot_core::pose_t msg_out_vic = getIsometry3dAsBotPose(pose_to_vicon_pose, msg->utime);
   lcm_->publish("POSE_BODY_VICON",&msg_out_vic);
   bot_core::pose_t msg_out_corr_vic = getIsometry3dAsBotPose(corr_to_vicon_pose, msg->utime);
   lcm_->publish("POSE_BODY_CORRECTED_VICON",&msg_out_corr_vic);
+  // ############################################
 
   pose_initialized_ = TRUE;
 }
