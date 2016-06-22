@@ -1,9 +1,3 @@
-#include <pcl/io/vtk_lib_io.h>
-
-#include <vtkSmartPointer.h>
-#include <vtkPolyData.h>
-#include <vtkPolyDataReader.h>
-#include <vtkUnsignedIntArray.h>
 
 #include <boost/shared_ptr.hpp>
 #include <lcm/lcm-cpp.hpp>
@@ -57,13 +51,13 @@ main (int argc, char** argv)
   std::cout << "Loaded " << cloud->width * cloud->height << " data points from file\n";
   pc_vis_->ptcld_to_lcm_from_list(2, *cloud, utime, utime);
 
-  // 2a. Translate the pose
+  // 2a. Translate the pose and send the point cloud and the pose again - translated by this offset
   poseT.pose.translation() = Eigen::Vector3d(0,2,0);
   pc_vis_->pose_to_lcm_from_list(3, poseT);
   pc_vis_->ptcld_to_lcm_from_list(4, *cloud, utime, utime);
 
 
-  // 3.
+  // 3. Create a vector of poses and publish them all
   std::vector<Isometry3dTime> posesT;
   poseT.pose.translation() = Eigen::Vector3d(-4,2,0); poseT.utime = 1; posesT.push_back(poseT);
   poseT.pose.translation() = Eigen::Vector3d(-4,2.1,0); poseT.utime = 2; posesT.push_back(poseT);
@@ -77,13 +71,11 @@ main (int argc, char** argv)
   pc_vis_->pose_collection_to_lcm_from_list(5, posesT);
 
 
-
   // 4. Move a pose which will indirectly move the associated point cloud, without republishing it 
-  std::cout << "wait 10 seconds, then translate the point cloud by republishing the pose its attached to. The point cloud is not retransmitted\n";
+  std::cout << "wait 10 seconds, then translate the point cloud by republishing the pose its attached to. The original point cloud is not retransmitted\n";
   sleep(10);
   poseT.pose.translation() = Eigen::Vector3d(0,4,0); // nominal head height
   pc_vis_->pose_to_lcm_from_list(3, poseT);
-
 
 
   return (0);
