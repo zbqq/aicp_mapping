@@ -8,7 +8,6 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include <lcmtypes/bot_core.hpp>
-#include <lcmtypes/vicon.hpp>
 #include <lcmtypes/drc/behavior_t.hpp>
 #include <lcmtypes/drc/controller_status_t.hpp>
 #include <mutex>
@@ -111,7 +110,7 @@ class App{
     void doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T);
 
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
-    void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  vicon::body_t* msg);
+    void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
 
     // Valkyrie
     void behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
@@ -120,7 +119,7 @@ class App{
 
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
     Eigen::Isometry3d getPoseAsIsometry3d(const bot_core::pose_t* pose);
-    Eigen::Isometry3d getBodyAsIsometry3d(const vicon::body_t* pose);
+    Eigen::Isometry3d getBodyAsIsometry3d(const bot_core::rigid_transform_t* pose);
     Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
 };    
 
@@ -213,7 +212,7 @@ Eigen::Isometry3d App::getPoseAsIsometry3d(const bot_core::pose_t* pose){
   return pose_iso;
 }
 
-Eigen::Isometry3d App::getBodyAsIsometry3d(const vicon::body_t* pose){
+Eigen::Isometry3d App::getBodyAsIsometry3d(const bot_core::rigid_transform_t* pose){
   Eigen::Isometry3d pose_iso;
   pose_iso.setIdentity();
   pose_iso.translation()  <<  pose->trans[0], pose->trans[1] , pose->trans[2];
@@ -263,8 +262,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // First ICP loop
   string configName1;
   configName1.append(reg_cfg_.homedir);
-  configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
-  //configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  //configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
+  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
   registr_->setConfigFile(configName1);
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
@@ -507,7 +506,7 @@ void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::strin
   }
 }
 
-void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  vicon::body_t* msg){
+void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
 
   Eigen::Isometry3d body_to_vicon_frame;
   get_trans_with_utime( botframes_, "body_vicon", "vicon_frame", msg->utime, body_to_vicon_frame);
