@@ -34,3 +34,12 @@ add_executable(publish-vtk publish-vtk.cpp)
 pods_use_pkg_config_packages(publish-vtk path-util   eigen3  )
 target_link_libraries(publish-vtk lcm boost_system boost_thread ${VTK_LIBRARIES})
 pods_install_executables(publish-vtk)
+
+
+
+
+###############
+add_executable(collections-demo collections-demo.cpp)
+pods_use_pkg_config_packages(collections-demo path-util   eigen3  pronto_vis)
+target_link_libraries(collections-demo lcm boost_system boost_thread )
+pods_install_executables(collections-demo)
