@@ -51,8 +51,6 @@ class App{
     CloudAccumulateConfig ca_cfg_;
     RegistrationConfig reg_cfg_;
 
-    void plotBotFrame(const char* from_frame, const char* to_frame, int64_t utime);
-
     // thread function for doing actual work
     void operator()();
   private:
@@ -83,6 +81,7 @@ class App{
     AlignedSweepsCollection* sweep_scans_list_;
 
     // Transformation matrices
+    Eigen::Isometry3d local_;
     Eigen::Isometry3d body_to_lidar_; // Variable tf from the lidar to the robot's base link
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
     Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch
@@ -134,6 +133,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
 
+  local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
   world_to_frame_vicon_ = Eigen::Isometry3d::Identity();
   world_to_frame_vicon_first_ = Eigen::Isometry3d::Identity();
@@ -246,16 +246,6 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
   return pose_iso;
 }
 
-void App::plotBotFrame(const char* from_frame, const char* to_frame, int64_t utime)
-{
-  Eigen::Isometry3d transform;
-  get_trans_with_utime( botframes_, from_frame, to_frame, utime, transform); 
-
-  //To director
-  bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), from_frame);
-  drawFrame(lcmgl_fr, transform);
-}
-
 void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
 {
   // ............do registration.............
@@ -293,12 +283,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
 
   // To director
-  std::stringstream vtk_simpleICP;
-  vtk_simpleICP << "accum_simpleICP_";
-  vtk_simpleICP << to_string(sweep_scans_list_->getNbClouds());
-  vtk_simpleICP << ".vtk";
-  bot_lcmgl_t* lcmgl_pc1 = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_simpleICP.str().c_str());
-  drawPointCloud(lcmgl_pc1, out1);
+  drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out1, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // Second ICP loop
@@ -353,7 +338,7 @@ void App::operator()() {
       vector<LidarScan> first_sweep_scans_list = scans_queue.front();
       scans_queue.pop_front();
 
-      // To file and drawing
+      // To file
       std::stringstream vtk_fname;
       vtk_fname << "accum_advICP_";
       vtk_fname << to_string(sweep_scans_list_->getNbClouds());
@@ -363,11 +348,8 @@ void App::operator()() {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
 
-        // To director (NOTE: Visualization using lcmgl shows (sometimes) imperfections
-        // in clouds (random lines). The clouds are actually correct, but lcm cannot manage 
-        // so many points and introduces mistakes in visualization.
-        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "ref_cloud");
-        drawPointCloud(lcmgl_pc, dp_cloud);
+        // To director
+        drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
       }
       else
       {
@@ -393,8 +375,7 @@ void App::operator()() {
         sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
         // To director
-        bot_lcmgl_t* lcmgl_pc = bot_lcmgl_init(lcm_->getUnderlyingLCM(), vtk_fname.str().c_str());
-        //drawPointCloud(lcmgl_pc, out);  
+        drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
      
       // To file
@@ -412,7 +393,6 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     cout << "Estimate not initialized, exiting planarLidarHandler.\n";
     return;
   }
-  //plotBotFrame("head", "local", msg->utime);
     
   // 1. copy robot state
   Eigen::Isometry3d world_to_body_last;
@@ -546,10 +526,6 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
     // Update world to body transform (from kinematics msg) 
     world_to_body_msg_ = getPoseAsIsometry3d(msg);
     world_to_body_last = world_to_body_msg_;
-
-    // To director
-    bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm_->getUnderlyingLCM(), "pelvis");
-    //drawFrame(lcmgl_fr, world_to_body_msg_);
   }
 
   bot_core::pose_t msg_out;
@@ -633,10 +609,6 @@ int main(int argc, char **argv){
     std::cerr <<"ERROR: lcm is not good()" <<std::endl;
   }
   App* app= new App(lcm, cl_cfg, ca_cfg, reg_cfg);
-
-  // To director
-  bot_lcmgl_t* lcmgl_fr = bot_lcmgl_init(lcm->getUnderlyingLCM(), "local");
-  //drawFrame(lcmgl_fr);
 
   while(0 == lcm->handle());
 }
