@@ -59,21 +59,22 @@ main (int argc, char** argv)
 
   // 3. Create a vector of poses and publish them all
   std::vector<Isometry3dTime> posesT;
-  poseT.pose.translation() = Eigen::Vector3d(-4,2,0); poseT.utime = 1; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.1,0); poseT.utime = 2; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.2,0); poseT.utime = 3; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.3,0); poseT.utime = 4; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.4,0); poseT.utime = 5; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.5,0); poseT.utime = 6; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.6,0); poseT.utime = 7; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.7,0); poseT.utime = 8; posesT.push_back(poseT);
-  poseT.pose.translation() = Eigen::Vector3d(-4,2.8,0); poseT.utime = 9; posesT.push_back(poseT);
+  Isometry3dTime poseT2 =  Isometry3dTime(0, Eigen::Isometry3d::Identity()) ;
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2,0);   poseT2.utime = 1; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.1,0); poseT2.utime = 2; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.2,0); poseT2.utime = 3; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.3,0); poseT2.utime = 4; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.4,0); poseT2.utime = 5; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.5,0); poseT2.utime = 6; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.6,0); poseT2.utime = 7; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.7,0); poseT2.utime = 8; posesT.push_back(poseT2);
+  poseT2.pose.translation() = Eigen::Vector3d(-4,2.8,0); poseT2.utime = 9; posesT.push_back(poseT2);
   pc_vis_->pose_collection_to_lcm_from_list(5, posesT);
 
 
   // 4. Move a pose which will indirectly move the associated point cloud, without republishing it 
-  std::cout << "wait 10 seconds, then translate the point cloud by republishing the pose its attached to. The original point cloud is not retransmitted\n";
-  sleep(10);
+  std::cout << "wait 5 seconds, then translate the red point cloud by republishing the pose its attached to. The original point cloud is not retransmitted\n";
+  sleep(5);
   poseT.pose.translation() = Eigen::Vector3d(0,4,0); // nominal head height
   pc_vis_->pose_to_lcm_from_list(3, poseT);
 
