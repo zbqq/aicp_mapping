@@ -263,12 +263,24 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   string configName1;
   configName1.append(reg_cfg_.homedir);
   //configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
-  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  //configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
+  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_new_improving.yaml");
   registr_->setConfigFile(configName1);
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
   DP out1 = registr_->getDataOut();
+
+  PM::ICP icp = registr_->getIcp();
+  DP readFiltered = icp.getReadingFiltered();
+
+  // DEBUG: Store readind cloud after pre-filtering -----------------
+  std::stringstream vtk_filteredName;
+  vtk_filteredName << "readFilteredICP_";
+  vtk_filteredName << to_string(sweep_scans_list_->getNbClouds());
+  vtk_filteredName << ".vtk";
+  savePointCloudVTK(vtk_filteredName.str().c_str(), readFiltered);
+  //-----------------------------------------------------------------
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*

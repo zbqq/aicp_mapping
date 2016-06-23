@@ -1,0 +1,53 @@
+##### Pre-filetring: 
+## MinDistDataPointsFilter:
+# Keep points which lie beyond a radial threshold in meters.
+## SurfaceNormalDataPointsFilter:
+# The surface normal to each point is estimated by finding knn neighboring points (including the point itself) and taking the eigen-# vector corresponding to the smallest eigen-value of all neighboring points.
+## MaxDensityDataPointsFilter:
+# Sub-sampling occurs mostly in high density regions. The result is a cloud with lower density overall with the low density regions # being preserved. The param is the desired maximum density of points/m^3.
+
+readingDataPointsFilters:
+  - MinDistDataPointsFilter:
+      minDist: 2
+  - SurfaceNormalDataPointsFilter:
+        knn: 20
+        keepDensities: 1
+  - MaxDensityDataPointsFilter:
+       maxDensity: 1000
+
+referenceDataPointsFilters:
+  - MinDistDataPointsFilter:
+      minDist: 0.5
+  - SurfaceNormalDataPointsFilter:
+        knn: 20
+        keepDensities: 1
+  - MaxDensityDataPointsFilter:
+       maxDensity: 1000
+
+matcher:
+  KDTreeMatcher:
+    knn: 1
+    epsilon: 3.16
+
+outlierFilters:
+  - TrimmedDistOutlierFilter:
+      ratio: 0.7
+
+errorMinimizer:
+  PointToPlaneErrorMinimizer
+
+transformationCheckers:
+  - CounterTransformationChecker:
+      maxIterationCount: 150
+  - DifferentialTransformationChecker:
+      minDiffRotErr: 0.001
+      minDiffTransErr: 0.01
+      smoothLength: 4   
+      
+inspector:
+  PerformanceInspector
+
+logger:
+#  FileLogger
+  NullLogger
+

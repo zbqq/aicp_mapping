@@ -28,3 +28,17 @@ pods_install_pkg_config_file(timingUtils
   LIBS 
   REQUIRES eigen3 
   VERSION 0.0.1)
+
+add_library(filteringUtils SHARED filteringUtils.cpp)
+set_target_properties(filteringUtils PROPERTIES SOVERSION 1)
+pods_install_libraries(filteringUtils)
+pods_install_headers( filteringUtils.hpp
+              DESTINATION filteringUtils)
+pods_use_pkg_config_packages(filteringUtils eigen3
+  lcm    bot2-frames icp-registration drc-lcmtypes
+  lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7
+  ${FK_PACKAGES})
+pods_install_pkg_config_file(filteringUtils
+  LIBS
+  REQUIRES eigen3
+  VERSION 0.0.1)
