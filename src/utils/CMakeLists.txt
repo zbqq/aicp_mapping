@@ -36,7 +36,7 @@ pods_install_headers( filteringUtils.hpp
               DESTINATION filteringUtils)
 pods_use_pkg_config_packages(filteringUtils eigen3
   lcm    bot2-frames icp-registration drc-lcmtypes
-  lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7
+  lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7 pcl_filters-1.7 pcl_segmentation-1.7
   ${FK_PACKAGES})
 pods_install_pkg_config_file(filteringUtils
   LIBS
