@@ -7,22 +7,22 @@
 # Sub-sampling occurs mostly in high density regions. The result is a cloud with lower density overall with the low density regions # being preserved. The param is the desired maximum density of points/m^3.
 
 readingDataPointsFilters:
-  - MinDistDataPointsFilter:
-      minDist: 2
+  #- MinDistDataPointsFilter:
+  #    minDist: 2
   - SurfaceNormalDataPointsFilter:
         knn: 20
         keepDensities: 1
-  - MaxDensityDataPointsFilter:
-       maxDensity: 1000
+  #- MaxDensityDataPointsFilter:
+  #     maxDensity: 1000
 
 referenceDataPointsFilters:
-  - MinDistDataPointsFilter:
-      minDist: 0.5
+  #- MinDistDataPointsFilter:
+  #    minDist: 0.5
   - SurfaceNormalDataPointsFilter:
         knn: 20
         keepDensities: 1
-  - MaxDensityDataPointsFilter:
-       maxDensity: 1000
+  #- MaxDensityDataPointsFilter:
+  #     maxDensity: 1000
 
 matcher:
   KDTreeMatcher:
@@ -31,7 +31,7 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.7
+      ratio: 0.40
 
 errorMinimizer:
   PointToPlaneErrorMinimizer

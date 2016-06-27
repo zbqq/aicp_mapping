@@ -3,36 +3,40 @@
 
 using namespace Eigen;
 
-void planesExtractionFilter(DP &dp_cloud_blob)
+void planeModelSegmentationFilter(DP &dp_cloud_blob)
 {
   pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
   fromDataPointsToPCL(dp_cloud_blob, pcl_cloud);
 
-  planesExtractionFilter(pcl_cloud);
+  planeModelSegmentationFilter(pcl_cloud);
+
+  DP dp_cloud;
+  fromPCLToDataPoints(dp_cloud, pcl_cloud);
+  dp_cloud_blob = dp_cloud;
 }
 
-void planesExtractionFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
+void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_blob_ptr;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>),
   cloud_p (new pcl::PointCloud<pcl::PointXYZRGB>), cloud_f (new pcl::PointCloud<pcl::PointXYZRGB>),
   cloud_planes (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-  std::cerr << "PointCloud before filtering: " << cloud_blob.width * cloud_blob.height << " data points." << std::endl;
-  //std::cerr << "PointCloud before filtering: " << pcl_cloud->width * pcl_cloud->height << " data points." << std::endl;
+  std::cerr << "Before downsampling: " << cloud_blob.width * cloud_blob.height << " data points." << std::endl;
+  //std::cerr << "Before downsampling: " << pcl_cloud->width * pcl_cloud->height << " data points." << std::endl;
 
-  // Create the filtering object: downsample the dataset using a leaf size of 1cm
+  // Filter: uniform distribution of points
+  // Create the filtering object: downsample the dataset using a leaf size of 8cm
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   cloud_blob_ptr = cloud_blob.makeShared();
   sor.setInputCloud(cloud_blob_ptr);
   sor.setLeafSize (0.08f, 0.08f, 0.08f);
   sor.filter (*cloud_filtered);
 
-  std::cerr << "PointCloud after filtering: " << cloud_filtered->width * cloud_filtered->height << " data points." << std::endl;
-
+  std::cerr << "After downsampling: " << cloud_filtered->width * cloud_filtered->height << " data points." << std::endl;
   // Write the downsampled version to disk
   pcl::PCDWriter writer;
-  writer.write<pcl::PointXYZRGB> ("table_scene_lms400_downsampled.pcd", *cloud_filtered, false);
+  writer.write<pcl::PointXYZRGB> ("downsampled_cloud.pcd", *cloud_filtered, false);
 
   pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients ());
   pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
@@ -75,11 +79,19 @@ void planesExtractionFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
     double area = compute2DPolygonalArea(*cloud_p, normal);*/
 
     //std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << " data points. Area: " << area << std::endl;
-    std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << std::endl;
-    
-    std::stringstream ss;
-    ss << "table_scene_lms400_plane_" << i << ".pcd";
-    writer.write<pcl::PointXYZRGB> (ss.str (), *cloud_p, false);
+    //std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << std::endl;
+
+    //srand (time(NULL));
+    // Cluster color
+    float r = (rand() % 256);
+    float g = (rand() % 256);
+    float b = (rand() % 256);
+    for (size_t i_point = 0; i_point < cloud_p->points.size (); i_point++)
+    {
+      cloud_p->points[i_point].r = r;
+      cloud_p->points[i_point].g = g;
+      cloud_p->points[i_point].b = b;
+    }
 
     // Create the filtering object
     extract.setNegative (true);
@@ -92,21 +104,97 @@ void planesExtractionFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
     //if((cloud_p->width * cloud_p->height) >= (cloud_filtered->width * cloud_filtered->height * 0.01))
     *cloud_planes = *cloud_planes + *cloud_p;
   }
-/*
-  // Sparse points filter
-  pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
-  // build the filter
-  outrem.setInputCloud(cloud_planes);
-  outrem.setRadiusSearch(0.1);
-  outrem.setMinNeighborsInRadius (7);
-  // apply filter
-  outrem.filter (*cloud_planes);
-*/
-  writer.write<pcl::PointXYZRGB> ("table_scene_lms400_filtering.pcd", *cloud_filtered, false);
-  writer.write<pcl::PointXYZRGB> ("table_scene_lms400_planes.pcd", *cloud_planes, false);
+
+  writer.write<pcl::PointXYZRGB> ("planes_extraction_filtered_cloud.pcd", *cloud_planes, false);
+
+  cloud_blob = *cloud_planes;
 }
 
-/////////// TO_DO: Try Region growing segmentation!!!!!!!
+void regionGrowingPlaneSegmentationFilter(DP &dp_cloud_blob)
+{
+  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
+  fromDataPointsToPCL(dp_cloud_blob, pcl_cloud);
+
+  regionGrowingPlaneSegmentationFilter(pcl_cloud);
+
+  DP dp_cloud;
+  fromPCLToDataPoints(dp_cloud, pcl_cloud);
+  dp_cloud_blob = dp_cloud;
+}
+
+void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
+{
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_blob_ptr;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_planes (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  // Filter: uniform distribution of points
+  // Create the filtering object: downsample the dataset using a leaf size of 8cm
+  pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+  cloud_blob_ptr = cloud_blob.makeShared();
+  sor.setInputCloud(cloud_blob_ptr);
+  sor.setLeafSize (0.08f, 0.08f, 0.08f);
+  sor.filter (*cloud_filtered);
+
+  pcl::search::Search<pcl::PointXYZRGB>::Ptr tree =
+  boost::shared_ptr<pcl::search::Search<pcl::PointXYZRGB> > (new pcl::search::KdTree<pcl::PointXYZRGB>);
+  pcl::PointCloud <pcl::Normal>::Ptr normals (new pcl::PointCloud <pcl::Normal>);
+  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> normal_estimator;
+  normal_estimator.setSearchMethod (tree);
+  normal_estimator.setInputCloud (cloud_filtered);
+  normal_estimator.setKSearch (30);
+  normal_estimator.compute (*normals);
+
+  pcl::IndicesPtr indices (new std::vector <int>);
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud (cloud_filtered);
+  pass.setFilterFieldName ("z");
+  pass.setFilterLimits (0.0, 1.0);
+  pass.filter (*indices);
+
+  pcl::RegionGrowing<pcl::PointXYZRGB, pcl::Normal> reg;
+  reg.setMinClusterSize (50);
+  reg.setMaxClusterSize (30000);
+  reg.setSearchMethod (tree);
+  reg.setNumberOfNeighbours (15);
+  reg.setInputCloud (cloud_filtered);
+  //reg.setIndices (indices);
+  reg.setInputNormals (normals);
+  reg.setSmoothnessThreshold (3.0 / 180.0 * M_PI);
+  reg.setCurvatureThreshold (1.0);
+
+  std::vector <pcl::PointIndices> clusters;
+  reg.extract (clusters);
+
+  std::cout << "Number of clusters is equal to " << clusters.size () << std::endl;
+  std::cout << "First cluster has " << clusters[0].indices.size () << " points." << endl;
+
+  srand (time(NULL));
+  for (int i = 0; i < clusters.size(); i++)
+  {
+    pcl::PointCloud<pcl::PointXYZRGB> cloud_cluster (*cloud_filtered, clusters[i].indices);
+    // Cluster color
+    float r = (rand() % 256);
+    float g = (rand() % 256);
+    float b = (rand() % 256);
+    for (size_t i_point = 0; i_point < cloud_cluster.points.size (); i_point++)
+    {
+      cloud_cluster.points[i_point].r = r;
+      cloud_cluster.points[i_point].g = g;
+      cloud_cluster.points[i_point].b = b;
+    }
+
+    *cloud_planes = *cloud_planes + cloud_cluster;
+  }
+
+  pcl::PointCloud <pcl::PointXYZRGB>::Ptr colored_cloud = reg.getColoredCloud ();
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointXYZRGB> ("region_growing_clusters.pcd", *colored_cloud, false);
+  writer.write<pcl::PointXYZRGB> ("region_growing_filtered_cloud.pcd", *cloud_planes, false);
+
+  cloud_blob = *cloud_planes;
+}
+
 
 double compute2DPolygonalArea (pcl::PointCloud<pcl::PointXYZRGB> cloud, Eigen::Vector4f normal)
 {

@@ -116,8 +116,8 @@ PM::Matrix distancesKNN(DP &A, DP &B, const char *filename)
       values(0, i) = sqrt(matches.dists(0, i));
     }
   }
-  //savePointCloudVTP("readDistances.vtp", out, values);
-  //savePointCloudVTK(filename, out, values);
+  //savePointCloudVTP("readDistances.vtp", B, values);
+  savePointCloudVTK(filename, B, values);
 
   int nbValidMatches = 0;
   float dist = 0;

@@ -35,7 +35,7 @@ void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eige
   // obj: id name type reset
   // pts: id name type reset objcoll usergb rgb
   pc_vis->obj_cfg_list.push_back( obj_cfg(frame_index,frame_name.str().c_str(),5,reset) );
-  pc_vis->ptcld_cfg_list.push_back( ptcld_cfg(pc_index,pc_name.str().c_str(),1,1,1,1,{r,g,b})); // use the user RGB
+  pc_vis->ptcld_cfg_list.push_back( ptcld_cfg(pc_index,pc_name.str().c_str(),1,1,0,1,{r,g,b})); // use the user RGB
 
   // Publish cloud and frame:
   Isometry3dTime poseT = Isometry3dTime(utime, pose);

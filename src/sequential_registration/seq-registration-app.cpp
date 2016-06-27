@@ -3,7 +3,6 @@
 // Input: POSE_BODY, Output POSE_BODY_CORRECTED
 // Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
 
-
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
@@ -27,8 +26,10 @@
 #include <icp-registration/icp_utils.h>
 #include <icp-registration/vtkUtils.h>
 
-#include "drawingUtils/drawingUtils.hpp"
 #include "timingUtils/timingUtils.hpp"
+#include "drawingUtils/drawingUtils.hpp"
+#include "filteringUtils/filteringUtils.hpp"
+
 #include "aligned_sweeps_collection.hpp"
 
 using namespace std;
@@ -248,6 +249,21 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
 
 void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
 {
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // To file: DEBUG
+  std::stringstream vtk_fname;
+  vtk_fname << "beforeICP_";
+  vtk_fname << to_string(sweep_scans_list_->getNbClouds());
+  vtk_fname << ".vtk";
+  savePointCloudVTK(vtk_fname.str().c_str(), reading);
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  // PRE-FILTERING using filteringUtils
+  //planeModelSegmentationFilter(reference);
+  //planeModelSegmentationFilter(reading);
+  regionGrowingPlaneSegmentationFilter(reference);
+  regionGrowingPlaneSegmentationFilter(reading);
+
   // ............do registration.............
   // First ICP loop
   string configName1;
@@ -264,14 +280,6 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   PM::ICP icp = registr_->getIcp();
   DP readFiltered = icp.getReadingFiltered();
 
-  // DEBUG: Store readind cloud after pre-filtering -----------------
-  std::stringstream vtk_filteredName;
-  vtk_filteredName << "readFilteredICP_";
-  vtk_filteredName << to_string(sweep_scans_list_->getNbClouds());
-  vtk_filteredName << ".vtk";
-  savePointCloudVTK(vtk_filteredName.str().c_str(), readFiltered);
-  //-----------------------------------------------------------------
-
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
   // Distance dp_cloud points from KNN in ref
@@ -283,7 +291,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
 
   // To director
-  drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out1, 1);
+  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out1, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // Second ICP loop
@@ -303,6 +311,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // Distance out_max_filter points from KNN in ref
   PM::Matrix distsOut2 = distancesKNN(reference, output);
   writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);*/
+  pairedPointsMeanDistance(reference, output, icp);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   //T = T2 * T1;
