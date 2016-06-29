@@ -275,7 +275,9 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
-  DP out1 = registr_->getDataOut();
+  // Store output after first ICP
+  // (if second ICP gives exception the output cloud remains this one)
+  output = registr_->getDataOut();
 
   PM::ICP icp = registr_->getIcp();
   DP readFiltered = icp.getReadingFiltered();
@@ -287,34 +289,40 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   PM::Matrix distsRead = distancesKNN(reference, reading);
   writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
   // Distance out_trimmed_filter points from KNN in ref
-  PM::Matrix distsOut1 = distancesKNN(reference, out1);
+  PM::Matrix distsOut1 = distancesKNN(reference, output);
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
+  pairedPointsMeanDistance(reference, output, icp);
 
   // To director
-  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out1, 1);
+  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+/*
   // Second ICP loop
-  // DP out1 = registr_->getDataOut();
-  /*string configName2;
+  string configName2;
   configName2.append(reg_cfg_.homedir);
   configName2.append("/oh-distro/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
   registr_->setConfigFile(configName2);
+  PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
 
-  registr_->getICPTransform(out1, reference);
-  PM::TransformationParameters T2 = registr_->getTransform();
-  cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;*/
-  output = registr_->getDataOut();
+  try {
+    registr_->getICPTransform(output, reference);
+    T2 = registr_->getTransform();
+    cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
+    output = registr_->getDataOut();
 
-  // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
-  /*
-  // Distance out_max_filter points from KNN in ref
-  PM::Matrix distsOut2 = distancesKNN(reference, output);
-  writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);*/
-  pairedPointsMeanDistance(reference, output, icp);
-  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
+    // // Distance out_max_filter points from KNN in ref
+    // PM::Matrix distsOut2 = distancesKNN(reference, output);
+    // writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);
+    pairedPointsMeanDistance(reference, output, icp);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  }
+  catch (std::runtime_error e) {
+    cout << "Exception: No points for Max Outlier Distance --> T2 = Identity \n";
+    T2 = PM::TransformationParameters::Identity(4,4);
+  }
 
-  //T = T2 * T1;
+  T = T2 * T1;*/
   T = T1;
 }
 
