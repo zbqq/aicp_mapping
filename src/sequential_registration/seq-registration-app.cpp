@@ -261,8 +261,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // PRE-FILTERING using filteringUtils
   //planeModelSegmentationFilter(reference);
   //planeModelSegmentationFilter(reading);
-  regionGrowingPlaneSegmentationFilter(reference);
-  regionGrowingPlaneSegmentationFilter(reading);
+  //regionGrowingPlaneSegmentationFilter(reference);
+  //regionGrowingPlaneSegmentationFilter(reading);
 
   // ............do registration.............
   // First ICP loop
@@ -376,6 +376,22 @@ void App::operator()() {
         DP out;
         PM::TransformationParameters Ttot;
 
+  // PRE-FILTERING using filteringUtils
+  //planeModelSegmentationFilter(reference);
+  //planeModelSegmentationFilter(reading);
+  regionGrowingPlaneSegmentationFilter(ref);
+  regionGrowingPlaneSegmentationFilter(dp_cloud);
+
+        //Overlap
+        Eigen::Isometry3d ref_pose = sweep_scans_list_->getReference().getBodyPose();
+        Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
+        DP ref_try, read_try;
+        ref_try = ref;
+        read_try = dp_cloud;
+        overlapFilter(ref_try, read_try, ref_pose, read_pose);
+        //drawPointCloudCollections(lcm_, 500, local_, ref_try, 1);
+        //drawPointCloudCollections(lcm_, 501, local_, read_try, 1);
+
         this->doRegistration(ref, dp_cloud, out, Ttot);
 
         TimingUtils::toc();
@@ -427,7 +443,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
   // 4. Store in LidarScan current scan wrt lidar frame
   LidarScan* current_scan = new LidarScan(msg->utime,msg->rad0,msg->radstep,
-                                          msg->ranges,msg->intensities,world_to_head_now_,head_to_lidar_);
+                                          msg->ranges,msg->intensities,world_to_head_now_,head_to_lidar_,
+                                          world_to_body_last);
 
   // DEBUG: Storage in full sweep structure......%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Accumulate current scan in point cloud (projection to default reference "body")

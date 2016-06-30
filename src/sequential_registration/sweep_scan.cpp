@@ -29,9 +29,11 @@ void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int 
   utime_start = planar_scans.front().getUtime(); // Time stamp of first planar scan
   utime_end = planar_scans.back().getUtime(); // Time stamp of last planar scan
 
-  Eigen::Isometry3d world_to_first_scan = planar_scans.front().getPose();
-  world_to_last_scan = planar_scans.back().getPose();
+  Eigen::Isometry3d world_to_first_scan = planar_scans.front().getSensorPose();
+  world_to_last_scan = planar_scans.back().getSensorPose();
   relative_motion = world_to_first_scan.inverse() * world_to_last_scan;
+
+  world_to_body = planar_scans.back().getBodyPose();
 
   initialized_ = true;
 }

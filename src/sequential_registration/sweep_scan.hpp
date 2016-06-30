@@ -17,6 +17,8 @@ class SweepScan
     int getNbPoints(){ return dp_cloud.getNbPoints(); };
 
     DP& getCloud(){ return dp_cloud; };
+    Eigen::Isometry3d getSensorPose(){ return world_to_last_scan; };
+    Eigen::Isometry3d getBodyPose(){ return world_to_body; };
     std::vector<LidarScan>& getScans(){ return planar_scans; };
     int getId(){ return cloud_id; };
 
@@ -47,4 +49,5 @@ class SweepScan
     Eigen::Isometry3d relative_motion; // first_to_last_scan used to accumulate cloud
                                        // without drift correction
     Eigen::Isometry3d world_to_last_scan;  // world_to_current_cloud = world_to_last_scan
+    Eigen::Isometry3d world_to_body;
 };
