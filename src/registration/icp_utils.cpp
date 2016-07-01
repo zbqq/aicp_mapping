@@ -430,3 +430,40 @@ void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number)
   else cout << "Unable to open file";
   cout << "Written file: " << out_file << endl;
 }
+
+void replaceRatioConfigFile(string in_file, string out_file, float ratio)
+{
+  std::ifstream in;
+  in.open(in_file, std::fstream::in);
+  std::ofstream out;
+  out.open(out_file, std::ofstream::out);
+  if (!in)
+  {
+    cerr << "Could not open config file for params update." << "\n";
+  }
+  if (!out)
+  {
+    cerr << "Could not open config file for params update." << "\n";
+  }
+
+  string word_to_replace = "ratio: ";
+  std::stringstream word_to_replace_with_tmp;
+  word_to_replace_with_tmp << "ratio: ";
+  word_to_replace_with_tmp << ratio;
+  string word_to_replace_with = word_to_replace_with_tmp.str();
+
+  string line;
+  size_t len = word_to_replace.length() + 3;
+  while (!in.eof())
+  {
+    getline(in, line);
+    size_t pos = line.find(word_to_replace);
+    if (pos != string::npos)
+    {
+      line.replace(pos, len, word_to_replace_with);
+    }
+    out << line << '\n';
+  }
+  in.close();
+  out.close();
+}

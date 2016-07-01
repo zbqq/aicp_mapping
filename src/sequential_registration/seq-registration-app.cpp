@@ -103,6 +103,10 @@ class App{
 
     // Overlap parameter
     float overlap_;
+    float angluarView_;
+    float outlierFilerRatio_;
+    // Temporary config file for ICP chain: copied and trimmed ratio replaced
+    string tmpConfigName_;
 
     // Correction variables
     Eigen::Isometry3d current_correction_;
@@ -138,6 +142,16 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   robot_behavior_previous_ = -1;
 
   overlap_ = -1.0;
+  outlierFilerRatio_ = 0.40;
+  if (cl_cfg_.robot_name == "val")
+    angluarView_ = 200.0;
+  else if (cl_cfg_.robot_name == "atlas")
+    angluarView_ = 220.0;
+  else
+    angluarView_ = 270.0;
+  // File used to update config file for ICP chain
+  tmpConfigName_.append(reg_cfg_.homedir);
+  tmpConfigName_.append("/oh-distro/software/perception/registration/filters_config/icp_improving_tmp.yaml");
 
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -267,9 +281,14 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // First ICP loop
   string configName1;
   configName1.append(reg_cfg_.homedir);
-  //configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
-  //configName1.append("/oh-distro/software/perception/registration/filters_config/icp_trimmed_atlas_finals.yaml");
   configName1.append("/oh-distro/software/perception/registration/filters_config/icp_new_improving.yaml");
+
+  // Auto-tune ICP chain (quantile for the Trimmed Outlier Filter)
+  float current_ratio = overlap_/100.0;
+  if (current_ratio < 0.25)
+    current_ratio = 0.25;
+  replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
+
   registr_->setConfigFile(configName1);
   registr_->getICPTransform(reading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
@@ -386,7 +405,7 @@ void App::operator()() {
         DP ref_try, read_try;
         ref_try = ref;
         read_try = dp_cloud;
-        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, 270.0);
+        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angluarView_);
         cout << "Overlap: " << overlap_ << "%" << endl;
 
         this->doRegistration(ref, dp_cloud, out, Ttot);

@@ -46,3 +46,4 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud
 void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int num_clouds);
 void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number);
 
+void replaceRatioConfigFile(string in_file, string out_file, float ratio);
