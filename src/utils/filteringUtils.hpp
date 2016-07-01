@@ -32,13 +32,10 @@ void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& clo
 
 double compute2DPolygonalArea (pcl::PointCloud<pcl::PointXYZRGB> cloud, Eigen::Vector4f normal);
 
-void overlapFilter(DP& cloudA, DP& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB);
-void overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB);
-void transormCloud(pcl::PointCloud<pcl::PointXYZRGB>& cloud,
-                   pcl::PointCloud<pcl::PointXYZRGB>& transformed_cloud, Eigen::Isometry3d pose);
-void fieldOfViewFilter(std::vector<pcl::PointXYZ> &points_in,
-                       std::vector<pcl::PointXYZ> &points_out, int ang_view, int range);
-
+float overlapFilter(DP& cloudA, DP& cloudB,
+                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
+                   float range, float angularView);
+float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
+                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
+                   float range, float angularView);
 #endif

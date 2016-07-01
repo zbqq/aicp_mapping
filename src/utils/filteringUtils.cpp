@@ -228,32 +228,29 @@ double compute2DPolygonalArea (pcl::PointCloud<pcl::PointXYZRGB> cloud, Eigen::V
 // The overlapFilter does not reduce the number of points in the clouds. However it computes
 // a parameter describing the overlap between the two clouds.
 // Input: two clouds cloudA and cloudB in local reference frame,
-//        the transformations poseA and poseB (robot pose at capturing time wrt local).
+//        the transformations poseA and poseB (robot pose at capturing time wrt local),
+//        sensor range [meters] and angular field of view [degrees].
 // Output: overlapParam.
-void overlapFilter(DP& cloudA, DP& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB)
+float overlapFilter(DP& cloudA, DP& cloudB,
+                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
+                   float range, float angularView)
 {
   pcl::PointCloud<pcl::PointXYZRGB> pcl_cloudA, pcl_cloudB;
   fromDataPointsToPCL(cloudA, pcl_cloudA);
   fromDataPointsToPCL(cloudB, pcl_cloudB);
 
-  overlapFilter(pcl_cloudA, pcl_cloudB, poseA, poseB);
-
-  DP dp_cloudA, dp_cloudB;
-  fromPCLToDataPoints(dp_cloudA, pcl_cloudA);
-  fromPCLToDataPoints(dp_cloudB, pcl_cloudB);
-  cloudA = dp_cloudA;
-  cloudB = dp_cloudB;
+  float overlap = overlapFilter(pcl_cloudA, pcl_cloudB, poseA, poseB, range, angularView);
+  return overlap;
 }
 
-void overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB)
+float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
+                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
+                   float range, float angularView)
 {
-  float range = 20.0;
-  float ang_view = 270.0;
+  float thresh = (180.0-((360.0-angularView)/2));
   Eigen::Isometry3d poseBinverse;
   poseBinverse = poseB.inverse();
-  // Filter 1
+  // Filter 1: first cloud wrt second pose
   std::vector<pcl::PointXYZ> accepted_pointsA;
   for (int i=0; i < cloudA.size(); i++)
   {
@@ -268,9 +265,9 @@ void overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pc
     float phi = acos (pointA_B.z / r) * 180.0 / M_PI;
 
     // Filter out points with (theta > 225deg and theta < 315deg) and the far ones
-    if ((theta < (180.0-((360.0-ang_view)/2)) || theta > (180.0+((360.0-ang_view)/2))) && r < range)
+    //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
+    if ((theta < thresh && theta > -thresh) && r < range)
     {
-      //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
       pcl::PointXYZ point;
       point.x = r * cos( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
       point.y = r * sin( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
@@ -279,138 +276,84 @@ void overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pc
     }
   }
 
-  cout << "Points left in cloudA: " << accepted_pointsA.size() << " of " << cloudA.size() << endl;
-  //cout << "Points left in cloudB: " << pointsBred_poseB.size() << " of " << transf_cloudB_poseB->size() << endl;
-}
-
-void transormCloud(pcl::PointCloud<pcl::PointXYZRGB>& cloud, 
-                   pcl::PointCloud<pcl::PointXYZRGB>& transformed_cloud, Eigen::Isometry3d pose)
-{
-  Eigen::Affine3d poseaff;
-  poseaff.translation() = pose.translation();
-  poseaff.linear() = pose.rotation();
-
-  // Executing the transformation
-  pcl::transformPointCloud (cloud, transformed_cloud, poseaff);
-}
-
-void fieldOfViewFilter(std::vector<pcl::PointXYZ> &points_in, 
-                       std::vector<pcl::PointXYZ> &points_out, int ang_view, int range)
-{
-  // cartesian to spherical coord
-  for (int i=0; i < points_in.size(); i++)
+  Eigen::Isometry3d poseAinverse;
+  poseAinverse = poseA.inverse();
+  // Filter 2: second cloud wrt first pose
+  std::vector<pcl::PointXYZ> accepted_pointsB;
+  for (int i=0; i < cloudB.size(); i++)
   {
-    float r = sqrt( pow(points_in.at(i).x,2.0) + pow(points_in.at(i).y,2.0) + pow(points_in.at(i).z,2.0) );
-    float theta = atan2 (points_in.at(i).y,points_in.at(i).x) * 180 / M_PI; //degrees
-    float phi = acos (points_in.at(i).z / r) * 180.0 / M_PI;
+    pcl::PointXYZ pointB_A;
+    pointB_A.x = static_cast<float> (poseAinverse(0, 0) * cloudB.points[i].x + poseAinverse(0, 1) * cloudB.points[i].y + poseAinverse(0, 2) * cloudB.points[i].z + poseAinverse(0, 3));
+    pointB_A.y = static_cast<float> (poseAinverse(1, 0) * cloudB.points[i].x + poseAinverse(1, 1) * cloudB.points[i].y + poseAinverse(1, 2) * cloudB.points[i].z + poseAinverse(1, 3));
+    pointB_A.z = static_cast<float> (poseAinverse(2, 0) * cloudB.points[i].x + poseAinverse(2, 1) * cloudB.points[i].y + poseAinverse(2, 2) * cloudB.points[i].z + poseAinverse(2, 3));
+    //pointB_A = poseB.inverse() * cloudB.points[i];
+
+    float r = sqrt( pow(pointB_A.x,2.0) + pow(pointB_A.y,2.0) + pow(pointB_A.z,2.0) );
+    float theta = atan2 (pointB_A.y,pointB_A.x) * 180 / M_PI; //degrees
+    float phi = acos (pointB_A.z / r) * 180.0 / M_PI;
 
     // Filter out points with (theta > 225deg and theta < 315deg) and the far ones
-    if ((theta < ang_view/2 || theta > ang_view/2) && r < range)
+    //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
+    if ((theta < thresh && theta > -thresh) && r < range)
     {
-      //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
       pcl::PointXYZ point;
       point.x = r * cos( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
       point.y = r * sin( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
       point.z = r * cos( phi * M_PI / 180.0 );
-      points_out.push_back(point);
+      accepted_pointsB.push_back(point);
     }
   }
-}
 
+  //Compute overlap parameter dependent on percentage of accepted points per cloud
+  float perc_accepted_A, perc_accepted_B;
+  perc_accepted_A = (float)(accepted_pointsA.size()) / (float)(cloudA.size());
+  perc_accepted_B = (float)(accepted_pointsB.size()) / (float)(cloudB.size());
+  cout << "Points left in cloudA: " << perc_accepted_A*100.0 << "%" << endl;
+  cout << "Points left in cloudB: " << perc_accepted_B*100.0 << "%" << endl;
 
-//%%%%%%%%%%%%
-/*
-void overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB)
-{
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf_cloudA_poseA (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf_cloudA_poseB (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf_cloudB_poseA (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf_cloudB_poseB (new pcl::PointCloud<pcl::PointXYZRGB> ());
+  float overlap = perc_accepted_A * perc_accepted_B;
+  //cout << "Overlap: " << overlap*100.0 << "%" << endl;
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudA_ptr;
-
-  // Transform both cloud in first reference frame
-  transormCloud(cloudA, *transf_cloudA_poseA, poseA);
-  transormCloud(cloudB, *transf_cloudB_poseA, poseA);
-  // Filter 1
-  std::vector<pcl::PointXYZ> pointsA_poseA;
-  for (int i=0; i < transf_cloudA_poseA->size(); i++)
+  /*
+  // Create point clouds for visualization
+  pcl::PointCloud<pcl::PointXYZ>::Ptr accepted_cloudA (new pcl::PointCloud<pcl::PointXYZ> ());
+  accepted_cloudA->width = accepted_pointsA.size();
+  accepted_cloudA->height = 1;
+  for (int i=0; i < accepted_pointsA.size(); i++)
   {
-    pcl::PointXYZ point;
-    point.x = transf_cloudA_poseA->points[i].x;
-    point.y = transf_cloudA_poseA->points[i].y;
-    point.z = transf_cloudA_poseA->points[i].z;
-    pointsA_poseA.push_back(point);
+    accepted_cloudA->points.push_back(accepted_pointsA.at(i));
   }
-  std::vector<pcl::PointXYZ> pointsB_poseA;
-  for (int i=0; i < transf_cloudB_poseA->size(); i++)
-  {
-    pcl::PointXYZ point;
-    point.x = transf_cloudB_poseA->points[i].x;
-    point.y = transf_cloudB_poseA->points[i].y;
-    point.z = transf_cloudB_poseA->points[i].z;
-    pointsB_poseA.push_back(point);
-  }
-  std::vector<pcl::PointXYZ> pointsAred_poseA, pointsBred_poseA;
-  fieldOfViewFilter(pointsA_poseA, pointsAred_poseA, 270, 20);
-  fieldOfViewFilter(pointsB_poseA, pointsBred_poseA, 270, 20);
 
-  // Transform both cloud in second reference frame
-  transormCloud(*transf_cloudA_poseA, *transf_cloudA_poseB, poseB * poseA.inverse());
-  transormCloud(*transf_cloudB_poseA, *transf_cloudB_poseB, poseB * poseA.inverse());
-  // Filter 2
-  std::vector<pcl::PointXYZ> pointsA_poseB;
-  for (int i=0; i < transf_cloudA_poseB->size(); i++)
+  pcl::PointCloud<pcl::PointXYZ>::Ptr accepted_cloudB (new pcl::PointCloud<pcl::PointXYZ> ());
+  accepted_cloudB->width = accepted_pointsB.size();
+  accepted_cloudB->height = 1;
+  for (int i=0; i < accepted_pointsB.size(); i++)
   {
-    pcl::PointXYZ point;
-    point.x = transf_cloudA_poseB->points[i].x;
-    point.y = transf_cloudA_poseB->points[i].y;
-    point.z = transf_cloudA_poseB->points[i].z;
-    pointsA_poseB.push_back(point);
+    accepted_cloudB->points.push_back(accepted_pointsB.at(i));
   }
-  std::vector<pcl::PointXYZ> pointsB_poseB;
-  for (int i=0; i < transf_cloudB_poseB->size(); i++)
-  {
-    pcl::PointXYZ point;
-    point.x = transf_cloudB_poseB->points[i].x;
-    point.y = transf_cloudB_poseB->points[i].y;
-    point.z = transf_cloudB_poseB->points[i].z;
-    pointsB_poseB.push_back(point);
-  }
-  std::vector<pcl::PointXYZ> pointsAred_poseB, pointsBred_poseB;
-  fieldOfViewFilter(pointsA_poseB, pointsAred_poseB, 270, 20);
-  fieldOfViewFilter(pointsB_poseB, pointsBred_poseB, 270, 20);
 
-  cout << "Points left in cloudA: " << pointsAred_poseB.size() << " of " << transf_cloudA_poseB->size() << endl;
-  cout << "Points left in cloudB: " << pointsBred_poseB.size() << " of " << transf_cloudB_poseB->size() << endl;
-
-  
   // Visualization
-  printf(  "\nPoint cloud colors :  white  = original point cloud\n"
-      "                        red  = transformed point cloud\n");
+  printf(  "\nPoint cloud colors :  white = cloudA\n"
+           "                      red   = cloudB\n");
   pcl::visualization::PCLVisualizer viewer ("Matrix transformation example");
 
    // Define R,G,B colors for the point cloud
-  cloudA_ptr = cloudA.makeShared();
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGB> source_cloud_color_handler (transf_cloudA_poseA, 255, 255, 255);
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler (accepted_cloudA, 255, 255, 255);
   // We add the point cloud to the viewer and pass the color handler
-  viewer.addPointCloud (transf_cloudA_poseA, source_cloud_color_handler, "original_cloud");
+  viewer.addPointCloud (accepted_cloudA, source_cloud_color_handler, "cloudA");
 
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGB> transformed_cloud_color_handler (transf_cloudA_poseB, 230, 20, 20); // Red
-  viewer.addPointCloud (transf_cloudA_poseB, transformed_cloud_color_handler, "transformed_cloud");
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> transformed_cloud_color_handler (accepted_cloudB, 230, 20, 20); // Red
+  viewer.addPointCloud (accepted_cloudB, transformed_cloud_color_handler, "cloudB");
 
   viewer.addCoordinateSystem (1.0, 0);
   viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
-  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed_cloud");
+  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloudA");
+  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloudB");
   //viewer.setPosition(800, 400); // Setting visualiser window position
 
   while (!viewer.wasStopped ()) { // Display the visualiser until 'q' key is pressed
     viewer.spinOnce ();
-  }
+  }*/
 
-
-  cloudA = *transf_cloudA_poseA;
-  cloudB = *transf_cloudB_poseA;
-}*/
+  return overlap*100.0;
+}

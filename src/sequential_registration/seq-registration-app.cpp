@@ -101,6 +101,9 @@ class App{
     int robot_behavior_now_;
     int robot_behavior_previous_;
 
+    // Overlap parameter
+    float overlap_;
+
     // Correction variables
     Eigen::Isometry3d current_correction_;
 
@@ -133,6 +136,8 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
+
+  overlap_ = -1.0;
 
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -258,12 +263,6 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   savePointCloudVTK(vtk_fname.str().c_str(), reading);
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  // PRE-FILTERING using filteringUtils
-  //planeModelSegmentationFilter(reference);
-  //planeModelSegmentationFilter(reading);
-  //regionGrowingPlaneSegmentationFilter(reference);
-  //regionGrowingPlaneSegmentationFilter(reading);
-
   // ............do registration.............
   // First ICP loop
   string configName1;
@@ -376,21 +375,19 @@ void App::operator()() {
         DP out;
         PM::TransformationParameters Ttot;
 
-  // PRE-FILTERING using filteringUtils
-  //planeModelSegmentationFilter(reference);
-  //planeModelSegmentationFilter(reading);
-  regionGrowingPlaneSegmentationFilter(ref);
-  regionGrowingPlaneSegmentationFilter(dp_cloud);
-
+        // PRE-FILTERING using filteringUtils
+        //planeModelSegmentationFilter(ref);
+        //planeModelSegmentationFilter(dp_cloud);
+        regionGrowingPlaneSegmentationFilter(ref);
+        regionGrowingPlaneSegmentationFilter(dp_cloud);
         //Overlap
         Eigen::Isometry3d ref_pose = sweep_scans_list_->getReference().getBodyPose();
         Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
         DP ref_try, read_try;
         ref_try = ref;
         read_try = dp_cloud;
-        overlapFilter(ref_try, read_try, ref_pose, read_pose);
-        //drawPointCloudCollections(lcm_, 500, local_, ref_try, 1);
-        //drawPointCloudCollections(lcm_, 501, local_, read_try, 1);
+        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, 270.0);
+        cout << "Overlap: " << overlap_ << "%" << endl;
 
         this->doRegistration(ref, dp_cloud, out, Ttot);
 
