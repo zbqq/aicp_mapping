@@ -151,7 +151,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
     angluarView_ = 270.0;
   // File used to update config file for ICP chain
   tmpConfigName_.append(reg_cfg_.homedir);
-  tmpConfigName_.append("/oh-distro/software/perception/registration/filters_config/icp_improving_tmp.yaml");
+  tmpConfigName_.append("/oh-distro/software/perception/registration/filters_config/icp_autotuned_default.yaml");
 
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -281,7 +281,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // First ICP loop
   string configName1;
   configName1.append(reg_cfg_.homedir);
-  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_new_improving.yaml");
+  configName1.append("/oh-distro/software/perception/registration/filters_config/icp_autotuned.yaml");
 
   // Auto-tune ICP chain (quantile for the Trimmed Outlier Filter)
   float current_ratio = overlap_/100.0;

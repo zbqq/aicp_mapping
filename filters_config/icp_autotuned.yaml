@@ -1,4 +1,4 @@
-##### Pre-filetring: 
+##### Pre-filetring:
 ## MinDistDataPointsFilter:
 # Keep points which lie beyond a radial threshold in meters.
 ## SurfaceNormalDataPointsFilter:
@@ -32,7 +32,7 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.40
+      ratio: 0.250
 
 errorMinimizer:
   PointToPlaneErrorMinimizer
@@ -43,12 +43,13 @@ transformationCheckers:
   - DifferentialTransformationChecker:
       minDiffRotErr: 0.001
       minDiffTransErr: 0.01
-      smoothLength: 4   
-      
+      smoothLength: 4
+
 inspector:
   PerformanceInspector
 
 logger:
 #  FileLogger
   NullLogger
+
 
