@@ -281,6 +281,7 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   // First ICP loop
   string configName1;
   configName1.append(reg_cfg_.homedir);
+  //configName1.append("/oh-distro/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
   configName1.append("/oh-distro/software/perception/registration/filters_config/icp_autotuned.yaml");
 
   // Auto-tune ICP chain (quantile for the Trimmed Outlier Filter)
