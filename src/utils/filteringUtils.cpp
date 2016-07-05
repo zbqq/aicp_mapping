@@ -25,7 +25,9 @@ void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
   std::cerr << "Before downsampling: " << cloud_blob.width * cloud_blob.height << " data points." << std::endl;
   //std::cerr << "Before downsampling: " << pcl_cloud->width * pcl_cloud->height << " data points." << std::endl;
 
-  // Filter: uniform distribution of points
+  // Filter: downsampling the cloud (reduce the number of points) using a voxelized grid approach.
+  // The VoxelGrid class creates a 3D voxel grid over the point cloud. In each voxel, all the points
+  // will be approximated with their centroid.
   // Create the filtering object: downsample the dataset using a leaf size of 8cm
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   cloud_blob_ptr = cloud_blob.makeShared();
@@ -38,6 +40,8 @@ void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
   pcl::PCDWriter writer;
   writer.write<pcl::PointXYZRGB> ("downsampled_cloud.pcd", *cloud_filtered, false);
 
+  // Filter: RANSAC approach for  model fitting. We specify a distance threshold,
+  // which determines how close a point must be to the model in order to be considered an inlier.
   pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients ());
   pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
   // Create the segmentation object
@@ -128,7 +132,9 @@ void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& clo
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_planes (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-  // Filter: uniform distribution of points
+  // Filter: downsampling the cloud (reduce the number of points) using a voxelized grid approach.
+  // The VoxelGrid class creates a 3D voxel grid over the point cloud. In each voxel, all the points
+  // will be approximated with their centroid.
   // Create the filtering object: downsample the dataset using a leaf size of 8cm
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   cloud_blob_ptr = cloud_blob.makeShared();
@@ -152,6 +158,10 @@ void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& clo
   pass.setFilterLimits (0.0, 1.0);
   pass.filter (*indices);
 
+  // Filter: It sorts the points by their curvature value and the region begins its growth
+  // from the point that has the minimum curvature value. The picked point is added to the set called
+  // seeds. For every seed point the algorithm finds neighbouring points and tests them
+  // for the angle between their normal and normal of the current seed point.
   pcl::RegionGrowing<pcl::PointXYZRGB, pcl::Normal> reg;
   reg.setMinClusterSize (50);
   reg.setMaxClusterSize (30000);
