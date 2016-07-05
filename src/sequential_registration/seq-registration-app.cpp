@@ -288,6 +288,8 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   float current_ratio = overlap_/100.0;
   if (current_ratio < 0.25)
     current_ratio = 0.25;
+  else if (current_ratio > 0.75)
+    current_ratio = 0.75;
   replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
 
   registr_->setConfigFile(configName1);

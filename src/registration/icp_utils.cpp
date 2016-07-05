@@ -453,7 +453,7 @@ void replaceRatioConfigFile(string in_file, string out_file, float ratio)
   string word_to_replace_with = word_to_replace_with_tmp.str();
 
   string line;
-  size_t len = word_to_replace.length() + 3;
+  size_t len = word_to_replace.length() + 4;
   while (!in.eof())
   {
     getline(in, line);
