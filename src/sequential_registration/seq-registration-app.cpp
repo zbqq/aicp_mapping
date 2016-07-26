@@ -75,7 +75,6 @@ class App{
 
     BotParam* botparam_;
     BotFrames* botframes_;
-    FrameCheckTools frame_check_tools_;
 
     // Data structures for storage
     vector<LidarScan> lidar_scans_list_;
@@ -94,6 +93,7 @@ class App{
     Eigen::Isometry3d world_to_body_corr_first_;
 
     bool pose_initialized_;
+    bool updated_correction_;
     bool vicon_initialized_;
 
     // Robot behavior
@@ -104,11 +104,11 @@ class App{
     // Overlap parameter
     float overlap_;
     float angularView_;
-    float outlierFilterRatio_;
     // Temporary config file for ICP chain: copied and trimmed ratio replaced
     string tmpConfigName_;
 
     // Correction variables
+    Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d current_correction_;
 
     // Init handlers:
@@ -135,6 +135,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
          cl_cfg_(cl_cfg_), ca_cfg_(ca_cfg_), reg_cfg_(reg_cfg_){
 
   pose_initialized_ = FALSE;
+  updated_correction_ = TRUE;
   vicon_initialized_ = FALSE;
 
   accumulate_ = TRUE;
@@ -142,7 +143,6 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   robot_behavior_previous_ = -1;
 
   overlap_ = -1.0;
-  outlierFilterRatio_ = 0.40;
   if (cl_cfg_.robot_name == "val")
     angularView_ = 200.0;
   else if (cl_cfg_.robot_name == "atlas")
@@ -158,6 +158,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   world_to_frame_vicon_ = Eigen::Isometry3d::Identity();
   world_to_frame_vicon_first_ = Eigen::Isometry3d::Identity();
   world_to_body_corr_first_ = Eigen::Isometry3d::Identity();
+  corrected_pose_ = Eigen::Isometry3d::Identity();
   current_correction_ = Eigen::Isometry3d::Identity();
 
   // Set up frames and config:
@@ -419,6 +420,7 @@ void App::operator()() {
 
         // Compute correction to pose estimate:
         current_correction_ = getTransfParamAsIsometry3d(Ttot);
+        updated_correction_ = TRUE;
         //bot_core::pose_t msg_out2 = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
         //lcm_->publish("POSE_BODY_CORRECTION",&msg_out2);
 
@@ -582,27 +584,35 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   }
 
   bot_core::pose_t msg_out;
-  Eigen::Isometry3d corrected_pose;
-  // Compute and publish correction (Simulation or Robot)
+  //Eigen::Isometry3d corrected_pose;
+  // Compute and publish correction (Robot or Debug)
   if (cl_cfg_.working_mode == "robot")
   {
     // Apply correction if available (identity otherwise)
-    corrected_pose = current_correction_ * world_to_body_last;
-    // To correct robot drift publish CORRECTED POSE
-    msg_out = getIsometry3dAsBotPose(corrected_pose, msg->utime);
-    lcm_->publish(cl_cfg_.output_channel,&msg_out);
+    if (updated_correction_)
+    {
+      corrected_pose_ = current_correction_ * world_to_body_last;
+      updated_correction_ = FALSE;
+
+      // To correct robot drift publish CORRECTED POSE
+      msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
+      lcm_->publish(cl_cfg_.output_channel,&msg_out);
+    }
   }
-  else
+  else if (cl_cfg_.working_mode == "debug")
   {
-    // To correct artificial drift (with SCS simulation) publish CORRECTION only
-    msg_out = getIsometry3dAsBotPose(current_correction_, msg->utime);
-    lcm_->publish("POSE_BODY_CORRECTION",&msg_out);
+    // Apply correction if available (identity otherwise)
+    corrected_pose_ = current_correction_ * world_to_body_last;
+
+    // To correct robot drift publish CORRECTED POSE
+    msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
+    lcm_->publish(cl_cfg_.output_channel,&msg_out);
   }
 
   if ( !pose_initialized_ ){
     cout << "Initialize state estimate using rigid transform or pose.\n";
 
-    world_to_body_corr_first_ = corrected_pose;
+    world_to_body_corr_first_ = corrected_pose_;
   }
 
   // Visualization: compare with Vicon #########
@@ -611,7 +621,7 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   corr_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
 
   Eigen::Isometry3d corr_to_vicon_pose;
-  corr_to_vicon_pose = corr_to_vicon_first * corrected_pose;
+  corr_to_vicon_pose = corr_to_vicon_first * corrected_pose_;
   // Estimated pose
   Eigen::Isometry3d pose_to_vicon_first;
   pose_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
@@ -649,7 +659,7 @@ int main(int argc, char **argv){
 
   ConciseArgs parser(argc, argv, "simple-fusion");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (i.e. atlas or val)");
-  parser.add(cl_cfg.working_mode, "s", "working_mode", "Simulation or Robot? (i.e. sim or robot)");
+  parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
