@@ -72,8 +72,8 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
       << "Initial transformation is not rigid, identity will be used." << endl;
     initT = PM::TransformationParameters::Identity(cloudDimension+1,cloudDimension+1);
   }
-  else
-    cout << "Initialization: " << reg_cfg_.initTrans_ << endl;
+  //else
+    //cout << "Initialization: " << reg_cfg_.initTrans_ << endl;
 
   // Compute the transformation to express input in ref
   PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT);

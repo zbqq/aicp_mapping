@@ -39,6 +39,7 @@ struct CommandLineConfig
   std::string robot_name;
   std::string output_channel;
   std::string working_mode;
+  bool apply_correction;
 };
 
 class App{
@@ -106,6 +107,8 @@ class App{
     float angularView_;
     // Temporary config file for ICP chain: copied and trimmed ratio replaced
     string tmpConfigName_;
+    // Initialize ICP
+    PM::TransformationParameters initialT_;
 
     // Correction variables
     Eigen::Isometry3d corrected_pose_;
@@ -114,7 +117,8 @@ class App{
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
                             const std::string& channel, const  bot_core::planar_lidar_t* msg);
-    void doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T);
+    void doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose,
+                        Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T);
 
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
     void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
@@ -152,6 +156,8 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   // File used to update config file for ICP chain
   tmpConfigName_.append(getenv("DRC_BASE"));
   tmpConfigName_.append("/software/perception/registration/filters_config/icp_autotuned_default.yaml");
+  // Initialize ICP
+  initialT_ = PM::TransformationParameters::Identity(4,4);
 
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -267,15 +273,28 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
   return pose_iso;
 }
 
-void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
+void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose,
+                        Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T)
 {
+  // PRE-FILTERING using filteringUtils
+  //planeModelSegmentationFilter(reference);
+  //planeModelSegmentationFilter(reading);
+  regionGrowingPlaneSegmentationFilter(reference);
+  regionGrowingPlaneSegmentationFilter(reading);
+
+  // Overlap
+  DP ref_try, read_try;
+  ref_try = reference;
+  read_try = reading;
+  overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
+  cout << "Overlap: " << overlap_ << "%" << endl;
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // To file: DEBUG
-  std::stringstream vtk_fname;
+  /*std::stringstream vtk_fname;
   vtk_fname << "beforeICP_";
   vtk_fname << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname << ".vtk";
-  savePointCloudVTK(vtk_fname.str().c_str(), reading);
+  savePointCloudVTK(vtk_fname.str().c_str(), reading);*/
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // ............do registration.............
@@ -285,16 +304,51 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   //configName1.append("/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
   configName1.append("/software/perception/registration/filters_config/icp_autotuned.yaml");
 
+  DP initializedReading;
+  // Initialization (if user rquires to apply the correction)
+  if (cl_cfg_.apply_correction)
+  {
+    PM::Transformation* rigidTrans;
+    rigidTrans = PM::get().REG(Transformation).create("RigidTransformation");
+
+    if (!rigidTrans->checkParameters(initialT_)) {
+      cerr << endl
+         << "Initial transformation is not rigid. Initialization: identity."
+         << endl;
+      initialT_ = PM::TransformationParameters::Identity(4,4);
+    }
+    else
+    {
+      initializedReading = rigidTrans->compute(reading, initialT_);
+      cout << "Initialization:" << endl << initialT_ << endl;
+    }
+  }
+  else
+  {
+    initializedReading = reading;
+    initialT_ = PM::TransformationParameters::Identity(4,4);
+    cout << "Initialization: not applied." << endl;
+  }
+
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // To file: DEBUG
+  /*std::stringstream vtk_fname2;
+  vtk_fname2 << "afterInitICP_";
+  vtk_fname2 << to_string(sweep_scans_list_->getNbClouds());
+  vtk_fname2 << ".vtk";
+  savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
   // Auto-tune ICP chain (quantile for the Trimmed Outlier Filter)
   float current_ratio = overlap_/100.0;
   if (current_ratio < 0.25)
     current_ratio = 0.25;
-  else if (current_ratio > 0.75)
-    current_ratio = 0.75;
+  else if (current_ratio > 0.70)
+    current_ratio = 0.70;
   replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
 
   registr_->setConfigFile(configName1);
-  registr_->getICPTransform(reading, reference);
+  registr_->getICPTransform(initializedReading, reference);
   PM::TransformationParameters T1 = registr_->getTransform();
   cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
   // Store output after first ICP
@@ -308,12 +362,12 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   /*
   // Distance dp_cloud points from KNN in ref
   int line_number = sweep_scans_list_->getNbClouds();
-  PM::Matrix distsRead = distancesKNN(reference, reading);
+  PM::Matrix distsRead = distancesKNN(reference, initializedReading);
   writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
   // Distance out_trimmed_filter points from KNN in ref
   PM::Matrix distsOut1 = distancesKNN(reference, output);
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
-  pairedPointsMeanDistance(reference, output, icp);
+  //pairedPointsMeanDistance(reference, output, icp);
 
   // To director
   //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
@@ -345,7 +399,15 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
   }
 
   T = T2 * T1;*/
-  T = T1;
+  T = T1 * initialT_;
+  // Variable to apply correction (initialize the alignment)
+  float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
+  cout << "distT = " << distT << endl;
+  
+  if (distT < 0.50)
+    initialT_ = T;
+  else
+    initialT_ = PM::TransformationParameters::Identity(4,4);
 }
 
 void App::operator()() {
@@ -394,25 +456,19 @@ void App::operator()() {
       {
         TimingUtils::tic();
 
+        // AICP: Registration against same reference
         DP ref = sweep_scans_list_->getReference().getCloud();
+        // Incremental ICP
+        //DP ref = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getCloud();
         DP out;
         PM::TransformationParameters Ttot;
 
-        // PRE-FILTERING using filteringUtils
-        //planeModelSegmentationFilter(ref);
-        //planeModelSegmentationFilter(dp_cloud);
-        regionGrowingPlaneSegmentationFilter(ref);
-        regionGrowingPlaneSegmentationFilter(dp_cloud);
         //Overlap
         Eigen::Isometry3d ref_pose = sweep_scans_list_->getReference().getBodyPose();
+        //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
         Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
-        DP ref_try, read_try;
-        ref_try = ref;
-        read_try = dp_cloud;
-        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
-        cout << "Overlap: " << overlap_ << "%" << endl;
 
-        this->doRegistration(ref, dp_cloud, out, Ttot);
+        this->doRegistration(ref, dp_cloud, ref_pose, read_pose, out, Ttot);
 
         TimingUtils::toc();
 
@@ -429,12 +485,13 @@ void App::operator()() {
         sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
         // To director
-        drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
+        //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
      
       // To file
       vtk_fname << ".vtk";
-      savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+      if(sweep_scans_list_->getNbClouds() % 20 == 0)
+        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
         
       current_sweep->~SweepScan(); 
     }
@@ -476,22 +533,22 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     robot_behavior_now = robot_behavior_now_;
   }
 
-  if (cl_cfg_.robot_name == "val" && robot_behavior_now != 4 && accumulate_
-      || cl_cfg_.robot_name == "atlas" && robot_behavior_now != 2 && accumulate_)
+  //if (cl_cfg_.robot_name == "val" && robot_behavior_now != 4 && accumulate_
+  //    || cl_cfg_.robot_name == "atlas" && robot_behavior_now != 2 && accumulate_)
   // only when transition from walking to standing happens 
-  {
+  //{
     if ( accu_->getCounter() % ca_cfg_.batch_size == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
     accu_->processLidar(msg);
     lidar_scans_list_.push_back(*current_scan);
-  }
+  /*}
   else
   {
     if ( accu_->getCounter() > 0 )
       accu_->clearCloud();
       if (!lidar_scans_list_.empty())
         lidar_scans_list_.clear();
-  }
+  }*/
   delete current_scan;
 
   if ( accu_->getFinished() ){ //finished accumulating?
@@ -644,6 +701,7 @@ int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
   cl_cfg.robot_name = "val";
   cl_cfg.working_mode = "robot";
+  cl_cfg.apply_correction = FALSE;
   cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
   CloudAccumulateConfig ca_cfg;
@@ -660,6 +718,7 @@ int main(int argc, char **argv){
   ConciseArgs parser(argc, argv, "simple-fusion");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (i.e. atlas or val)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
+  parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose?");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
