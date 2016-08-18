@@ -13,7 +13,15 @@ RegistrationConfig::RegistrationConfig(){
 
 Registration::Registration(boost::shared_ptr<lcm::LCM> &lcm_, const RegistrationConfig& reg_cfg_):
     lcm_(lcm_), reg_cfg_(reg_cfg_){
+  init();
+}
 
+Registration::Registration(const RegistrationConfig& reg_cfg_):reg_cfg_(reg_cfg_){
+  init();
+}
+
+void Registration::init()
+{
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB> ());
   reference_cloud_ = cloud_ref_ptr;
 
@@ -62,21 +70,21 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
 
   // Apply rigid transformation (just a "visually good" approximation of the transformation 
   // between ref and input clouds) to escape local minima
-  PM::TransformationParameters initT = parseTransformationDeg(reg_cfg_.initTrans_, cloudDimension);
+  initT_ = parseTransformationDeg(reg_cfg_.initTrans_, cloudDimension);
 
   PM::Transformation* rigidTrans;
   rigidTrans = PM::get().REG(Transformation).create("RigidTransformation");
 
-  if (!rigidTrans->checkParameters(initT)) {
+  if (!rigidTrans->checkParameters(initT_)) {
     cerr << endl
       << "Initial transformation is not rigid, identity will be used." << endl;
-    initT = PM::TransformationParameters::Identity(cloudDimension+1,cloudDimension+1);
+    initT_ = PM::TransformationParameters::Identity(cloudDimension+1,cloudDimension+1);
   }
-  //else
-    //cout << "Initialization: " << reg_cfg_.initTrans_ << endl;
+  else
+    cout << "Initialization: " << reg_cfg_.initTrans_ << endl;
 
   // Compute the transformation to express input in ref
-  PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT);
+  PM::TransformationParameters T = icp_(cloud_in, cloud_ref, initT_);
   //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
   cout << "Accepted matches (inliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
@@ -88,7 +96,7 @@ void Registration::getICPTransform(DP &cloud_in, DP &cloud_ref)
 
   // Store input after initialization and after final transformation
   fromDataPointsToPCL(out_cloud_, *transformed_input_cloud_);
-  DP initializedInput = rigidTrans->compute(cloud_in, initT);
+  DP initializedInput = rigidTrans->compute(cloud_in, initT_);
   fromDataPointsToPCL(initializedInput, *initialized_input_cloud_);
 
   out_transform_ = T;

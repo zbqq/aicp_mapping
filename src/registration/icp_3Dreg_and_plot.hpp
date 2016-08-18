@@ -42,6 +42,7 @@ class RegistrationConfig
 class Registration{
   public:
     Registration(boost::shared_ptr<lcm::LCM> &lcm_, const RegistrationConfig& reg_cfg_);
+    Registration(const RegistrationConfig& reg_cfg_);
     
     ~Registration(){
     }   
@@ -58,6 +59,7 @@ class Registration{
       else //idx == 3
         return initialized_input_cloud_; }
     
+    PM::TransformationParameters getInitialTransform(){ return initT_; }
     PM::TransformationParameters getTransform(){ return out_transform_; }
     DP getDataOut(){ return out_cloud_; }
     string getConfigFileName(){ return reg_cfg_.configFile3D_; }
@@ -72,6 +74,8 @@ class Registration{
         reg_cfg_.configFile3D_.append(configName); }
 
   private:
+    void init();
+
     boost::shared_ptr<lcm::LCM> lcm_;
     RegistrationConfig reg_cfg_;
 
@@ -82,7 +86,8 @@ class Registration{
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr initialized_input_cloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_input_cloud_;
-    PM::TransformationParameters out_transform_;    
+    PM::TransformationParameters out_transform_;
+    PM::TransformationParameters initT_;
     DP out_cloud_; 
 };
 

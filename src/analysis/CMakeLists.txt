@@ -27,5 +27,17 @@ pods_use_pkg_config_packages(icp-error-compute eigen3
   ${FK_PACKAGES})
 pods_install_executables(icp-error-compute)
 
+add_executable (perturbations_routine perturbations_routine_app.cpp)
+target_link_libraries(perturbations_routine boost_system filteringUtils drawingUtils icp-registration)
+pods_use_pkg_config_packages(perturbations_routine eigen3
+  lcm    bot2-frames
+  lcmtypes_bot2-core  
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  pronto_vis icp-registration drc-lcmtypes pronto_vis
+  bot2-lcmgl-client 
+  lidar-odom maps laser-util
+  ${FK_PACKAGES})
+pods_install_executables(perturbations_routine)
+
 
 
