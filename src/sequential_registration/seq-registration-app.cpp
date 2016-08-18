@@ -9,6 +9,7 @@
 #include <lcmtypes/bot_core.hpp>
 #include <lcmtypes/drc/behavior_t.hpp>
 #include <lcmtypes/drc/controller_status_t.hpp>
+#include <lcmtypes/drc/double_array_t.hpp>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -39,6 +40,7 @@ struct CommandLineConfig
   std::string robot_name;
   std::string output_channel;
   std::string working_mode;
+  std::string algorithm;
   bool apply_correction;
 };
 
@@ -148,7 +150,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   overlap_ = -1.0;
   if (cl_cfg_.robot_name == "val")
-    angularView_ = 200.0;
+    angularView_ = 180.0;
   else if (cl_cfg_.robot_name == "atlas")
     angularView_ = 220.0;
   else
@@ -196,7 +198,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   cout << "Initialization of Vicon pose...\n";
 
   // ICP chain
-  registr_ = new Registration(lcm_, reg_cfg_);
+  registr_ = new Registration(reg_cfg_);
 }
 
 int get_trans_with_utime(BotFrames *bot_frames,
@@ -277,10 +279,13 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
                         Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T)
 {
   // PRE-FILTERING using filteringUtils
-  //planeModelSegmentationFilter(reference);
-  //planeModelSegmentationFilter(reading);
-  regionGrowingPlaneSegmentationFilter(reference);
-  regionGrowingPlaneSegmentationFilter(reading);
+  if (cl_cfg_.algorithm == "aicp")
+  {
+    //planeModelSegmentationFilter(reference);
+    //planeModelSegmentationFilter(reading);
+    regionGrowingPlaneSegmentationFilter(reference);
+    regionGrowingPlaneSegmentationFilter(reading);
+  }
 
   // Overlap
   DP ref_try, read_try;
@@ -301,12 +306,14 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // First ICP loop
   string configName1;
   configName1.append(getenv("DRC_BASE"));
-  //configName1.append("/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
-  configName1.append("/software/perception/registration/filters_config/icp_autotuned.yaml");
+  if (cl_cfg_.algorithm == "icp")
+    configName1.append("/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
+  else if (cl_cfg_.algorithm == "aicp")
+    configName1.append("/software/perception/registration/filters_config/icp_autotuned.yaml");
 
   DP initializedReading;
   // Initialization (if user rquires to apply the correction)
-  if (cl_cfg_.apply_correction)
+  if (cl_cfg_.apply_correction && cl_cfg_.working_mode != "robot")
   {
     PM::Transformation* rigidTrans;
     rigidTrans = PM::get().REG(Transformation).create("RigidTransformation");
@@ -345,7 +352,9 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     current_ratio = 0.25;
   else if (current_ratio > 0.70)
     current_ratio = 0.70;
-  replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
+
+  if (cl_cfg_.algorithm == "aicp")
+    replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
 
   registr_->setConfigFile(configName1);
   registr_->getICPTransform(initializedReading, reference);
@@ -490,7 +499,7 @@ void App::operator()() {
      
       // To file
       vtk_fname << ".vtk";
-      if(sweep_scans_list_->getNbClouds() % 20 == 0)
+      if(sweep_scans_list_->getNbClouds() % 8 == 0)
         savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
         
       current_sweep->~SweepScan(); 
@@ -666,6 +675,13 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
     lcm_->publish(cl_cfg_.output_channel,&msg_out);
   }
 
+  // Publish current overlap
+  drc::double_array_t msg_overlap;
+  msg_overlap.utime = msg->utime;
+  msg_overlap.num_values = 1;
+  msg_overlap.values.push_back(overlap_);
+  lcm_->publish("OVERLAP",&msg_overlap);
+
   if ( !pose_initialized_ ){
     cout << "Initialize state estimate using rigid transform or pose.\n";
 
@@ -701,6 +717,7 @@ int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
   cl_cfg.robot_name = "val";
   cl_cfg.working_mode = "robot";
+  cl_cfg.algorithm = "aicp";
   cl_cfg.apply_correction = FALSE;
   cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
@@ -718,7 +735,8 @@ int main(int argc, char **argv){
   ConciseArgs parser(argc, argv, "simple-fusion");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (i.e. atlas or val)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
-  parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose?");
+  parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
+  parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
