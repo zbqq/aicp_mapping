@@ -11,6 +11,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include <iomanip>
+#include <random>
+
 #include <math.h>       /* cos, sin */
 
 #include <pcl/common/io.h>
@@ -47,3 +50,5 @@ void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int
 void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number);
 
 void replaceRatioConfigFile(string in_file, string out_file, float ratio);
+
+Eigen::VectorXf getRandomGaussianVariable(float mean, float std_deviation, int size);

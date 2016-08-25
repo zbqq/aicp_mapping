@@ -467,3 +467,19 @@ void replaceRatioConfigFile(string in_file, string out_file, float ratio)
   in.close();
   out.close();
 }
+
+Eigen::VectorXf getRandomGaussianVariable(float mean, float std_deviation, int size)
+{
+  std::random_device rd;
+
+  std::mt19937 e2(rd());
+
+  std::normal_distribution<float> dist(mean, std_deviation);
+
+  Eigen::VectorXf rand_variables(size);
+  for (int n = 0; n < rand_variables.size(); n++) {
+    rand_variables(n) = dist(e2);
+  }
+
+  return rand_variables;
+}

@@ -111,6 +111,9 @@ class App{
     string tmpConfigName_;
     // Initialize ICP
     PM::TransformationParameters initialT_;
+    Eigen::VectorXf x_perturbs_;
+    Eigen::VectorXf y_perturbs_;
+    Eigen::VectorXf yaw_perturbs_;
 
     // Correction variables
     Eigen::Isometry3d corrected_pose_;
@@ -160,6 +163,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   tmpConfigName_.append("/software/perception/registration/filters_config/icp_autotuned_default.yaml");
   // Initialize ICP
   initialT_ = PM::TransformationParameters::Identity(4,4);
+  x_perturbs_ = getRandomGaussianVariable(0.0, 0.1, 300);
+  y_perturbs_ = getRandomGaussianVariable(0.0, 0.1, 300);
+  yaw_perturbs_ = getRandomGaussianVariable(0.0, 10, 300);
 
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
@@ -278,6 +284,20 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
 void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose,
                         Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T)
 {
+  // EXPERIMENT: Sensitivity to Input
+  // Initial Perturbations: random variables from Gaussian distribution
+  PM::TransformationParameters perturbsT = PM::TransformationParameters::Identity(4,4);
+  std::stringstream perturbs_tmp;
+  perturbs_tmp << to_string(x_perturbs_(sweep_scans_list_->getNbClouds()));
+  perturbs_tmp << ",";
+  perturbs_tmp << to_string(y_perturbs_(sweep_scans_list_->getNbClouds()));
+  perturbs_tmp << ",";
+  perturbs_tmp << to_string(yaw_perturbs_(sweep_scans_list_->getNbClouds()));
+  string perturbs_str;
+  perturbs_str.append(perturbs_tmp.str());
+  cout << "perturbs_str: " << perturbs_str << endl;
+  perturbsT = parseTransformationDeg(perturbs_str, 3);
+
   // PRE-FILTERING using filteringUtils
   if (cl_cfg_.algorithm == "aicp")
   {
@@ -326,6 +346,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     }
     else
     {
+      initialT_ = perturbsT * initialT_;
       initializedReading = rigidTrans->compute(reading, initialT_);
       cout << "Initialization:" << endl << initialT_ << endl;
     }
