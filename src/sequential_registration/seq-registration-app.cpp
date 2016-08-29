@@ -287,7 +287,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // EXPERIMENT: Sensitivity to Input
   // Initial Perturbations: random variables from Gaussian distribution
   PM::TransformationParameters perturbsT = PM::TransformationParameters::Identity(4,4);
-  std::stringstream perturbs_tmp;
+  /*std::stringstream perturbs_tmp;
   perturbs_tmp << to_string(x_perturbs_(sweep_scans_list_->getNbClouds()));
   perturbs_tmp << ",";
   perturbs_tmp << to_string(y_perturbs_(sweep_scans_list_->getNbClouds()));
@@ -295,8 +295,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   perturbs_tmp << to_string(yaw_perturbs_(sweep_scans_list_->getNbClouds()));
   string perturbs_str;
   perturbs_str.append(perturbs_tmp.str());
-  cout << "perturbs_str: " << perturbs_str << endl;
-  perturbsT = parseTransformationDeg(perturbs_str, 3);
+  cout << "Initial Perturbation: " << perturbs_str << endl;
+  perturbsT = parseTransformationDeg(perturbs_str, 3);*/
 
   // PRE-FILTERING using filteringUtils
   if (cl_cfg_.algorithm == "aicp")
@@ -519,9 +519,9 @@ void App::operator()() {
       }
      
       // To file
-      vtk_fname << ".vtk";
+      /*vtk_fname << ".vtk";
       if(sweep_scans_list_->getNbClouds() % 8 == 0)
-        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());*/
         
       current_sweep->~SweepScan(); 
     }

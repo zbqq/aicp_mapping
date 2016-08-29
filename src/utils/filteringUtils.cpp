@@ -199,8 +199,8 @@ void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& clo
 
   pcl::PointCloud <pcl::PointXYZRGB>::Ptr colored_cloud = reg.getColoredCloud ();
   pcl::PCDWriter writer;
-  writer.write<pcl::PointXYZRGB> ("region_growing_clusters.pcd", *colored_cloud, false);
-  writer.write<pcl::PointXYZRGB> ("region_growing_filtered_cloud.pcd", *cloud_planes, false);
+  //writer.write<pcl::PointXYZRGB> ("region_growing_clusters.pcd", *colored_cloud, false);
+  //writer.write<pcl::PointXYZRGB> ("region_growing_filtered_cloud.pcd", *cloud_planes, false);
 
   cloud_blob = *cloud_planes;
 }
