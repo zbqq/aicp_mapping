@@ -35,7 +35,7 @@ pods_use_pkg_config_packages(perturbations_routine eigen3
   lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
   pronto_vis icp-registration drc-lcmtypes pronto_vis
   bot2-lcmgl-client 
-  lidar-odom maps laser-util
+  lidar-odom laser-util
   ${FK_PACKAGES})
 pods_install_executables(perturbations_routine)
 
