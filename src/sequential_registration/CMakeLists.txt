@@ -12,6 +12,6 @@ target_link_libraries(sequential-registration boost_system pointmatcher filterin
 pods_use_pkg_config_packages(sequential-registration eigen3
   lcm    bot2-frames icp-registration drc-lcmtypes pronto_vis
   lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7 bot2-lcmgl-client 
-  lidar-odom maps laser-util
+  lidar-odom laser-util
   ${FK_PACKAGES})
 pods_install_executables(sequential-registration)
