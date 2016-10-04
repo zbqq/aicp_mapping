@@ -8,10 +8,8 @@
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
-#include <lcmtypes/bot_core.hpp>
 #include <boost/shared_ptr.hpp>
 #include <lidar-odom/lidar-odometry.hpp>
-#include <lcmtypes/bot_core.hpp>
 #include <ConciseArgs>
 
 #include <iterator>
