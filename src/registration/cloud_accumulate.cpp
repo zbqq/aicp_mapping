@@ -160,11 +160,11 @@ void CloudAccumulate::processLidar(const  bot_core::planar_lidar_t* msg){
 
 
 void CloudAccumulate::processLidar(std::shared_ptr<bot_core::planar_lidar_t> this_msg){
-  
+  /*
   if (!frame_check_tools_.isLocalToScanValid(botframes_)){
     cout << "Is local to scan valid? NO." << endl; 
     return;
-  }
+  }*/
   
   // Convert Scan to local frame:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_local (new pcl::PointCloud<pcl::PointXYZRGB> ());
