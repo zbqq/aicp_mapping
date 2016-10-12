@@ -6,7 +6,9 @@
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
-#include <lcmtypes/bot_core.hpp>
+#include <lcmtypes/bot_core/planar_lidar_t.hpp>
+#include <lcmtypes/bot_core/pose_t.hpp>
+#include <lcmtypes/bot_core/rigid_transform_t.hpp>
 #include <lcmtypes/drc/behavior_t.hpp>
 #include <lcmtypes/drc/controller_status_t.hpp>
 #include <lcmtypes/drc/double_array_t.hpp>
