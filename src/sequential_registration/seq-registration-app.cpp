@@ -107,6 +107,8 @@ class App{
     // Overlap parameter
     float overlap_;
     float angularView_;
+    // Registration directory base
+    string REG_BASE_;
     // Temporary config file for ICP chain: copied and trimmed ratio replaced
     string tmpConfigName_;
     // Initialize ICP
@@ -158,9 +160,15 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
     angularView_ = 220.0;
   else
     angularView_ = 270.0;
+  // Registration directory base
+  REG_BASE_.append(getenv("DRC_BASE"));
+  if (cl_cfg_.robot_name == "hyq")
+    REG_BASE_.append("/software/registration");
+  else
+    REG_BASE_.append("/software/perception/registration");
   // File used to update config file for ICP chain
-  tmpConfigName_.append(getenv("DRC_BASE"));
-  tmpConfigName_.append("/software/perception/registration/filters_config/icp_autotuned_default.yaml");
+  tmpConfigName_.append(REG_BASE_);
+  tmpConfigName_.append("/filters_config/icp_autotuned_default.yaml");
   // Initialize ICP
   initialT_ = PM::TransformationParameters::Identity(4,4);
   x_perturbs_ = getRandomGaussianVariable(0.0, 0.1, 300);
@@ -325,11 +333,11 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // ............do registration.............
   // First ICP loop
   string configName1;
-  configName1.append(getenv("DRC_BASE"));
+  configName1.append(REG_BASE_);
   if (cl_cfg_.algorithm == "icp")
-    configName1.append("/software/perception/registration/filters_config/Chen91_pt2plane.yaml");
+    configName1.append("/filters_config/Chen91_pt2plane.yaml");
   else if (cl_cfg_.algorithm == "aicp")
-    configName1.append("/software/perception/registration/filters_config/icp_autotuned.yaml");
+    configName1.append("/filters_config/icp_autotuned.yaml");
 
   DP initializedReading;
   // Initialization (if user rquires to apply the correction)
@@ -405,8 +413,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
 /*
   // Second ICP loop
   string configName2;
-  configName2.append(getenv("DRC_BASE"));
-  configName2.append("/software/perception/registration/filters_config/icp_max_atlas_finals.yaml");
+  configName2.append(REG_BASE_);
+  configName2.append("/filters_config/icp_max_atlas_finals.yaml");
   registr_->setConfigFile(configName2);
   PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
 
@@ -754,13 +762,13 @@ int main(int argc, char **argv){
   reg_cfg.initTrans_.append("0,0,0"); 
 
   ConciseArgs parser(argc, argv, "simple-fusion");
-  parser.add(cl_cfg.robot_name, "r", "robot_name", "Atlas or Valkyrie? (i.e. atlas or val)");
+  parser.add(cl_cfg.robot_name, "r", "robot_name", "Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
   parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
   parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
-  parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans accumulated per 3D point cloud");
+  parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
   parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");
   parser.add(ca_cfg.max_range, "M", "max_range", "Furthest accepted lidar range");
   parser.parse();
