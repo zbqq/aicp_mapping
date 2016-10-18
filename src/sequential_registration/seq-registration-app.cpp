@@ -568,6 +568,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
   if (cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_))
   // Accumulate EITHER always OR only when transition from walking to standing happens
+  // Pyhton script convert_robot_behavior_type.py must be running.
   {
     if ( accu_->getCounter() % ca_cfg_.batch_size == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
