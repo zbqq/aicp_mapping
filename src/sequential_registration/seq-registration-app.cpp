@@ -9,9 +9,7 @@
 #include <lcmtypes/bot_core/planar_lidar_t.hpp>
 #include <lcmtypes/bot_core/pose_t.hpp>
 #include <lcmtypes/bot_core/rigid_transform_t.hpp>
-#include <lcmtypes/drc/behavior_t.hpp>
-#include <lcmtypes/drc/controller_status_t.hpp>
-#include <lcmtypes/drc/double_array_t.hpp>
+#include <lcmtypes/bot_core/double_array_t.hpp>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -43,6 +41,7 @@ struct CommandLineConfig
   std::string output_channel;
   std::string working_mode;
   std::string algorithm;
+  bool register_if_walking;
   bool apply_correction;
 };
 
@@ -132,10 +131,8 @@ class App{
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
     void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
 
-    // Valkyrie
-    void behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg);
-    // Atlas
-    void behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg);
+    // Valkyrie Unit D and Atlas
+    void behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::double_array_t* msg);
 
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
     Eigen::Isometry3d getPoseAsIsometry3d(const bot_core::pose_t* pose);
@@ -194,12 +191,8 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
 
   lcm_->subscribe(ca_cfg_.lidar_channel, &App::planarLidarHandler, this);
-  // for Valkyrie Unit D
-  lcm_->subscribe("ROBOT_BEHAVIOR", &App::behaviorCallbackValkyrie, this);
-  // for Valkyrie January 2016
-  lcm_->subscribe("ATLAS_BEHAVIOR", &App::behaviorCallbackValkyrie, this);
-  // for Atlas
-  lcm_->subscribe("CONTROLLER_STATUS", &App::behaviorCallbackAtlas, this);
+  // for Valkyrie Unit D and Atlas
+  lcm_->subscribe("CURRENT_ROBOT_BEHAVIOR", &App::behaviorCallback, this);
 
   // Storage
   sweep_scans_list_ = new AlignedSweepsCollection();
@@ -410,7 +403,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   //pairedPointsMeanDistance(reference, output, icp);
 
   // To director
-  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+  drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 /*
   // Second ICP loop
@@ -573,22 +566,22 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     robot_behavior_now = robot_behavior_now_;
   }
 
-  //if (cl_cfg_.robot_name == "val" && robot_behavior_now != 4 && accumulate_
-  //    || cl_cfg_.robot_name == "atlas" && robot_behavior_now != 2 && accumulate_)
-  // only when transition from walking to standing happens 
-  //{
+  if (cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_))
+  // Accumulate EITHER always OR only when transition from walking to standing happens
+  {
     if ( accu_->getCounter() % ca_cfg_.batch_size == 0 )
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
     accu_->processLidar(msg);
     lidar_scans_list_.push_back(*current_scan);
-  /*}
+  }
   else
   {
     if ( accu_->getCounter() > 0 )
       accu_->clearCloud();
       if (!lidar_scans_list_.empty())
         lidar_scans_list_.clear();
-  }*/
+  }
+
   delete current_scan;
 
   if ( accu_->getFinished() ){ //finished accumulating?
@@ -623,30 +616,18 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
 }
 
-// Valkyrie
-void App::behaviorCallbackValkyrie(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::behavior_t* msg)
+// Valkyrie Unit D and Atlas
+void App::behaviorCallback(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::double_array_t* msg)
 {
   std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
   {
     robot_behavior_previous_ = robot_behavior_now_;
-    robot_behavior_now_ = msg->behavior;
+    robot_behavior_now_ = msg->values[1];
 
-    if (robot_behavior_now_ != 4 && robot_behavior_previous_ == 4)    
+    if (robot_behavior_now_ != 1 && robot_behavior_previous_ == 1)
     {
       accumulate_ = TRUE;
     }
-  }
-}
-// Atlas
-void App::behaviorCallbackAtlas(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  drc::controller_status_t* msg)
-{
-  std::unique_lock<std::mutex> lock(robot_behavior_mutex_);
-  {
-    robot_behavior_previous_ = robot_behavior_now_;
-    robot_behavior_now_ = msg->state;
-
-    if (robot_behavior_now_ != 2 && robot_behavior_previous_ == 2)    
-      accumulate_ = TRUE;
   }
 }
 
@@ -707,7 +688,7 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   }
 
   // Publish current overlap
-  drc::double_array_t msg_overlap;
+  bot_core::double_array_t msg_overlap;
   msg_overlap.utime = msg->utime;
   msg_overlap.num_values = 1;
   msg_overlap.values.push_back(overlap_);
@@ -749,6 +730,7 @@ int main(int argc, char **argv){
   cl_cfg.robot_name = "val";
   cl_cfg.working_mode = "robot";
   cl_cfg.algorithm = "aicp";
+  cl_cfg.register_if_walking = TRUE;
   cl_cfg.apply_correction = FALSE;
   cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
@@ -767,6 +749,7 @@ int main(int argc, char **argv){
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
   parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
+  parser.add(cl_cfg.register_if_walking, "w", "register_if_walking", "Compute correction also when robot is walking?");
   parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
