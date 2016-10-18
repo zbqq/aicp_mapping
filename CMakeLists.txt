@@ -11,3 +11,4 @@ add_subdirectory(src/analysis)
 add_subdirectory(src/test)
 add_subdirectory(src/utils)
 
+pods_install_python_script(convert_robot_behavior python/convert_robot_behavior_type.py)
