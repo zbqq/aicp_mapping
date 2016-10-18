@@ -411,7 +411,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   //pairedPointsMeanDistance(reference, output, icp);
 
   // To director
-  drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 /*
   // Second ICP loop
