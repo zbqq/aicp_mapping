@@ -13,21 +13,33 @@ pods_use_pkg_config_packages(octrees-difference eigen3
   path-util
   lcmtypes_bot2-core octomap
   lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
-  pronto_vis
   octomap-util
   ${FK_PACKAGES})
 
 target_link_libraries(octrees-difference
   lcm    bot2-frames lcm boost_system
-                       boost_thread pronto_math)
+                       boost_thread)
 set_target_properties(octrees-difference PROPERTIES SOVERSION 1)
 pods_install_libraries(octrees-difference)
-pods_install_headers(convert_octomap.cpp DESTINATION octrees-difference)
+pods_install_headers(convert_octomap.hpp DESTINATION octrees-difference)
 
 pods_install_pkg_config_file(octrees-difference
     LIBS -loctrees-difference
     REQUIRES 
     VERSION 0.0.1)
+
+add_executable (octrees-diff octrees_diff_app.cpp)
+target_link_libraries(octrees-diff pointmatcher lcm boost_system
+                       boost_thread octrees-difference)
+pods_use_pkg_config_packages(octrees-diff eigen3
+  lcm    bot2-frames
+  path-util
+  lcmtypes_bot2-core octomap
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  pronto_vis icp-registration
+  octomap-util
+  ${FK_PACKAGES})
+pods_install_executables(octrees-diff)
 
 
 

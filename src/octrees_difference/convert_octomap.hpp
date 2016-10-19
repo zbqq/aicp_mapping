@@ -1,20 +1,14 @@
 #ifndef CONVERT_OCTOMAP_HPP_
 #define CONVERT_OCTOMAP_HPP_
 
-// file i-o
-#include <sys/types.h>
-#include <sys/stat.h>
-
 #include <boost/shared_ptr.hpp>
 #include <lcm/lcm-cpp.hpp>
 #include <octomap/octomap.h>
-#include <octomap_utils/octomap_util.hpp>
-#include <lcmtypes/octomap_utils.h>
-
-#include <path_util/path_util.h>
-#include <pronto_utils/pronto_vis.hpp>
-
 #include <octomap/ColorOcTree.h>
+#include <octomap_utils/octomap_util.hpp>
+#include <pcl/point_types.h>
+#include <pcl/common/io.h>
+#include <lcmtypes/octomap_utils.h>
 
 using namespace std;
 using namespace octomap;
@@ -34,14 +28,13 @@ class ConvertOctomap{
     ~ConvertOctomap(){
     }    
 
-    void doWork(pronto::PointCloud* &cloud);
-    void doWork(pronto::PointCloud* &cloud, string octree_channel);
+    void doWork(pcl::PointCloud<pcl::PointXYZRGB> &cloud, string octree_channel);
     ColorOcTree* getTree(){ return tree_; }
     bool clearTree(){ 
       tree_->clear();
       return true; 
     }
-    void publishOctree(ColorOcTree* tree, std::string channel);
+    void publishOctree(ColorOcTree* tree, string octree_channel);
     void printChangesByColor(ColorOcTree& tree);
     void printChangesAndActual(ColorOcTree& tree);
     void colorChanges(ColorOcTree& tree, int idx); //idx is an index representing 
@@ -49,10 +42,6 @@ class ConvertOctomap{
     
   private:
 
-    void updateOctree(pronto::PointCloud* &cloud, octomap::ColorOcTree* tree);
-    ScanGraph* convertPointCloudToScanGraph(pronto::PointCloud* &cloud);
-
-    pronto_vis* pc_vis_ ;
     boost::shared_ptr<lcm::LCM> lcm_;
 
     ColorOcTree* tree_;    
@@ -65,6 +54,9 @@ class ConvertOctomap{
     ColorOcTreeNode::Color* yellow;
     ColorOcTreeNode::Color* blue;
     ColorOcTreeNode::Color* green;
+
+    void updateOctree(pcl::PointCloud<pcl::PointXYZRGB> &cloud, ColorOcTree* tree);
+    ScanGraph* convertPointCloudToScanGraph(pcl::PointCloud<pcl::PointXYZRGB> &cloud);
 };
 
 

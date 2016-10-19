@@ -7,19 +7,16 @@ ConvertOctomap::ConvertOctomap(boost::shared_ptr<lcm::LCM> &lcm_, const ConvertO
   tree_  = new ColorOcTree(co_cfg_.octomap_resolution);
   std::cout << "Resolution: " << co_cfg_.octomap_resolution << "  ====================" << endl;
 
-  pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
-
   // define colors
   yellow = new ColorOcTreeNode::Color(250,250,0);
   green = new ColorOcTreeNode::Color(0,102,0);
   blue = new ColorOcTreeNode::Color(0,0,255);
 }
 
-void ConvertOctomap::updateOctree(pronto::PointCloud* &cloud, octomap::ColorOcTree* tree){
+void ConvertOctomap::updateOctree(pcl::PointCloud<pcl::PointXYZRGB> &cloud, ColorOcTree* tree){
   //  Takes about 2.5 sec to convert 400scans or 400k points into an octree
 
-  // double res = 0.1; // used 0.1 and blur of 0.1 was too sharp
-  std::cout << "Resolution: " << co_cfg_.octomap_resolution << endl;
+  std::cout << "Resolution: " << co_cfg_.octomap_resolution << endl; // used 0.1 and blur of 0.1 was too sharp
   double maxrange = -1;
   int max_scan_no = -1;
   unsigned char compression = 0;
@@ -99,7 +96,7 @@ void ConvertOctomap::updateOctree(pronto::PointCloud* &cloud, octomap::ColorOcTr
     }
   }
   tree->updateInnerOccupancy();
-
+  
   /*
   //DEBUGGING:
   std::string old_path = getDataPath(); 
@@ -114,7 +111,7 @@ void ConvertOctomap::updateOctree(pronto::PointCloud* &cloud, octomap::ColorOcTr
   tree->prune();
 }
 
-ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pronto::PointCloud* &cloud)
+ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pcl::PointCloud<pcl::PointXYZRGB> &cloud)
 {
   // Convert cloud to octomap graph:
   ScanGraph* graph = new ScanGraph();
@@ -124,10 +121,10 @@ ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pronto::PointCloud* &clo
   pose6d pose(0, 0, 0, 0, 0, 0);
   //std::cout << "Pose "<< pose << " found.\n";
 
-  for (size_t i = 0; i < cloud->points.size(); i++){
-    scan->push_back(cloud->points[i].x,
-                                 cloud->points[i].y,
-                                 cloud->points[i].z);
+  for (size_t i = 0; i < cloud.points.size(); i++){
+    scan->push_back(cloud.at(i).x,
+                    cloud.at(i).y,
+                    cloud.at(i).z);
   }
   graph->addNode(scan, pose);
   graph->connectPrevious();
@@ -135,7 +132,14 @@ ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pronto::PointCloud* &clo
   return graph;
 }
 
-void ConvertOctomap::publishOctree(ColorOcTree* tree, std::string channel){
+void ConvertOctomap::publishOctree(ColorOcTree* tree, string octree_channel){
+
+  /*
+  double minX, minY, minZ, maxX, maxY, maxZ;
+  tree->getMetricMin(minX, minY, minZ);
+  tree->getMetricMax(maxX, maxY, maxZ);
+  printf("\nmap bounds: [%.2f, %.2f, %.2f] - [%.2f, %.2f, %.2f]  res: %f\n", minX, minY, minZ, maxX, maxY, maxZ,
+      tree->getResolution());*/
 
   octomap_raw_t msg;
   msg.utime = bot_timestamp_now();
@@ -147,14 +151,13 @@ void ConvertOctomap::publishOctree(ColorOcTree* tree, std::string channel){
     msg.transform[i][i] = 1;
   }
 
-  tree->expand();
-
   std::stringstream datastream;
-  tree->writeBinaryConst(datastream);
+  tree->write(datastream);
   std::string datastring = datastream.str();
   msg.data = (uint8_t *) datastring.c_str();
   msg.length = datastring.size();
-  octomap_raw_t_publish(lcm_->getUnderlyingLCM(), channel.c_str(), &msg);
+
+  octomap_raw_t_publish(lcm_->getUnderlyingLCM(), octree_channel.c_str(), &msg);
 }
 
 void ConvertOctomap::colorChanges(ColorOcTree& tree, int idx){
@@ -175,8 +178,9 @@ void ConvertOctomap::colorChanges(ColorOcTree& tree, int idx){
         // new occupied space
         if (idx == 0)
           node->setColor(*yellow); // set color to yellow
-        else
+        else{
           node->setColor(*green); // set color to green
+        }
         changedOccupied += 1;
       }
       else {
@@ -284,97 +288,24 @@ void ConvertOctomap::printChangesAndActual(ColorOcTree& tree){
   tree.prune();
 }
 
-
-void backupFiles(){
-  std::string old_path = getDataPath();
-  
-  time_t rawtime;
-  struct tm * timeinfo;  
-  time ( &rawtime );
-  timeinfo = localtime ( &rawtime );  
-  static char newdir_name[150];
-  sprintf(newdir_name, "backup-%d-%02d-%02d-%02d-%02d-%02d",
-    1900 + timeinfo->tm_year,
-    timeinfo->tm_mon,    
-    timeinfo->tm_mday, timeinfo->tm_hour,
-    timeinfo->tm_min, timeinfo->tm_sec);
-  std::string new_path  = string( old_path + "/" +  newdir_name) ;
-  std::cout << new_path << "\n";
-  mkdir( new_path.c_str() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-  
-  // if the files exist move them:
-  rename( string( old_path + "/octomap.pcd" ).c_str() , 
-          string( new_path + "/octomap.pcd" ).c_str() );  
-  rename( string( old_path + "/octomap.bt" ).c_str() , 
-          string( new_path + "/octomap.bt" ).c_str() );  
-  rename( string( old_path + "/octomap.bt_blurred" ).c_str() , 
-          string( new_path + "/octomap.bt_blurred" ).c_str() );     
-}
-
-void ConvertOctomap::doWork(pronto::PointCloud* &cloud){
-  // set default name for octree visualization
-  doWork(cloud, "OCTOMAP");
-}
-
-void ConvertOctomap::doWork(pronto::PointCloud* &cloud, string octree_channel){
+void ConvertOctomap::doWork(pcl::PointCloud<pcl::PointXYZRGB> &cloud, string octree_channel){
   int idx = 0;
 
   if (octree_channel != "OCTOMAP_REF")
   {
     tree_->resetChangeDetection();
-    idx = 1;    
+    idx = 1;
   }
   updateOctree(cloud, tree_);
-
   publishOctree(tree_, octree_channel);
+
   colorChanges(*tree_, idx);
-  
-  std::string old_path = getDataPath(); 
- 
-  // write binary tree to bt 
-  static char octree_bin_name[50];
-  sprintf(octree_bin_name, "octomap-%d.bt", idx);
-  std::string binary_path  = string( old_path + "/" +  octree_bin_name) ;
-  cout << "Saving binary octree to: " << binary_path << endl;
-  tree_->writeBinary(binary_path);
+
+  /*
   // write color tree to ot
   static char octree_col_name[50];
   sprintf(octree_col_name, "octomap-colored-%d.ot", idx);
-  std::string col_path  = string( old_path + "/" +  octree_col_name) ;
+  std::string col_path  = string(octree_col_name) ;
   cout << "Saving color octree to: " << col_path << endl;;
-  tree_->write(col_path);
-
-  /*
-  octomap::OcTree * tree_blurred;
-  if (co_cfg_.blur_map){
-    timeval start; 
-    timeval stop; 
-    gettimeofday(&start, NULL);  // start timer  
-    tree_->toMaxLikelihood();
-    tree_->expand();
-    printf("Blurring octomap\n");
-    double minNegLogLike;
-    
-    tree_blurred = octomap_utils::octomapBlur(tree_, co_cfg_.blur_sigma, &minNegLogLike);
-    gettimeofday(&stop, NULL);  // stop timer
-    double time_to_blur = (stop.tv_sec - start.tv_sec) + 1.0e-6 *(stop.tv_usec - start.tv_usec);
-    if (verbose_>=1) cout << "time to insert scans: " << time_to_blur << " sec" << endl;
-    // publishOctree(tree_blurred,"OCTOMAP_BLURRED");
-   
-    // Backup  old octomaps and write new ones:
-    backupFiles();
-    
-    std::stringstream s1;
-    s1 <<  getDataPath() <<   "/octomap.pcd" ;
-    //printf("Saving original point cloud to: %s\n", s1.str().c_str());
-    pc_vis_->writePCD(s1.str(), *cloud);
-    //pcl::PCDWriter writer;
-    //writer.write (s1.str(), *cloud, true); // binary =true
-    //cout << "Finished writing "<< cloud->points.size() <<" points to:\n" << s1.str() <<"\n";
-    
-    //s << "_blurred"; // " << co_cfg_.blur_sigma ;
-    //std::cout << "Saving blurred map to: " << s.str() << " with blur sigma of " << co_cfg_.blur_sigma << "\n" ;
-    //octomap_utils::saveOctomap(tree_blurred, s.str().c_str(), minNegLogLike);      
-  } 
-  */
+  tree_->write(col_path);*/
 }

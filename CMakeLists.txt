@@ -13,5 +13,6 @@ add_subdirectory(src/sequential_registration)
 add_subdirectory(src/analysis)
 add_subdirectory(src/test)
 add_subdirectory(src/utils)
+add_subdirectory(src/octrees_difference)
 
 pods_install_python_script(convert_robot_behavior python/convert_robot_behavior_type.py)
