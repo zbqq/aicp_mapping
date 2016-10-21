@@ -76,8 +76,6 @@ int main(int argc, const char *argv[])
   // Init Default
   ConvertOctomapConfig co_cfg;
   co_cfg.octomap_resolution = 0.1; // was always 0.1 for mav and atlas
-  co_cfg.blur_sigma = 0.1; // default was .5
-  co_cfg.blur_map = false;
   AppConfig app_cfg;
 
   const int ret = validateArgs(argc, argv, co_cfg);
@@ -176,9 +174,6 @@ int validateArgs(const int argc, const char *argv[], ConvertOctomapConfig& co_cf
     if (opt == "-r" || opt == "--octomapRes") {
       co_cfg.octomap_resolution = atof(argv[i+1]);
     }
-    else if (opt == "-b" || opt == "--blurSigma") {
-      co_cfg.blur_sigma = atof(argv[i+1]);
-    }
     else if (opt == "-h")
     {
       cerr << "Usage:";
@@ -198,6 +193,5 @@ void usage(const char *argv[])
 {
   cerr << endl;
   cerr << "-r or --octomapRes --> Resolution of underlying octomap (default: 0.1)" << endl;
-  cerr << "-b or --blurSigma --> Radius of the blur kernel (default: 0.1)" << endl;
   cerr << endl;
 }

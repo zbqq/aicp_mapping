@@ -2,10 +2,8 @@
 
 ConvertOctomap::ConvertOctomap(boost::shared_ptr<lcm::LCM> &lcm_, const ConvertOctomapConfig& co_cfg_):
     lcm_(lcm_), co_cfg_(co_cfg_){
-      
-  verbose_ = 0; // 3 lots, 2 some, 1 v.important
+
   tree_  = new ColorOcTree(co_cfg_.octomap_resolution);
-  std::cout << "Resolution: " << co_cfg_.octomap_resolution << "  ====================" << endl;
 
   // define colors
   yellow = new ColorOcTreeNode::Color(250,250,0);
@@ -40,7 +38,7 @@ void ConvertOctomap::updateOctree(pcl::PointCloud<pcl::PointXYZRGB> &cloud, Colo
   tmp_tree->enableChangeDetection(true);  
 
   // get default sensor model values:
-  OcTree emptyTree(0.1);
+  ColorOcTree emptyTree(0.1);
   double clampingMin = emptyTree.getClampingThresMin();
   double clampingMax = emptyTree.getClampingThresMax();
   double probMiss = emptyTree.getProbMiss();
@@ -133,6 +131,34 @@ ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pcl::PointCloud<pcl::Poi
 }
 
 void ConvertOctomap::publishOctree(ColorOcTree* tree, string octree_channel){
+
+  /*
+  double minX, minY, minZ, maxX, maxY, maxZ;
+  tree->getMetricMin(minX, minY, minZ);
+  tree->getMetricMax(maxX, maxY, maxZ);
+  printf("\nmap bounds: [%.2f, %.2f, %.2f] - [%.2f, %.2f, %.2f]  res: %f\n", minX, minY, minZ, maxX, maxY, maxZ,
+      tree->getResolution());*/
+
+  octomap_raw_t msg;
+  msg.utime = bot_timestamp_now();
+
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      msg.transform[i][j] = 0;
+    }
+    msg.transform[i][i] = 1;
+  }
+
+  std::stringstream datastream;
+  tree->write(datastream);
+  std::string datastring = datastream.str();
+  msg.data = (uint8_t *) datastring.c_str();
+  msg.length = datastring.size();
+
+  octomap_raw_t_publish(lcm_->getUnderlyingLCM(), octree_channel.c_str(), &msg);
+}
+
+void ConvertOctomap::publishOctree(OcTree* tree, string octree_channel){
 
   /*
   double minX, minY, minZ, maxX, maxY, maxZ;
@@ -307,5 +333,5 @@ void ConvertOctomap::doWork(pcl::PointCloud<pcl::PointXYZRGB> &cloud, string oct
   sprintf(octree_col_name, "octomap-colored-%d.ot", idx);
   std::string col_path  = string(octree_col_name) ;
   cout << "Saving color octree to: " << col_path << endl;;
-  tree_->write(col_path);*/
+  tree_->write(col_path);*/    
 }

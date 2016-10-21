@@ -16,8 +16,6 @@ using namespace octomap;
 struct ConvertOctomapConfig
 {
     double octomap_resolution;
-    double blur_sigma;
-    bool blur_map;
 };
 
 
@@ -35,6 +33,7 @@ class ConvertOctomap{
       return true; 
     }
     void publishOctree(ColorOcTree* tree, string octree_channel);
+    void publishOctree(OcTree* tree, string octree_channel);
     void printChangesByColor(ColorOcTree& tree);
     void printChangesAndActual(ColorOcTree& tree);
     void colorChanges(ColorOcTree& tree, int idx); //idx is an index representing 
