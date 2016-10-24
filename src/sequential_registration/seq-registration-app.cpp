@@ -413,33 +413,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // To director
   //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/*
-  // Second ICP loop
-  string configName2;
-  configName2.append(REG_BASE);
-  configName2.append("/filters_config/icp_max_atlas_finals.yaml");
-  registr_->setConfigFile(configName2);
-  PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
 
-  try {
-    registr_->getICPTransform(output, reference);
-    T2 = registr_->getTransform();
-    cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
-    output = registr_->getDataOut();
-
-    // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
-    // // Distance out_max_filter points from KNN in ref
-    // PM::Matrix distsOut2 = distancesKNN(reference, output);
-    // writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);
-    pairedPointsMeanDistance(reference, output, icp);
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  }
-  catch (std::runtime_error e) {
-    cout << "Exception: No points for Max Outlier Distance --> T2 = Identity \n";
-    T2 = PM::TransformationParameters::Identity(4,4);
-  }
-
-  T = T2 * T1;*/
   T = T1 * initialT_;
   // Variable to apply correction (initialize the alignment)
   float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));

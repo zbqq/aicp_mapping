@@ -1,19 +1,18 @@
-// Start. Get 2 point clouds (either from user or default).
-// Perform registration (input cloud aligned to reference).
-// Convert to octomap, blur and save to file.
-// Republish the octomap.
-// Plot and store changes.
+// Get 2 point clouds (default).
+// Convert to first cloud to octree and publish to lcm.
+// Update the octree with the second cloud (octrees difference with color coding):
+//      blue - occupied voxels in both octrees
+//      yellow - old occupied voxels
+//      green - new occupied voxels
+// Republish the octree.
 
-// Command: octrees-difference -h
+// RUN: octrees-difference -h
 
 #include <sstream>      // std::stringstream
 
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
-
-//#include <icp-registration/icp_3Dreg_and_plot.hpp>
-//#include <icp-registration/clouds_io_utils.h>
 
 #include "pointmatcher/PointMatcher.h"
 #include <icp-registration/icp_utils.h>
