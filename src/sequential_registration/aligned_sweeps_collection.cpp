@@ -3,6 +3,7 @@
 AlignedSweepsCollection::AlignedSweepsCollection()
 { 
   initialized_ = false;
+  last_reference_ = -1;
 }
 
 AlignedSweepsCollection::~AlignedSweepsCollection()
@@ -12,6 +13,7 @@ AlignedSweepsCollection::~AlignedSweepsCollection()
 void AlignedSweepsCollection::initializeCollection(SweepScan reference)
 {
   aligned_clouds.push_back(reference);
+  last_reference_ = reference.getId();
 
   utime_start = aligned_clouds.front().getUtimeEnd(); 
   utime_end = aligned_clouds.back().getUtimeEnd();

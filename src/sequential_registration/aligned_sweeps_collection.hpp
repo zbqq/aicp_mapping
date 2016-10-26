@@ -20,15 +20,19 @@ class AlignedSweepsCollection
 
     std::vector<SweepScan>& getClouds(){ return aligned_clouds; };
     PM::TransformationParameters& getConstraintToReference(){ return reference_to_current_cloud; };
-    SweepScan& getReference(){ return aligned_clouds.front(); };
     SweepScan& getCurrentCloud(){ return aligned_clouds.back(); };
     SweepScan& getCloud(int index){ return aligned_clouds.at(index); };
+
+    SweepScan& getCurrentReference(){ return aligned_clouds.at(last_reference_); };
+    void updateReference(){ last_reference_ =  aligned_clouds.back().getId(); };
 
     void initializeCollection(SweepScan reference);
     void addSweep(SweepScan current_aligned, PM::TransformationParameters T_ref_curr);
 
   private:
     bool initialized_;
+
+    int last_reference_;
 
     long long int utime_start; // Time stamp of the reference cloud
     long long int utime_end; // Time stamp of last cloud aligned

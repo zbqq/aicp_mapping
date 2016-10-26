@@ -129,6 +129,8 @@ class App{
     Eigen::VectorXf yaw_perturbs_;
 
     // Correction variables
+    bool valid_correction_;
+    bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d current_correction_;
 
@@ -157,6 +159,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   pose_initialized_ = FALSE;
   updated_correction_ = TRUE;
   vicon_initialized_ = FALSE;
+
+  valid_correction_ = FALSE;
+  force_reference_update_ = FALSE;
 
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
@@ -370,9 +375,9 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   }
 
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // To file: DEBUG
-  /*std::stringstream vtk_fname2;
-  vtk_fname2 << "afterInitICP_";
+  /*// To file: DEBUG
+  std::stringstream vtk_fname2;
+  vtk_fname2 << "initializedReading_";
   vtk_fname2 << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname2 << ".vtk";
   savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
@@ -420,9 +425,33 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   cout << "distT = " << distT << endl;
   
   if (distT < 0.50)
+  {
     initialT_ = T;
+    valid_correction_ = TRUE;
+  }
   else
-    initialT_ = PM::TransformationParameters::Identity(4,4);
+  {
+    if(cl_cfg_.working_mode == "debug")
+    {
+      output = initializedReading;
+      T = initialT_;
+    }
+    else if(cl_cfg_.working_mode == "robot")
+    {
+      T = PM::TransformationParameters::Identity(4,4);
+    }
+    
+    valid_correction_ = FALSE;
+
+    // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    // To file: DEBUG
+    std::stringstream vtk_fname2;
+    vtk_fname2 << "initializedReading_";
+    vtk_fname2 << to_string(sweep_scans_list_->getNbClouds()-1);
+    vtk_fname2 << ".vtk";
+    savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);
+    // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  }
 }
 
 void App::operator()() {
@@ -456,9 +485,8 @@ void App::operator()() {
 
       // To file
       std::stringstream vtk_fname;
-      vtk_fname << "accum_advICP_";
-      vtk_fname << to_string(sweep_scans_list_->getNbClouds());
-        
+      vtk_fname << "cloud_";
+
       if(sweep_scans_list_->isEmpty())
       {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
@@ -471,15 +499,29 @@ void App::operator()() {
       {
         TimingUtils::tic();
 
-        // AICP: Registration against same reference
-        DP ref = sweep_scans_list_->getReference().getCloud();
+        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 40))
+        {
+          cout << "REF UPDATE, Overlap: " << overlap_ << ", FORCED UPDATE: " << force_reference_update_ << endl;
+          sweep_scans_list_->getCurrentCloud().setReference();
+          sweep_scans_list_->updateReference();
+
+          force_reference_update_ = FALSE;
+
+          vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
+          vtk_fname << ".vtk";
+          savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+        }
+
+        // AICP: Registration against last reference
+        DP ref = sweep_scans_list_->getCurrentReference().getCloud();
+
         // Incremental ICP
         //DP ref = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getCloud();
         DP out;
         PM::TransformationParameters Ttot;
 
         //Overlap
-        Eigen::Isometry3d ref_pose = sweep_scans_list_->getReference().getBodyPose();
+        Eigen::Isometry3d ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
         //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
         Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
 
@@ -487,49 +529,54 @@ void App::operator()() {
 
         TimingUtils::toc();
 
-        current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds());
+        current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
 
         // Compute correction to pose estimate:
-        current_correction_ = getTransfParamAsIsometry3d(Ttot);
-        updated_correction_ = TRUE;
-
-        // Publish corrcted pose
-        bot_core::pose_t msg_out;
-        Eigen::Isometry3d world_to_body_last;
-        std::unique_lock<std::mutex> lock(robot_state_mutex_);
+        if(valid_correction_)
         {
-          // Get latest world to body transform available
-          world_to_body_last = world_to_body_msg_;
-        }
+          current_correction_ = getTransfParamAsIsometry3d(Ttot);
+          updated_correction_ = TRUE;
+          //bot_core::pose_t msg_out2 = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
+          //lcm_->publish("POSE_BODY_CORRECTION",&msg_out2);
 
-        if (cl_cfg_.working_mode == "robot")
+          // Ttot is the full transform to move the input on the reference cloud
+          // Store current sweep 
+          sweep_scans_list_->addSweep(*current_sweep, Ttot);
+          valid_correction_ = FALSE;
+          cout << "VALID CORRECTION" << endl;
+        }
+        else
         {
-          // Apply correction if available (identity otherwise)
-          if (updated_correction_)
-          {
-            corrected_pose_ = current_correction_ * world_to_body_last;
-            updated_correction_ = FALSE;
+          // Ttot is not updated, therefore I keep cloud as from K-I state estimate
+          // Store current sweep (not registered)
+          sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
-            // To correct robot drift publish CORRECTED POSE
-            msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
-            lcm_->publish(cl_cfg_.output_channel,&msg_out);
-          }
+          force_reference_update_ = TRUE;         
+          cout << "NOT VALID CORRECTION" << endl;
+
+          // To director
+          drawPointCloudCollections(lcm_, (sweep_scans_list_->getNbClouds()-1), local_, out, 1);
         }
-
-        // Ttot is the full transform to move the input on the reference cloud
-        // Store current sweep 
-        sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
         // To director
         //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
+
+      cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
+      cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
+      cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
      
       // To file
-      /*vtk_fname << ".vtk";
-      if(sweep_scans_list_->getNbClouds() % 8 == 0)
-        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());*/
+      if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 8 == 0))
+      {
+        vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
+        vtk_fname << ".vtk";
+        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+      }
         
-      current_sweep->~SweepScan(); 
+      current_sweep->~SweepScan();
+
+      cout << "--------------------------------------------------------------------------------------" << endl;
     }
   }
 }
