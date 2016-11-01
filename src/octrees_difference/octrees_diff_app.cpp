@@ -23,8 +23,13 @@
 #include <octomap/octomap.h>
 #include <octomap/math/Utils.h>
 
+//Help
+#include <ConciseArgs>
+
 struct AppConfig
 {
+  string cloud1;
+  string cloud2;
 };
 
 class App{
@@ -41,13 +46,14 @@ class App{
     boost::shared_ptr<lcm::LCM> lcm_;
     ConvertOctomap* convert_;
 
+    // Clouds
     string cloudA_name_;
     string cloudB_name_;
 
-    bool do_convert_cloud_; // true if the pt cloud is ready to be converted to octomap
     bool do_republish_; // true if an octree is ready  
 
   private:
+    ColorOcTree* doConversion(DP &cloud, int cloud_idx); // NOTE: accepted cloud indexes are 0 (reference) and 1 (input).
     
 };
 
@@ -55,80 +61,52 @@ App::App(boost::shared_ptr< lcm::LCM >& lcm_,
          ConvertOctomapConfig co_cfg_, AppConfig app_cfg_) : lcm_(lcm_), 
          co_cfg_(co_cfg_),
          app_cfg_(app_cfg_){
+
   convert_ = new ConvertOctomap(lcm_, co_cfg_); 
   std::cout << "Clouds to octrees conversion at launch.\n";
 
-  cloudA_name_.clear();
-  cloudB_name_.clear();
-
-  do_convert_cloud_ = false;
   do_republish_ = false;
-}
 
-ColorOcTree* doConversion(App* app, DP &cloud, int cloud_idx); // NOTE: accepted cloud indexes are 0 (reference) and 1 (input).
-//void convertCloudPclToPronto(pcl::PointCloud<pcl::PointXYZRGB> &cloud, pronto::PointCloud &cloud_out);
-int validateArgs(const int argc, const char *argv[], ConvertOctomapConfig& co_cfg);
-void usage(const char *argv[]);
-
-int main(int argc, const char *argv[])
-{
-  // Init Default
-  ConvertOctomapConfig co_cfg;
-  co_cfg.octomap_resolution = 0.1; // was always 0.1 for mav and atlas
-  AppConfig app_cfg;
-
-  const int ret = validateArgs(argc, argv, co_cfg);
-
-  if (ret == -1)
-    return ret;
-
-  //Set up LCM channel for visualization
-  boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
-  if(!lcm->good()){
-    std::cerr <<"ERROR: lcm is not good()" <<std::endl;
+  if (app_cfg_.cloud1.empty() || app_cfg_.cloud2.empty())
+  {
+    cloudA_name_.append(getenv("DRC_BASE"));
+    cloudB_name_.append(getenv("DRC_BASE"));
+    cloudA_name_.append("/software/registration/data/cloud_01.vtk");
+    cloudB_name_.append("/software/registration/data/cloud_02.vtk");
+  }
+  else
+  {
+    cloudA_name_.append(app_cfg_.cloud1);
+    cloudB_name_.append(app_cfg_.cloud2);    
   }
 
-  App* app = new App(lcm, co_cfg, app_cfg);
-
-  app->cloudA_name_.append(getenv("DRC_BASE"));
-  app->cloudA_name_.append("/software/registration/data/cloud_01.vtk");
-  app->cloudB_name_.append(getenv("DRC_BASE"));
-  app->cloudB_name_.append("/software/registration/data/cloud_02.vtk");
-
-  std::cout << app->cloudA_name_ << std::endl;
-  std::cout << app->cloudB_name_ << std::endl;
+  std::cout << cloudA_name_ << std::endl;
+  std::cout << cloudB_name_ << std::endl;
 
   // Load point clouds from file
-  DP cloudA = DP::load(app->cloudA_name_);
-  DP cloudB = DP::load(app->cloudB_name_);
+  DP cloudA = DP::load(cloudA_name_);
+  DP cloudB = DP::load(cloudB_name_);
 
   //===========================================
   // CONVERT CLOUD TO OCTREE AND DIFFERENTIATE
   //=========================================== 
 
-  app->do_convert_cloud_ = true; 
+  ColorOcTree* treeA = doConversion(cloudA, 0);
+  cout << "Pruned tree A size: " << treeA->size() <<" nodes." << endl;
+  cout << "Changes A:" << endl;
+  convert_->printChangesAndActual(*treeA);
 
-  if ( app->do_convert_cloud_ ) {
-
-    ColorOcTree* treeA = doConversion(app, cloudA, 0);
-    cout << "Pruned tree A size: " << treeA->size() <<" nodes." << endl;
-    cout << "Changes A:" << endl;
-    app->convert_->printChangesAndActual(*treeA);
-
-    // Uncomment for visualization of matching results one by one:
-    cout << "Press ENTER to continue..." << endl;
-    cin.get();
+  // Uncomment for visualization of matching results one by one:
+  cout << "Press ENTER to continue..." << endl;
+  cin.get();
     
-    ColorOcTree* treeB = doConversion(app, cloudB, 1);
-    cout << "Pruned tree B size: " << treeB->size() <<" nodes." << endl;
-    cout << "Changes B:" << endl;
-    app->convert_->printChangesByColor(*treeB);
-  }
-  
-  return 0;
+  ColorOcTree* treeB = doConversion(cloudB, 1);
+  cout << "Pruned tree B size: " << treeB->size() <<" nodes." << endl;
+  cout << "Changes B:" << endl;
+  convert_->printChangesByColor(*treeB);
 }
 
-ColorOcTree* doConversion(App* app, DP &cloud, int cloud_idx)
+ColorOcTree* App::doConversion(DP &cloud, int cloud_idx)
 {
   pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
   fromDataPointsToPCL(cloud, pcl_cloud);
@@ -142,55 +120,43 @@ ColorOcTree* doConversion(App* app, DP &cloud, int cloud_idx)
   else
     current_cloud = "OCTOMAP_IN";
 
-  app->convert_->doWork(pcl_cloud, current_cloud); 
+  convert_->doWork(pcl_cloud, current_cloud); 
 
   cout << "Processing completed!" << endl;
   cout << "====================================================" << endl;
            
-  app->do_republish_ = true;
-  app->do_convert_cloud_ = false;
+  do_republish_ = true;
 
-  if (app->do_republish_){
-    //std::cout << "Republishing unblurred octomap.\n";
-    app->convert_->publishOctree(app->convert_->getTree(),current_cloud);
+  if (do_republish_){
+    std::cout << "Republishing unblurred octomap.\n";
+    convert_->publishOctree(convert_->getTree(),current_cloud);
   }
 
-  return app->convert_->getTree();
+  return convert_->getTree();
 }
 
-// Make sure that the command arguments make sense
-int validateArgs(const int argc, const char *argv[], ConvertOctomapConfig& co_cfg)
+int main(int argc, char **argv)
 {
-  const int endOpt(argc);
+  // Init Default
+  ConvertOctomapConfig co_cfg;
+  co_cfg.octomap_resolution = 0.1;
+  AppConfig app_cfg;
+  app_cfg.cloud1.clear();
+  app_cfg.cloud2.clear();
 
-  for (int i = 1; i < endOpt; i += 2)
-  {
-    const string opt(argv[i]);
-    if (i + 1 > endOpt)
-    {
-      cerr << "Incorrect use of option " << opt << ", usage:"; usage(argv); exit(1);
-    }
-    if (opt == "-r" || opt == "--octomapRes") {
-      co_cfg.octomap_resolution = atof(argv[i+1]);
-    }
-    else if (opt == "-h")
-    {
-      cerr << "Usage:";
-      usage(argv);
-      return -1;
-    }
-    else
-    {
-      cerr << "Unknown option " << opt << ", usage:"; usage(argv); exit(1);
-    }
+  ConciseArgs parser(argc, argv, "");
+  parser.add(app_cfg.cloud1, "a", "cloud1", "First point cloud.");
+  parser.add(app_cfg.cloud2, "b", "cloud2", "Second point cloud.");
+  parser.add(co_cfg.octomap_resolution, "r", "octomap_resolution", "Octree resolution.");
+  parser.parse();
+
+  //Set up LCM channel for visualization
+  boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
+  if(!lcm->good()){
+    std::cerr <<"ERROR: lcm is not good()" <<std::endl;
   }
+
+  App* app = new App(lcm, co_cfg, app_cfg);
+  
   return 0;
-}
-
-// Dump command-line help
-void usage(const char *argv[])
-{
-  cerr << endl;
-  cerr << "-r or --octomapRes --> Resolution of underlying octomap (default: 0.1)" << endl;
-  cerr << endl;
 }
