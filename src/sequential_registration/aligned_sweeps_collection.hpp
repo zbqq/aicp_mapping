@@ -24,7 +24,7 @@ class AlignedSweepsCollection
     SweepScan& getCloud(int index){ return aligned_clouds.at(index); };
 
     SweepScan& getCurrentReference(){ return aligned_clouds.at(last_reference_); };
-    void updateReference(){ last_reference_ =  aligned_clouds.back().getId(); };
+    void updateReference(int index){ last_reference_ =  aligned_clouds.at(index).getId(); };
 
     void initializeCollection(SweepScan reference);
     void addSweep(SweepScan current_aligned, PM::TransformationParameters T_ref_curr);

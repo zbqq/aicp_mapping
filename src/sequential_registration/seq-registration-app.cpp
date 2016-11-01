@@ -1,7 +1,15 @@
-// sequential-registration (while playing log file)
+// Run: sequential-registration -h
 
-// Input: POSE_BODY, Output POSE_BODY_CORRECTED
-// Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
+// Input: POSE_BODY
+// Output: POSE_BODY_CORRECTED
+// Computes T_AICP and corrects the state estimate in POSE_BODY message.
+
+// The algorithm accumulates scans on a thread and registers the accumulated scans (clouds) in parallel
+// on a second thread. The first cloud is selected as the first reference for registration. The reference
+// cloud is updated with last aligned cloud 
+//     if (overlap from last alignment < threshold1),
+// is updated with last reading cloud (not registered but initialized with K-I state estimate)
+//     if (previous estimated correction > threshold2) <-- in this case initialized-only reading cloud was stored. 
 
 // Get path to registration base
 #ifdef CONFDIR
@@ -134,6 +142,10 @@ class App{
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d current_correction_;
 
+    //  Reference cloud update counters
+    int forced_updates_counter_;
+    int overlap_updates_counter_;
+
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
                             const std::string& channel, const  bot_core::planar_lidar_t* msg);
@@ -162,6 +174,10 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   valid_correction_ = FALSE;
   force_reference_update_ = FALSE;
+
+  //  Reference cloud update counters
+  forced_updates_counter_ = 0;
+  overlap_updates_counter_ = 0;
 
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
@@ -424,7 +440,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
   cout << "distT = " << distT << endl;
   
-  if (distT < 0.50)
+  if (distT < 0.20)
   {
     initialT_ = T;
     valid_correction_ = TRUE;
@@ -444,12 +460,12 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     valid_correction_ = FALSE;
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    // To file: DEBUG
+    /*// To file: DEBUG
     std::stringstream vtk_fname2;
     vtk_fname2 << "initializedReading_";
-    vtk_fname2 << to_string(sweep_scans_list_->getNbClouds()-1);
+    vtk_fname2 << to_string(sweep_scans_list_->getCurrentCloud().getId()+1);
     vtk_fname2 << ".vtk";
-    savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);
+    savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   }
 }
@@ -474,7 +490,7 @@ void App::operator()() {
     }
 
     // process workload
-    for (auto cloud : work_queue) {      
+    for (auto cloud : work_queue) {
       DP dp_cloud;
       fromPCLToDataPoints(dp_cloud, *cloud);
 
@@ -482,10 +498,6 @@ void App::operator()() {
       SweepScan* current_sweep = new SweepScan();
       vector<LidarScan> first_sweep_scans_list = scans_queue.front();
       scans_queue.pop_front();
-
-      // To file
-      std::stringstream vtk_fname;
-      vtk_fname << "cloud_";
 
       if(sweep_scans_list_->isEmpty())
       {
@@ -499,17 +511,29 @@ void App::operator()() {
       {
         TimingUtils::tic();
 
-        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 40))
+        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 11))
         {
-          cout << "REF UPDATE, Overlap: " << overlap_ << ", FORCED UPDATE: " << force_reference_update_ << endl;
+          cout << "Reference UPDATE, Overlap = " << overlap_ << ", FORCED: " << force_reference_update_ << endl;
+          // Reference Update Statistics
+          if (force_reference_update_)
+          {
+            forced_updates_counter_ ++;
+            force_reference_update_ = FALSE;
+          }
+          else
+          {
+            overlap_updates_counter_ ++;
+          }
+
           sweep_scans_list_->getCurrentCloud().setReference();
-          sweep_scans_list_->updateReference();
+          sweep_scans_list_->updateReference(sweep_scans_list_->getCurrentCloud().getId());
 
-          force_reference_update_ = FALSE;
-
-          vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
-          vtk_fname << ".vtk";
-          savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+          // To file
+          std::stringstream vtk_refName;
+          vtk_refName << "ref_";
+          vtk_refName << to_string(sweep_scans_list_->getCurrentCloud().getId());
+          vtk_refName << ".vtk";
+          savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
         }
 
         // AICP: Registration against last reference
@@ -562,13 +586,18 @@ void App::operator()() {
         //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
 
+      // DEBUG
       cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
       cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
       cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
-     
+      cout << "Overlap Updates: " << overlap_updates_counter_ << endl;
+      cout << "Forced Updates: " << forced_updates_counter_ << endl;
+
       // To file
       if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 8 == 0))
       {
+        std::stringstream vtk_fname;
+        vtk_fname << "cloud_";
         vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
         vtk_fname << ".vtk";
         savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
