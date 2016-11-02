@@ -23,6 +23,8 @@
 #include <octomap/octomap.h>
 #include <octomap/math/Utils.h>
 
+#include "octomap_utils/octomap_util.hpp"
+
 //Help
 #include <ConciseArgs>
 
@@ -53,8 +55,7 @@ class App{
     bool do_republish_; // true if an octree is ready  
 
   private:
-    ColorOcTree* doConversion(DP &cloud, int cloud_idx); // NOTE: accepted cloud indexes are 0 (reference) and 1 (input).
-    
+
 };
 
 App::App(boost::shared_ptr< lcm::LCM >& lcm_, 
@@ -80,9 +81,6 @@ App::App(boost::shared_ptr< lcm::LCM >& lcm_,
     cloudB_name_.append(app_cfg_.cloud2);    
   }
 
-  std::cout << cloudA_name_ << std::endl;
-  std::cout << cloudB_name_ << std::endl;
-
   // Load point clouds from file
   DP cloudA = DP::load(cloudA_name_);
   DP cloudB = DP::load(cloudB_name_);
@@ -90,49 +88,40 @@ App::App(boost::shared_ptr< lcm::LCM >& lcm_,
   //===========================================
   // CONVERT CLOUD TO OCTREE AND DIFFERENTIATE
   //=========================================== 
+  
+  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloudA;
+  fromDataPointsToPCL(cloudA, pcl_cloudA);
+  ColorOcTree* treeA;
 
-  ColorOcTree* treeA = doConversion(cloudA, 0);
+  convert_->doConversion(pcl_cloudA, 0);
+  treeA = convert_->getTree();
   cout << "Pruned tree A size: " << treeA->size() <<" nodes." << endl;
   cout << "Changes A:" << endl;
   convert_->printChangesAndActual(*treeA);
+  convert_->publishOctree(treeA, "OCTOMAP_REF");
 
   // Uncomment for visualization of matching results one by one:
   cout << "Press ENTER to continue..." << endl;
   cin.get();
+
+  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloudB;
+  fromDataPointsToPCL(cloudB, pcl_cloudB);
+  ColorOcTree* treeB;
     
-  ColorOcTree* treeB = doConversion(cloudB, 1);
+  convert_->doConversion(pcl_cloudB, 1);
+  treeB = convert_->getTree();
   cout << "Pruned tree B size: " << treeB->size() <<" nodes." << endl;
   cout << "Changes B:" << endl;
   convert_->printChangesByColor(*treeB);
-}
+  convert_->publishOctree(treeB, "OCTOMAP_IN");
 
-ColorOcTree* App::doConversion(DP &cloud, int cloud_idx)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
-  fromDataPointsToPCL(cloud, pcl_cloud);
+  //===========================================
+  // BLURRING
+  //===========================================  
 
-  cout << "====================================================" << endl;
-  cout << "Processing cloud with " << pcl_cloud.points.size()
-       << " points" << endl;
-  string current_cloud;  
-  if (cloud_idx == 0)    
-    current_cloud = "OCTOMAP_REF";
-  else
-    current_cloud = "OCTOMAP_IN";
-
-  convert_->doWork(pcl_cloud, current_cloud); 
-
-  cout << "Processing completed!" << endl;
-  cout << "====================================================" << endl;
-           
-  do_republish_ = true;
-
-  if (do_republish_){
-    std::cout << "Republishing unblurred octomap.\n";
-    convert_->publishOctree(convert_->getTree(),current_cloud);
-  }
-
-  return convert_->getTree();
+  ColorOcTree* blurred_treeB = new ColorOcTree(treeB->getResolution());
+  convert_->createBlurredOctree(blurred_treeB);
+  convert_->publishOctree(blurred_treeB, "OCTOMAP");
 }
 
 int main(int argc, char **argv)
@@ -140,6 +129,7 @@ int main(int argc, char **argv)
   // Init Default
   ConvertOctomapConfig co_cfg;
   co_cfg.octomap_resolution = 0.1;
+  co_cfg.blur_sigma = 0.1;
   AppConfig app_cfg;
   app_cfg.cloud1.clear();
   app_cfg.cloud2.clear();
@@ -148,6 +138,7 @@ int main(int argc, char **argv)
   parser.add(app_cfg.cloud1, "a", "cloud1", "First point cloud.");
   parser.add(app_cfg.cloud2, "b", "cloud2", "Second point cloud.");
   parser.add(co_cfg.octomap_resolution, "r", "octomap_resolution", "Octree resolution.");
+  parser.add(co_cfg.blur_sigma, "s", "blur_sigma", "Blurred octree sigma parameter.");
   parser.parse();
 
   //Set up LCM channel for visualization

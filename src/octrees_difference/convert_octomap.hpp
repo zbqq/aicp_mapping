@@ -16,6 +16,7 @@ using namespace octomap;
 struct ConvertOctomapConfig
 {
     double octomap_resolution;
+    double blur_sigma;
 };
 
 
@@ -26,7 +27,9 @@ class ConvertOctomap{
     ~ConvertOctomap(){
     }    
 
-    void doWork(pcl::PointCloud<pcl::PointXYZRGB> &cloud, string octree_channel);
+    void doConversion(pcl::PointCloud<pcl::PointXYZRGB> &cloud_in, int cloud_idx); //cloud indexes are 0 if reference, 1 if reading.
+    void createBlurredOctree(ColorOcTree* tree);
+
     ColorOcTree* getTree(){ return tree_; }
     bool clearTree(){ 
       tree_->clear();
@@ -42,17 +45,14 @@ class ConvertOctomap{
   private:
 
     boost::shared_ptr<lcm::LCM> lcm_;
+    const ConvertOctomapConfig co_cfg_;
 
-    ColorOcTree* tree_;    
-    
-    const ConvertOctomapConfig co_cfg_;   
-    
-    int verbose_;
+    ColorOcTree* tree_;       
 
     //Colors for change detection
-    ColorOcTreeNode::Color* yellow;
-    ColorOcTreeNode::Color* blue;
-    ColorOcTreeNode::Color* green;
+    ColorOcTreeNode::Color* yellow; //old occupied
+    ColorOcTreeNode::Color* blue;   //always occupied
+    ColorOcTreeNode::Color* green;  //new occupied
 
     void updateOctree(pcl::PointCloud<pcl::PointXYZRGB> &cloud, ColorOcTree* tree);
     ScanGraph* convertPointCloudToScanGraph(pcl::PointCloud<pcl::PointXYZRGB> &cloud);
