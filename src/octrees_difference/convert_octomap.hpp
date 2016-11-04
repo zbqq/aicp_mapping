@@ -53,6 +53,7 @@ class ConvertOctomap{
     ColorOcTreeNode::Color* yellow; //old occupied
     ColorOcTreeNode::Color* blue;   //always occupied
     ColorOcTreeNode::Color* green;  //new occupied
+    ColorOcTreeNode::Color* red;
 
     void updateOctree(pcl::PointCloud<pcl::PointXYZRGB> &cloud, ColorOcTree* tree);
     ScanGraph* convertPointCloudToScanGraph(pcl::PointCloud<pcl::PointXYZRGB> &cloud);

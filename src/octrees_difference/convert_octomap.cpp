@@ -9,6 +9,7 @@ ConvertOctomap::ConvertOctomap(boost::shared_ptr<lcm::LCM> &lcm_, const ConvertO
   yellow = new ColorOcTreeNode::Color(250,250,0);
   green = new ColorOcTreeNode::Color(0,102,0);
   blue = new ColorOcTreeNode::Color(0,0,255);
+  red = new ColorOcTreeNode::Color(255,0,0);
 }
 
 void ConvertOctomap::doConversion(pcl::PointCloud<pcl::PointXYZRGB> &cloud_in, int cloud_idx)
@@ -162,6 +163,8 @@ ScanGraph* ConvertOctomap::convertPointCloudToScanGraph(pcl::PointCloud<pcl::Poi
 
 void ConvertOctomap::createBlurredOctree(ColorOcTree* tree_blurred)
 {
+  printf("Creating blurred octree...\n");
+
   float res = tree_->getResolution();
 
   //normalize sigma from meteres to cell resolution
@@ -172,7 +175,7 @@ void ConvertOctomap::createBlurredOctree(ColorOcTree* tree_blurred)
 
   int kernel_size = 2 * co_cfg_.blur_sigma / res;
 
-  printf("kernel size is %d\n", kernel_size);
+  //printf("kernel size is %d\n", kernel_size);
 
   //create the gaussian kernel
   double kxzy0[3] = { -res * kernel_size, -res * kernel_size, -res * kernel_size };
@@ -195,7 +198,7 @@ void ConvertOctomap::createBlurredOctree(ColorOcTree* tree_blurred)
     }
   }
 
-  printf("kernel_sum = %f\n", kernel_sum);
+  //printf("kernel_sum = %f\n", kernel_sum);
 
   for (int i = 0; i < blurKernel->num_cells; i++) {
     blurKernel->data[i] /= kernel_sum;
@@ -214,7 +217,7 @@ void ConvertOctomap::createBlurredOctree(ColorOcTree* tree_blurred)
   }
   fprintf(stderr, "];\n");
 
-  printf("cross_section_sum = %f\n", cross_section_sum);
+  //printf("cross_section_sum = %f\n", cross_section_sum);
 
   //set blurred map to occupancy probablity
   int numLeaves = tree_->getNumLeafNodes();
@@ -248,20 +251,23 @@ void ConvertOctomap::createBlurredOctree(ColorOcTree* tree_blurred)
     }
   }
 
-  printf("Updating inner occupancy.\n");
   tree_blurred->updateInnerOccupancy();
 
   //convert from probabilities to log odds, capping at the likelihood of a wall
   int numBlurLeaves = tree_blurred->getNumLeafNodes();
-  printf("Converting to Log Odds.\n");
+  //printf("Converting to Log Odds.\n");
   count = 0;
   for (octomap::ColorOcTree::leaf_iterator it = tree_blurred->begin_leafs(),
       end = tree_blurred->end_leafs(); it != end; ++it)
   {
     octomap::ColorOcTreeNode &node = *it;
     node.setValue(-log(fmin(cross_section_sum, node.getValue())));
+    /*if (node.getValue() <= 1.0 && node.getColor() == *blue)
+      node.setColor(*red);
+    printf("Value = %f\n", node.getValue());*/
   }
   double minNegLogLike = -log(cross_section_sum);
+  printf("minNegLogLike = %f\n", minNegLogLike);
 }
 
 void ConvertOctomap::colorChanges(ColorOcTree& tree, int idx){
