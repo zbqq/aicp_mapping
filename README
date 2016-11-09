@@ -1,3 +1,53 @@
-ICP registeration module with LCM integration
+# Auto-Tuned ICP
 
-Uses libpointmatcher to align LIDAR point clouds. Tested on Multisense SL data from the Valkyrie and Atlas robots
+Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration with Lightweight Communications and Marshalling (LCM) integration. The registratetion strategy is based on the [libpointmatcher](https://github.com/ethz-asl/libpointmatcher) farmework. 
+
+AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston
+Dynamics Atlas robots.
+
+### Quick Start
+
+The main dependencies are:
+
+- [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point (ICP) algorithm for aligning point clouds.
+- [Point Cloud Library (PCL)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.7.1, a standalone, large scale, open project for 2D/3D image and point cloud processing.
+
+####Running
+
+Command: `sequential-registration -h`
+
+```
+Usage:
+  sequential-registration [opts]
+Options:
+  -h, --help                = [false]                   : Display this help message
+  -r, --robot_name          = ["val"]                   : Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)
+  -s, --working_mode        = ["robot"]                 : Robot or Debug? (i.e. robot or debug)
+  -a, --algorithm           = ["aicp"]                  : AICP or ICP? (i.e. aicp or icp)
+  -w, --register_if_walking = [true]                    : Compute correction also when robot is walking?
+  -c, --apply_correction    = [false]                   : Initialize ICP with corrected pose? (during debug)
+  -o, --output_channel      = ["POSE_BODY_CORRECTED"]   : Output message e.g POSE_BODY
+  -l, --lidar_channel       = ["SCAN"]                  : Input message e.g SCAN
+  -b, --batch_size          = [240]                     : Number of scans per full 3D point cloud (at 5RPM)
+  -m, --min_range           = [0.500000]                : Closest accepted lidar range
+  -M, --max_range           = [15.0000]                 : Furthest accepted lidar range
+```
+
+**Note:**
+
+- Option _"-s robot"_ is meant to be used if the corrected pose from AICP is fed back into the state estimator. Each corrected pose is published only once as soon as computed.
+- Option _"-s debug"_ is meant to be used during debug. The corrected pose message is published at the same frequency as the pose estimate from the state estimator (for visualization purposes).
+
+### Citing
+The following paper has been submitted for review:
+
+```
+@inproceedings{nobilifallonICRA17,
+  author    = {Simona Nobili and Raluca Scona and Marco Caravagna and Maurice Fallon},
+  title     = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
+  booktitle = {{Submitted to IEEE International Conference on Robotics and Automation (ICRA)}},
+  month     = {Sept},
+  year      = {2016},
+}
+```
+**Since this work is still under review, github users who have been granted access to this repository are not allowed to share this material. Simona.**
