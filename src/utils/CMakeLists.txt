@@ -9,7 +9,7 @@ pods_install_libraries(drawingUtils)
 pods_install_headers( drawingUtils.hpp
               DESTINATION drawingUtils)
 pods_use_pkg_config_packages(drawingUtils eigen3
-  lcm    bot2-frames icp-registration drc-lcmtypes
+  lcm    bot2-frames icp-registration
   lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7
   ${FK_PACKAGES})
 pods_install_pkg_config_file(drawingUtils 
@@ -35,7 +35,7 @@ pods_install_libraries(filteringUtils)
 pods_install_headers( filteringUtils.hpp
               DESTINATION filteringUtils)
 pods_use_pkg_config_packages(filteringUtils eigen3
-  lcm    bot2-frames icp-registration drc-lcmtypes
+  lcm    bot2-frames icp-registration
   lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7 pcl_filters-1.7 pcl_segmentation-1.7
   pcl_common-1.7 pcl_visualization-1.7
   ${FK_PACKAGES})
