@@ -3,6 +3,13 @@
 // Input: POSE_BODY, Output POSE_BODY_CORRECTED
 // Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
 
+// Get path to registration base
+#ifdef CONFDIR
+  # define REG_BASE CONFDIR
+#else
+  # define REG_BASE "undefined"
+#endif
+
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
@@ -110,8 +117,6 @@ class App{
     // Overlap parameter
     float overlap_;
     float angularView_;
-    // Registration directory base
-    string REG_BASE_;
     // Temporary config file for ICP chain: copied and trimmed ratio replaced
     string tmpConfigName_;
     // Initialize ICP
@@ -161,14 +166,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
     angularView_ = 220.0;
   else
     angularView_ = 270.0;
-  // Registration directory base
-  REG_BASE_.append(getenv("DRC_BASE"));
-  if (cl_cfg_.robot_name == "hyq")
-    REG_BASE_.append("/software/registration");
-  else
-    REG_BASE_.append("/software/perception/registration");
+
   // File used to update config file for ICP chain
-  tmpConfigName_.append(REG_BASE_);
+  tmpConfigName_.append(REG_BASE);
   tmpConfigName_.append("/filters_config/icp_autotuned_default.yaml");
   // Initialize ICP
   initialT_ = PM::TransformationParameters::Identity(4,4);
@@ -330,7 +330,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // ............do registration.............
   // First ICP loop
   string configName1;
-  configName1.append(REG_BASE_);
+  configName1.append(REG_BASE);
   if (cl_cfg_.algorithm == "icp")
     configName1.append("/filters_config/Chen91_pt2plane.yaml");
   else if (cl_cfg_.algorithm == "aicp")
@@ -410,7 +410,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
 /*
   // Second ICP loop
   string configName2;
-  configName2.append(REG_BASE_);
+  configName2.append(REG_BASE);
   configName2.append("/filters_config/icp_max_atlas_finals.yaml");
   registr_->setConfigFile(configName2);
   PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
