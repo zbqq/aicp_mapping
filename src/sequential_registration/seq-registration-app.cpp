@@ -510,8 +510,29 @@ void App::operator()() {
         // Compute correction to pose estimate:
         current_correction_ = getTransfParamAsIsometry3d(Ttot);
         updated_correction_ = TRUE;
-        //bot_core::pose_t msg_out2 = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
-        //lcm_->publish("POSE_BODY_CORRECTION",&msg_out2);
+
+        // Publish corrcted pose
+        bot_core::pose_t msg_out;
+        Eigen::Isometry3d world_to_body_last;
+        std::unique_lock<std::mutex> lock(robot_state_mutex_);
+        {
+          // Get latest world to body transform available
+          world_to_body_last = world_to_body_msg_;
+        }
+
+        if (cl_cfg_.working_mode == "robot")
+        {
+          // Apply correction if available (identity otherwise)
+          if (updated_correction_)
+          {
+            corrected_pose_ = current_correction_ * world_to_body_last;
+            updated_correction_ = FALSE;
+
+            // To correct robot drift publish CORRECTED POSE
+            msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
+            lcm_->publish(cl_cfg_.output_channel,&msg_out);
+          }
+        }
 
         // Ttot is the full transform to move the input on the reference cloud
         // Store current sweep 
@@ -663,22 +684,9 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   }
 
   bot_core::pose_t msg_out;
-  //Eigen::Isometry3d corrected_pose;
-  // Compute and publish correction (Robot or Debug)
-  if (cl_cfg_.working_mode == "robot")
-  {
-    // Apply correction if available (identity otherwise)
-    if (updated_correction_)
-    {
-      corrected_pose_ = current_correction_ * world_to_body_last;
-      updated_correction_ = FALSE;
 
-      // To correct robot drift publish CORRECTED POSE
-      msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
-      lcm_->publish(cl_cfg_.output_channel,&msg_out);
-    }
-  }
-  else if (cl_cfg_.working_mode == "debug")
+  // Compute and publish correction at same frequency as input pose (if "debug" mode)
+  if (cl_cfg_.working_mode == "debug")
   {
     // Apply correction if available (identity otherwise)
     corrected_pose_ = current_correction_ * world_to_body_last;
@@ -696,12 +704,11 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   lcm_->publish("OVERLAP",&msg_overlap);
 
   if ( !pose_initialized_ ){
-    cout << "Initialize state estimate using rigid transform or pose.\n";
-
     world_to_body_corr_first_ = corrected_pose_;
   }
 
-  // Visualization: compare with Vicon #########
+  /*
+  // Visualization: move poses in Vicon reference frame to compare #########
   // Corrected pose
   Eigen::Isometry3d corr_to_vicon_first;
   corr_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
@@ -721,6 +728,7 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   bot_core::pose_t msg_out_corr_vic = getIsometry3dAsBotPose(corr_to_vicon_pose, msg->utime);
   lcm_->publish("POSE_BODY_CORRECTED_VICON",&msg_out_corr_vic);
   // ############################################
+  */
 
   pose_initialized_ = TRUE;
 }
