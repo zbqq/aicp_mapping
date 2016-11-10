@@ -38,7 +38,7 @@ Options:
 - Option _"-s robot"_ is meant to be used if the corrected pose from AICP is fed back into the state estimator. Each corrected pose is published only once as soon as computed.
 - Option _"-s debug"_ is meant to be used during debug. The corrected pose message is published at the same frequency as the pose estimate from the state estimator (for visualization purposes).
 
-### Citing
+### Credits
 The following paper has been submitted for review:
 
 ```
@@ -51,3 +51,10 @@ The following paper has been submitted for review:
 }
 ```
 **Since this work is still under review, github users who have been granted access to this repository are not allowed to share the content. Simona.**
+
+###License
+
+The License information is available in the LICENSE file contained in this project repository.
+
+Simona Nobili, Nov 2016.
+Email: simona.nobili@ed.ac.uk
