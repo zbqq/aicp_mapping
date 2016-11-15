@@ -3,6 +3,13 @@
 // Input: POSE_BODY, Output POSE_BODY_CORRECTED
 // Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
 
+// Get path to registration base
+#ifdef CONFDIR
+  # define REG_BASE CONFDIR
+#else
+  # define REG_BASE "undefined"
+#endif
+
 #include <zlib.h>
 #include <lcm/lcm-cpp.hpp>
 
@@ -38,6 +45,8 @@ using namespace std;
 struct CommandLineConfig
 {
   std::string robot_name;
+  std::string pose_body_channel;
+  std::string vicon_channel;
   std::string output_channel;
   std::string working_mode;
   std::string algorithm;
@@ -108,8 +117,6 @@ class App{
     // Overlap parameter
     float overlap_;
     float angularView_;
-    // Registration directory base
-    string REG_BASE_;
     // Temporary config file for ICP chain: copied and trimmed ratio replaced
     string tmpConfigName_;
     // Initialize ICP
@@ -159,14 +166,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
     angularView_ = 220.0;
   else
     angularView_ = 270.0;
-  // Registration directory base
-  REG_BASE_.append(getenv("DRC_BASE"));
-  if (cl_cfg_.robot_name == "hyq")
-    REG_BASE_.append("/software/registration");
-  else
-    REG_BASE_.append("/software/perception/registration");
+
   // File used to update config file for ICP chain
-  tmpConfigName_.append(REG_BASE_);
+  tmpConfigName_.append(REG_BASE);
   tmpConfigName_.append("/filters_config/icp_autotuned_default.yaml");
   // Initialize ICP
   initialT_ = PM::TransformationParameters::Identity(4,4);
@@ -201,9 +203,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
 
   // Pose initialization
-  lcm_->subscribe("POSE_BODY", &App::poseInitHandler, this); 
-  cout << "Initialization of LIDAR pose...\n";
-  lcm_->subscribe("VICON_pelvis_val", &App::viconInitHandler, this);
+  lcm_->subscribe(cl_cfg_.pose_body_channel, &App::poseInitHandler, this);
+  cout << "Initialization of robot pose...\n";
+  lcm_->subscribe(cl_cfg_.vicon_channel, &App::viconInitHandler, this);
   cout << "Initialization of Vicon pose...\n";
 
   // ICP chain
@@ -328,7 +330,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // ............do registration.............
   // First ICP loop
   string configName1;
-  configName1.append(REG_BASE_);
+  configName1.append(REG_BASE);
   if (cl_cfg_.algorithm == "icp")
     configName1.append("/filters_config/Chen91_pt2plane.yaml");
   else if (cl_cfg_.algorithm == "aicp")
@@ -408,7 +410,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
 /*
   // Second ICP loop
   string configName2;
-  configName2.append(REG_BASE_);
+  configName2.append(REG_BASE);
   configName2.append("/filters_config/icp_max_atlas_finals.yaml");
   registr_->setConfigFile(configName2);
   PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
@@ -741,6 +743,8 @@ int main(int argc, char **argv){
   cl_cfg.algorithm = "aicp";
   cl_cfg.register_if_walking = TRUE;
   cl_cfg.apply_correction = FALSE;
+  cl_cfg.pose_body_channel = "POSE_BODY";
+  cl_cfg.vicon_channel = "VICON_pelvis_val";
   cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
   CloudAccumulateConfig ca_cfg;
@@ -754,13 +758,15 @@ int main(int argc, char **argv){
   reg_cfg.initTrans_.clear();
   reg_cfg.initTrans_.append("0,0,0"); 
 
-  ConciseArgs parser(argc, argv, "simple-fusion");
+  ConciseArgs parser(argc, argv, "aicp-registration");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
   parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
   parser.add(cl_cfg.register_if_walking, "w", "register_if_walking", "Compute correction also when robot is walking?");
   parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
-  parser.add(cl_cfg.output_channel, "o", "output_channel", "Output message e.g POSE_BODY");
+  parser.add(cl_cfg.pose_body_channel, "p", "pose_body_channel", "Kinematics-inertia pose estimate");
+  parser.add(cl_cfg.vicon_channel, "v", "vicon_channel", "Ground truth pose from Vicon");
+  parser.add(cl_cfg.output_channel, "o", "output_channel", "Corrected pose");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
   parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");
