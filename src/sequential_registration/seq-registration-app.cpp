@@ -338,13 +338,14 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     regionGrowingPlaneSegmentationFilter(reference);
     regionGrowingPlaneSegmentationFilter(reading);
   }
-
+/*
   // Overlap
   DP ref_try, read_try;
   ref_try = reference;
   read_try = reading;
   overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
   cout << "Overlap: " << overlap_ << "%" << endl;
+*/
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // To file: DEBUG
   /*std::stringstream vtk_fname;
@@ -440,33 +441,16 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
   cout << "distT = " << distT << endl;
   
-  if (distT < 0.20)
+  if (distT < 2.00)
   {
     initialT_ = T;
     valid_correction_ = TRUE;
   }
   else
   {
-    if(cl_cfg_.working_mode == "debug")
-    {
-      output = initializedReading;
-      T = initialT_;
-    }
-    else if(cl_cfg_.working_mode == "robot")
-    {
-      T = PM::TransformationParameters::Identity(4,4);
-    }
-    
     valid_correction_ = FALSE;
-
-    // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    /*// To file: DEBUG
-    std::stringstream vtk_fname2;
-    vtk_fname2 << "initializedReading_";
-    vtk_fname2 << to_string(sweep_scans_list_->getCurrentCloud().getId()+1);
-    vtk_fname2 << ".vtk";
-    savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
-    // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    // To director
+    drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   }
 }
 
@@ -511,9 +495,23 @@ void App::operator()() {
       {
         TimingUtils::tic();
 
-        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 11))
+        // Get current reference cloud
+        DP ref = sweep_scans_list_->getCurrentReference().getCloud();
+
+        // Overlap
+        Eigen::Isometry3d ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
+        //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
+        Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
+
+        DP ref_try, read_try;
+        ref_try = ref;
+        read_try = dp_cloud;
+        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
+        cout << "Overlap: " << overlap_ << "%" << endl;
+
+        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 9))
         {
-          cout << "Reference UPDATE, Overlap = " << overlap_ << ", FORCED: " << force_reference_update_ << endl;
+          cout << "Reference UPDATE, FORCED: " << force_reference_update_ << ", Overlap = " << overlap_ << endl;
           // Reference Update Statistics
           if (force_reference_update_)
           {
@@ -534,67 +532,63 @@ void App::operator()() {
           vtk_refName << to_string(sweep_scans_list_->getCurrentCloud().getId());
           vtk_refName << ".vtk";
           savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+
+          // Get just updated reference
+          ref = sweep_scans_list_->getCurrentReference().getCloud();
+          // Assuming after reference update overlap is sufficient
+          //(reference and reading clouds are consecutive clouds)
+          overlap_ = 75;
         }
 
-        // AICP: Registration against last reference
-        DP ref = sweep_scans_list_->getCurrentReference().getCloud();
-
-        // Incremental ICP
-        //DP ref = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getCloud();
         DP out;
         PM::TransformationParameters Ttot;
-
-        //Overlap
-        Eigen::Isometry3d ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
-        //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
-        Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
 
         this->doRegistration(ref, dp_cloud, ref_pose, read_pose, out, Ttot);
 
         TimingUtils::toc();
 
-        current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
+        //current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
 
         // Compute correction to pose estimate:
         if(valid_correction_)
         {
+          current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
+
           current_correction_ = getTransfParamAsIsometry3d(Ttot);
           updated_correction_ = TRUE;
-          //bot_core::pose_t msg_out2 = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
-          //lcm_->publish("POSE_BODY_CORRECTION",&msg_out2);
 
           // Ttot is the full transform to move the input on the reference cloud
           // Store current sweep 
           sweep_scans_list_->addSweep(*current_sweep, Ttot);
           valid_correction_ = FALSE;
           cout << "VALID CORRECTION" << endl;
+
+          // DEBUG
+          cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
+          cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
+          cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
+          cout << "Overlap Updates: " << overlap_updates_counter_ << endl;
+          cout << "Forced Updates: " << forced_updates_counter_ << endl;
         }
         else
         {
           // Ttot is not updated, therefore I keep cloud as from K-I state estimate
           // Store current sweep (not registered)
-          sweep_scans_list_->addSweep(*current_sweep, Ttot);
+          //sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
           force_reference_update_ = TRUE;         
           cout << "NOT VALID CORRECTION" << endl;
 
           // To director
-          drawPointCloudCollections(lcm_, (sweep_scans_list_->getNbClouds()-1), local_, out, 1);
+          //drawPointCloudCollections(lcm_, (sweep_scans_list_->getNbClouds()-1), local_, out, 1);
         }
 
         // To director
         //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
 
-      // DEBUG
-      cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
-      cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
-      cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
-      cout << "Overlap Updates: " << overlap_updates_counter_ << endl;
-      cout << "Forced Updates: " << forced_updates_counter_ << endl;
-
       // To file
-      if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 8 == 0))
+      if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 2 == 0))
       {
         std::stringstream vtk_fname;
         vtk_fname << "cloud_";
