@@ -110,7 +110,7 @@ int main(int argc, char ** argv) {
   }
 
   CloudAccumulateConfig ca_cfg;
-  ca_cfg.lidar_channel ="SCAN";
+  ca_cfg.lidar_channel ="MULTISENSE_SCAN";
   ca_cfg.batch_size = 240; // about 1 sweep
   ca_cfg.min_range = 0.0;//1.85; // remove all the short range points
   ca_cfg.max_range = 30.0;
