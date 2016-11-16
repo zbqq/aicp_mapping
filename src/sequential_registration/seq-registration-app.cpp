@@ -751,7 +751,7 @@ int main(int argc, char **argv){
   ca_cfg.batch_size = 240; // 240 is about 1 sweep
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
-  ca_cfg.lidar_channel ="SCAN";
+  ca_cfg.lidar_channel ="MULTISENSE_SCAN";
 
   RegistrationConfig reg_cfg;
   // Load initial transform
@@ -767,7 +767,7 @@ int main(int argc, char **argv){
   parser.add(cl_cfg.pose_body_channel, "p", "pose_body_channel", "Kinematics-inertia pose estimate");
   parser.add(cl_cfg.vicon_channel, "v", "vicon_channel", "Ground truth pose from Vicon");
   parser.add(cl_cfg.output_channel, "o", "output_channel", "Corrected pose");
-  parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g SCAN");
+  parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
   parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");
   parser.add(ca_cfg.max_range, "M", "max_range", "Furthest accepted lidar range");
