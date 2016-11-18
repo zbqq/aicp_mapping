@@ -2,7 +2,7 @@
 #define ICP_TESTING_ROUTINE_HPP_
 
 #include "icp_utils.h"
-#include "cloud_accumulate.hpp"
+#include "cloud_accumulate/cloud_accumulate.hpp"
 
 class RoutineConfig
 {

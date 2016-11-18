@@ -8,7 +8,7 @@ include(${VTK_USE_FILE})
 
 ##############################################
 add_executable (sequential-registration seq-registration-app.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
-target_link_libraries(sequential-registration pthread boost_system pointmatcher filteringUtils drawingUtils timingUtils ${VTK_LIBRARIES})
+target_link_libraries(sequential-registration pthread boost_system pointmatcher cloud_accumulate filteringUtils drawingUtils timingUtils ${VTK_LIBRARIES})
 pods_use_pkg_config_packages(sequential-registration eigen3
   lcm    bot2-frames icp-registration pronto_vis
   lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7 bot2-lcmgl-client 
