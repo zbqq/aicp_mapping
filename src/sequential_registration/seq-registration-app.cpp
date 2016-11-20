@@ -761,6 +761,7 @@ int main(int argc, char **argv){
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
   ca_cfg.lidar_channel ="MULTISENSE_SCAN";
+  //ca_cfg.check_local_to_scan_valid = FALSE;
 
   RegistrationConfig reg_cfg;
   // Load initial transform
