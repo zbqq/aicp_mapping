@@ -557,6 +557,29 @@ void App::operator()() {
           current_correction_ = getTransfParamAsIsometry3d(Ttot);
           updated_correction_ = TRUE;
 
+         // Publish corrected pose
+         bot_core::pose_t msg_out;
+         Eigen::Isometry3d world_to_body_last;
+         std::unique_lock<std::mutex> lock(robot_state_mutex_);
+         {
+           // Get latest world to body transform available
+           world_to_body_last = world_to_body_msg_;
+         }
+
+         if (cl_cfg_.working_mode == "robot")
+         {
+           // Apply correction if available (identity otherwise)
+           if (updated_correction_)
+           {
+             corrected_pose_ = current_correction_ * world_to_body_last;
+             updated_correction_ = FALSE;
+
+             // To correct robot drift publish CORRECTED POSE
+             msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
+             lcm_->publish(cl_cfg_.output_channel,&msg_out);
+           }
+          }
+
           // Ttot is the full transform to move the input on the reference cloud
           // Store current sweep 
           sweep_scans_list_->addSweep(*current_sweep, Ttot);
