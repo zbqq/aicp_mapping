@@ -1,7 +1,7 @@
 #include <lcm/lcm-cpp.hpp>
 #include <ConciseArgs>
 
-#include <icp-registration/cloud_accumulate.hpp>
+#include <cloud_accumulate/cloud_accumulate.hpp>
 #include <icp-registration/icp_3Dreg_and_plot.hpp>
 #include <icp-registration/icp_utils.h>
 #include <icp-registration/vtkUtils.h>

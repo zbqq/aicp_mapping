@@ -2,7 +2,7 @@
 
 #include <sstream>      // std::stringstream
 
-#include "cloud_accumulate.hpp"
+#include "cloud_accumulate/cloud_accumulate.hpp"
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/io/vtk_io.h>
@@ -33,6 +33,8 @@ class App{
     
     boost::shared_ptr<lcm::LCM> lcm_;
     CloudAccumulate* accu_;
+
+    pronto_vis* pc_vis_;
     
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
                       const std::string& channel, const  bot_core::planar_lidar_t* msg);   
@@ -47,6 +49,7 @@ App::App(boost::shared_ptr< lcm::LCM >& lcm_,
          app_cfg_(app_cfg_){
   accu_ = new CloudAccumulate(lcm_, ca_cfg_);
   std::cout << "Accumulating map at launch\n";  
+  pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
 }
 
 void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::planar_lidar_t* msg){
@@ -62,7 +65,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     if ( accu_->getFinished()  ){//finished_accumating?
 
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
-      cloud = accu_->getCloud();
+      pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud);
+      // cloud = accu_->getCloud();
       cloud->width = cloud->points.size();
       cloud->height = 1;
 
@@ -97,7 +101,12 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
         pcl::io::saveVTKFile (vtk_fname.str(), *cloud_output);
       }
 
-      accu_->publishCloud(cloud);
+      // convert to pronto::PointCloud
+      pronto::PointCloud* prCloud (new pronto::PointCloud);
+      pc_vis_->convertCloudPclToPronto(*cloud, *prCloud);
+
+      // accu_->publishCloud(cloud);
+      accu_->publishCloud(prCloud);
 
       exit(-1);
     }
@@ -114,6 +123,7 @@ int main(int argc, char ** argv) {
   ca_cfg.batch_size = 240; // about 1 sweep
   ca_cfg.min_range = 0.0;//1.85; // remove all the short range points
   ca_cfg.max_range = 30.0;
+  ca_cfg.check_local_to_scan_valid = false;
   AppConfig app_cfg;
   
   ConciseArgs opt(argc, (char**)argv);

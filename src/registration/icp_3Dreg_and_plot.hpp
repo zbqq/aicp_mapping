@@ -21,7 +21,7 @@
 
 #include <icp-registration/vtkUtils.h>
 #include <icp-registration/icp_utils.h>
-#include <icp-registration/cloud_accumulate.hpp>
+#include <cloud_accumulate/cloud_accumulate.hpp>
 
 class RegistrationConfig
 {

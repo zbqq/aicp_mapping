@@ -29,7 +29,7 @@
 
 #include <pcl/io/vtk_io.h>
 
-#include <icp-registration/cloud_accumulate.hpp>
+#include <cloud_accumulate/cloud_accumulate.hpp>
 #include <icp-registration/icp_3Dreg_and_plot.hpp>
 #include <icp-registration/icp_utils.h>
 #include <icp-registration/vtkUtils.h>
@@ -113,6 +113,9 @@ class App{
     bool accumulate_;
     int robot_behavior_now_;
     int robot_behavior_previous_;
+
+    // visualisation
+    pronto_vis* pc_vis_;
 
     // Overlap parameter
     float overlap_;
@@ -201,6 +204,9 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   // Accumulator
   accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
+
+  // Visualiser
+  pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
 
   // Pose initialization
   lcm_->subscribe(cl_cfg_.pose_body_channel, &App::poseInitHandler, this);
@@ -593,8 +599,9 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   // Accumulate EITHER always OR only when transition from walking to standing happens
   // Pyhton script convert_robot_behavior_type.py must be running.
   {
-    if ( accu_->getCounter() % ca_cfg_.batch_size == 0 )
+    if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
       cout << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
+    }
     accu_->processLidar(msg);
     lidar_scans_list_.push_back(*current_scan);
   }
@@ -610,9 +617,11 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
   if ( accu_->getFinished() ){ //finished accumulating?
     accumulate_ = FALSE;
+    std::cout << "Finished Collecting: " << accu_->getFinishedTime() << std::endl;
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
-    cloud = accu_->getCloud();
+    pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud);
+    // cloud = accu_->getCloud();
     cloud->width = cloud->points.size();
     cloud->height = 1;
     cout << "Processing cloud with " << cloud->points.size() << " points." << endl;
@@ -752,6 +761,7 @@ int main(int argc, char **argv){
   ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
   ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
   ca_cfg.lidar_channel ="MULTISENSE_SCAN";
+  //ca_cfg.check_local_to_scan_valid = FALSE;
 
   RegistrationConfig reg_cfg;
   // Load initial transform
