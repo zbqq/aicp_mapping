@@ -6,6 +6,7 @@
 import lcm
 import math
 import numpy as np
+import os
 
 from bot_core.pose_t import pose_t
 from bot_core.double_array_t import double_array_t
@@ -95,9 +96,18 @@ viconPose = 0
 index = 0
 utimeStart = 0
 updatedCorrection = False
+
 fileName = 'errorsFile.txt'
-file = open(fileName, 'w')
-print "Writing to: %s" % fileName
+currentDir = os.path.dirname(os.path.abspath(__file__))
+destDir = os.path.join(currentDir, 'results')
+try:
+    os.makedirs(destDir )
+except OSError:
+    pass # already exists
+path = os.path.join(destDir, fileName)
+file = open(path, 'w')
+print "Writing to: %s" % path
+
 sub1 = lc.subscribe("POSE_BODY", on_pose)
 sub2 = lc.subscribe("POSE_GROUND_TRUTH", on_vicon)
 sub3 = lc.subscribe("POSE_BODY_SCANMATCHER", on_correction)
