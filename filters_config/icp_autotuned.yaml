@@ -32,7 +32,7 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.250
+      ratio: 0.7
 
 errorMinimizer:
   PointToPlaneErrorMinimizer

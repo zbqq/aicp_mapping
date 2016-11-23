@@ -1,2 +1,6 @@
 pod-build
 *~
+python/results
+
+# Files
+matlab/*.png
