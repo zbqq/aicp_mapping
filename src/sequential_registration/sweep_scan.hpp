@@ -35,6 +35,8 @@ class SweepScan
     void resetSweepScan();
     void setReference(){ is_reference_ = true; };
 
+    void addPointsToSweepScan(DP other_cloud);
+
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getPCLCloud();
 
   private:

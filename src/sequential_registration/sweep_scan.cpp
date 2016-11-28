@@ -81,6 +81,11 @@ void cleanDataPoint(DP& cloud)
   */
 }
 
+void SweepScan::addPointsToSweepScan(DP other_cloud)
+{
+  dp_cloud.concatenate(other_cloud);
+}
+
 void SweepScan::resetSweepScan()
 {
   cloud_id = -1;
@@ -100,8 +105,7 @@ void SweepScan::resetSweepScan()
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr SweepScan::getPCLCloud()
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZRGB> ());
-
-  fromPCLToDataPoints(dp_cloud, *cloudPCL);
+  fromDataPointsToPCL(dp_cloud, *cloudPCL);
 
   return cloudPCL;
 }

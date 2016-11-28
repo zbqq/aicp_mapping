@@ -523,6 +523,10 @@ void App::operator()() {
             overlap_updates_counter_ ++;
           }
 
+          // Combine old and new reference clouds (ref is the previous/old reference)
+          //sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
+
+          // Updating reference...
           sweep_scans_list_->getCurrentCloud().setReference();
           sweep_scans_list_->updateReference(sweep_scans_list_->getCurrentCloud().getId());
 
