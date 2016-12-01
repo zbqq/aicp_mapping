@@ -21,6 +21,7 @@ class SweepScan
     Eigen::Isometry3d getBodyPose(){ return world_to_body; };
     std::vector<LidarScan>& getScans(){ return planar_scans; };
     int getId(){ return cloud_id; };
+    void setId(int newId){ cloud_id = newId; };
 
     int getItsReferenceId(){ return its_reference_id_; };
 
