@@ -185,7 +185,7 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   // compute mean distance
   const PM::Matrix dist = (matchedRead - matchedRef).colwise().norm(); // replace that by squaredNorm() to save computation time
   const float meanDist = dist.sum()/nbMatchedPoints;
-  //cout << "Robust mean distance: " << meanDist << " m" << endl; 
+  //cout << "Robust mean distance: " << meanDist << " m" << endl;
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Cloud which contains points belonging to the reference cloud. A matching point in the input cloud is associated to each of these. 
@@ -222,6 +222,27 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   */
 
   return meanDist;
+}
+
+void getResidualError(PM::ICP &icp, float overlap, float &meanDist, float &medDist, float &quantDist)
+{
+  const PM::ErrorMinimizer::ErrorElements matchedPoints = icp.errorMinimizer->getErrorElements();
+  // extract relevant information for convenience
+  const int dim = matchedPoints.reading.getEuclideanDim();
+  const int nbMatchedPoints = matchedPoints.reading.getNbPoints();
+  const PM::Matrix matchedRead = matchedPoints.reading.features.topRows(dim);
+  const PM::Matrix matchedRef = matchedPoints.reference.features.topRows(dim);
+
+  // compute mean and quantile residual distance between accepted matches
+  const PM::Matrix dist = (matchedRead - matchedRef).colwise().squaredNorm(); // replace that by squaredNorm() to save computation time
+
+  meanDist = dist.sum()/nbMatchedPoints;
+  medDist = matchedPoints.matches.getDistsQuantile(0.50);
+  quantDist = matchedPoints.matches.getDistsQuantile(overlap);
+
+  cout << "Mean Residual Distance: " << meanDist << " m" << endl;
+  cout << "Median Residual Distance: " << medDist << " m" << endl;
+  cout << "Quantile " << overlap << " Residual Distance: " <<  quantDist << " m" << endl;
 }
 
 /* Get the line whose index is given as argument from file. */

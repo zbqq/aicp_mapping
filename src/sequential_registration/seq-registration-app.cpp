@@ -421,6 +421,9 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   PM::ICP icp = registr_->getIcp();
   DP readFiltered = icp.getReadingFiltered();
 
+  float residualMeanDist, residualMedDist, residualQuantDist;
+  getResidualError(icp, current_ratio, residualMeanDist, residualMedDist, residualQuantDist);
+
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
   // Distance dp_cloud points from KNN in ref
@@ -440,8 +443,11 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // Variable to apply correction (initialize the alignment)
   float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
   cout << "distT = " << distT << endl;
+  cout << "dist_x = " << pow(T1(0,3),2) << endl;
+  cout << "dist_y = " << pow(T1(1,3),2) << endl;
+  cout << "dist_z = " << pow(T1(2,3),2) << endl;
   
-  if (distT < 3.00)
+  if (residualMeanDist < 0.01 && residualMedDist < 0.01 && residualQuantDist < 0.01)
   {
     initialT_ = T;
     valid_correction_ = TRUE;
@@ -519,13 +525,6 @@ void App::operator()() {
           ref_try = ref;
         }
 
-          // To file
-          std::stringstream vtk_refTry;
-          vtk_refTry << "refTry_";
-          vtk_refTry << to_string(sweep_scans_list_->getCurrentReference().getId()-1);
-          vtk_refTry << ".vtk";
-          savePointCloudVTK(vtk_refTry.str().c_str(), ref_try);
-
         //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
         read_pose = first_sweep_scans_list.back().getBodyPose();
         read_try = dp_cloud;
@@ -553,15 +552,8 @@ void App::operator()() {
           SweepScan previous_sweep = sweep_scans_list_->getCurrentCloud();
           sweep_scans_list_->addSweep(previous_sweep, PM::TransformationParameters::Identity(4,4));
           // Combine old and new reference clouds (ref is the previous/old reference)
-          sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
+          //sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
           sweep_scans_list_->getCurrentCloud().setId(sweep_scans_list_->getCurrentCloud().getId()+1);
-
-          // To file
-          std::stringstream vtk_firstRefName;
-          vtk_firstRefName << "firstHalfRef_";
-          vtk_firstRefName << to_string(sweep_scans_list_->getCurrentCloud().getId());
-          vtk_firstRefName << ".vtk";
-          savePointCloudVTK(vtk_firstRefName.str().c_str(), ref);
 
           // Updating reference with combined clouds...
           sweep_scans_list_->getCurrentCloud().setReference();
@@ -659,7 +651,7 @@ void App::operator()() {
       }
 
       // To file
-      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 2 == 0))
+      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
       {
         std::stringstream vtk_fname;
         vtk_fname << "cloud_";
