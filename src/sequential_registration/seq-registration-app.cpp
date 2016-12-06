@@ -447,7 +447,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   cout << "dist_y = " << pow(T1(1,3),2) << endl;
   cout << "dist_z = " << pow(T1(2,3),2) << endl;
   
-  if (residualMeanDist < 0.01 && residualMedDist < 0.01 && residualQuantDist < 0.01)
+  if (residualMeanDist < 0.01 || residualMedDist < 0.01 || residualQuantDist < 0.01)
   {
     initialT_ = T;
     valid_correction_ = TRUE;
