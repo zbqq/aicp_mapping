@@ -142,7 +142,14 @@ class App{
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d current_correction_;
 
-    //  Reference cloud update counters
+    // Residuals params
+    float residualMeanDist_;
+    float residualMedDist_;
+    float residualQuantDist_;
+    // Reference cloud update  triggers
+    float overlap_update_threshold_;
+    float forced_update_threshold_;
+    // Reference cloud update counters
     int forced_updates_counter_;
     int overlap_updates_counter_;
 
@@ -175,9 +182,13 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   valid_correction_ = FALSE;
   force_reference_update_ = FALSE;
 
-  //  Reference cloud update counters
+  // Reference cloud update triggers
+  overlap_update_threshold_ = 11;
+  forced_update_threshold_ = 0.01;
+  // Reference cloud update counters
   forced_updates_counter_ = 0;
   overlap_updates_counter_ = 0;
+
 
   accumulate_ = TRUE;
   robot_behavior_now_ = -1;
@@ -421,8 +432,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   PM::ICP icp = registr_->getIcp();
   DP readFiltered = icp.getReadingFiltered();
 
-  float residualMeanDist, residualMedDist, residualQuantDist;
-  getResidualError(icp, current_ratio, residualMeanDist, residualMedDist, residualQuantDist);
+  getResidualError(icp, current_ratio, residualMeanDist_, residualMedDist_, residualQuantDist_);
 
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
@@ -447,7 +457,9 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   cout << "dist_y = " << pow(T1(1,3),2) << endl;
   cout << "dist_z = " << pow(T1(2,3),2) << endl;
   
-  if (residualMeanDist < 0.01 || residualMedDist < 0.01 || residualQuantDist < 0.01)
+  if (residualMeanDist_ < forced_update_threshold_ ||
+      residualMedDist_ < forced_update_threshold_ ||
+      residualQuantDist_ < forced_update_threshold_)
   {
     initialT_ = T;
     valid_correction_ = TRUE;
@@ -532,7 +544,7 @@ void App::operator()() {
         overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
         cout << "Overlap: " << overlap_ << "%" << endl;
 
-        if(force_reference_update_ || (overlap_ != -1 && overlap_ < 11))
+        if(force_reference_update_ || (overlap_ != -1 && overlap_ < overlap_update_threshold_))
         {
           cout << "Reference UPDATE, FORCED: " << force_reference_update_ << ", Overlap = " << overlap_ << endl;
           // Reference Update Statistics
@@ -546,35 +558,47 @@ void App::operator()() {
             overlap_updates_counter_ ++;
           }
 
+          /*
           // Add new cloud from the combination of previous and new reference. In order:
           // last aligned cloud (previous),
           // followed by combined cloud (new reference).
           SweepScan previous_sweep = sweep_scans_list_->getCurrentCloud();
           sweep_scans_list_->addSweep(previous_sweep, PM::TransformationParameters::Identity(4,4));
           // Combine old and new reference clouds (ref is the previous/old reference)
-          //sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
-          sweep_scans_list_->getCurrentCloud().setId(sweep_scans_list_->getCurrentCloud().getId()+1);
+          sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
+          sweep_scans_list_->getCurrentCloud().setId(sweep_scans_list_->getCurrentCloud().getId()+1);*/
 
           // Updating reference with combined clouds...
-          sweep_scans_list_->getCurrentCloud().setReference();
-          sweep_scans_list_->updateReference(sweep_scans_list_->getCurrentCloud().getId());
+          bool referenceSet = FALSE;
+          int current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
+          int i = 0;
+          while (!referenceSet)
+          {
+            referenceSet = sweep_scans_list_->getCloud(current_cloud_id - i).setReference();
+            cout << "TRIED REFERENCE " << current_cloud_id - i << ", Set: " << referenceSet << endl;
+            if (referenceSet)
+              sweep_scans_list_->updateReference(current_cloud_id - i);
+            i ++;
+          }
 
+          /*
           // To file
           std::stringstream vtk_halfRefName;
           vtk_halfRefName << "halfRef_";
           vtk_halfRefName << to_string(sweep_scans_list_->getCurrentCloud().getId()-1);
           vtk_halfRefName << ".vtk";
-          savePointCloudVTK(vtk_halfRefName.str().c_str(), sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentCloud().getId()-1).getCloud());
+          savePointCloudVTK(vtk_halfRefName.str().c_str(), sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentCloud().getId()-1).getCloud());*/
+
+          // Get just updated reference
+          ref = sweep_scans_list_->getCurrentReference().getCloud();
 
           // To file
           std::stringstream vtk_refName;
           vtk_refName << "ref_";
-          vtk_refName << to_string(sweep_scans_list_->getCurrentCloud().getId());
+          vtk_refName << to_string(sweep_scans_list_->getCurrentReference().getId());
           vtk_refName << ".vtk";
-          savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+          savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentReference().getCloud());
 
-          // Get just updated reference
-          ref = sweep_scans_list_->getCurrentReference().getCloud();
           // Assuming after reference update overlap is sufficient
           //(reference and reading clouds are consecutive clouds)
           overlap_ = 75;
@@ -587,12 +611,15 @@ void App::operator()() {
 
         TimingUtils::toc();
 
-        //current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
-
         // Compute correction to pose estimate:
         if(valid_correction_)
         {
-          current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId());
+          bool enableRef = FALSE;
+          if (residualMeanDist_ < forced_update_threshold_ &&
+              residualMedDist_ < forced_update_threshold_ &&
+              residualQuantDist_ < forced_update_threshold_)
+            enableRef = TRUE;
+          current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
 
           current_correction_ = getTransfParamAsIsometry3d(Ttot);
           updated_correction_ = TRUE;
@@ -651,7 +678,7 @@ void App::operator()() {
       }
 
       // To file
-      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
+      if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 1 == 0))
       {
         std::stringstream vtk_fname;
         vtk_fname << "cloud_";

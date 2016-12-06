@@ -5,6 +5,7 @@ SweepScan::SweepScan()
   cloud_id = -1;
 
   is_reference_ = false;
+  enabled_reference_ = true;
   its_reference_id_ = -1;
   
   planar_scans.clear();
@@ -22,17 +23,19 @@ SweepScan::~SweepScan()
 { 
 }
 
+// Called to initialize first reference cloud only
 void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id)
 {
-  populateSweepScan(scans, cloud, id, -1);
+  populateSweepScan(scans, cloud, id, -1, true);
   is_reference_ = true;
 }
 
-void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId)
+void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId, bool enRef)
 {
   cloud_id = id;
   dp_cloud = cloud;
 
+  enabled_reference_ = enRef;
   its_reference_id_ = refId;
   
   planar_scans.assign(scans.begin(), scans.end());

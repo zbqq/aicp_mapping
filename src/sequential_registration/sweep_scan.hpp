@@ -32,9 +32,14 @@ class SweepScan
     //PM::Matrix getNormals(){ return dp_cloud.getDescriptorCopyByName("normals"); };
 
     void populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id);
-    void populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId);
+    void populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId, bool enRef);
     void resetSweepScan();
-    void setReference(){ is_reference_ = true; };
+    bool setReference()
+    {
+        if(enabled_reference_)
+            is_reference_ = true;
+        return enabled_reference_;
+    };
 
     void addPointsToSweepScan(DP other_cloud);
 
@@ -43,6 +48,7 @@ class SweepScan
   private:
     bool initialized_;
     bool is_reference_; // Is this cloud a reference cloud?
+    bool enabled_reference_; // Can this cloud be used as a reference cloud?
     
     // If scan is a reading cloud this field contains the id of the reference used for alignment
     // If scan is the first reference cloud this field is set to -1 
