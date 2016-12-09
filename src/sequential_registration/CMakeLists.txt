@@ -15,3 +15,12 @@ pods_use_pkg_config_packages(sequential-registration eigen3
   lidar-odom laser-util
   ${FK_PACKAGES})
 pods_install_executables(sequential-registration)
+
+add_executable (error-from-gt-map seq-registration-error-from-gt-map.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
+target_link_libraries(error-from-gt-map pthread boost_system pointmatcher cloud_accumulate filteringUtils drawingUtils timingUtils ${VTK_LIBRARIES})
+pods_use_pkg_config_packages(error-from-gt-map eigen3
+  lcm    bot2-frames icp-registration pronto_vis
+  lcmtypes_bot2-core ${REQUIRED_PACKAGES} pcl_io-1.7 bot2-lcmgl-client
+  lidar-odom laser-util
+  ${FK_PACKAGES})
+pods_install_executables(error-from-gt-map)

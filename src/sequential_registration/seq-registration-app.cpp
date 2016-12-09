@@ -6,10 +6,9 @@
 
 // The algorithm accumulates scans on a thread and registers the accumulated scans (clouds) in parallel
 // on a second thread. The first cloud is selected as the first reference for registration. The reference
-// cloud is updated with last aligned cloud 
-//     if (overlap from last alignment < threshold1),
-// is updated with last reading cloud (not registered but initialized with K-I state estimate)
-//     if (previous estimated correction > threshold2) <-- in this case initialized-only reading cloud was stored. 
+// cloud is updated with last (well) aligned cloud:
+//     if (current overlap < overlap_update_threshold),
+//     if (previous estimated correction > forced_update_threshold).
 
 // Get path to registration base
 #ifdef CONFDIR
@@ -183,7 +182,7 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   force_reference_update_ = FALSE;
 
   // Reference cloud update triggers
-  overlap_update_threshold_ = 11;
+  overlap_update_threshold_ = 12;
   forced_update_threshold_ = 0.01;
   // Reference cloud update counters
   forced_updates_counter_ = 0;
@@ -624,27 +623,27 @@ void App::operator()() {
           current_correction_ = getTransfParamAsIsometry3d(Ttot);
           updated_correction_ = TRUE;
 
-         // Publish corrected pose
-         bot_core::pose_t msg_out;
-         Eigen::Isometry3d world_to_body_last;
-         std::unique_lock<std::mutex> lock(robot_state_mutex_);
-         {
-           // Get latest world to body transform available
-           world_to_body_last = world_to_body_msg_;
-         }
+          // Publish corrected pose
+          bot_core::pose_t msg_out;
+          Eigen::Isometry3d world_to_body_last;
+          std::unique_lock<std::mutex> lock(robot_state_mutex_);
+          {
+            // Get latest world to body transform available
+            world_to_body_last = world_to_body_msg_;
+          }
 
-         if (cl_cfg_.working_mode == "robot")
-         {
-           // Apply correction if available (identity otherwise)
-           if (updated_correction_)
-           {
-             corrected_pose_ = current_correction_ * world_to_body_last;
-             updated_correction_ = FALSE;
+          if (cl_cfg_.working_mode == "robot")
+          {
+            // Apply correction if available (identity otherwise)
+            if (updated_correction_)
+            {
+              corrected_pose_ = current_correction_ * world_to_body_last;
+              updated_correction_ = FALSE;
 
-             // To correct robot drift publish CORRECTED POSE
-             msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
-             lcm_->publish(cl_cfg_.output_channel,&msg_out);
-           }
+              // To correct robot drift publish CORRECTED POSE
+              msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
+              lcm_->publish(cl_cfg_.output_channel,&msg_out);
+            }
           }
 
           // Ttot is the full transform to move the input on the reference cloud
