@@ -106,6 +106,7 @@ class App{
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
     Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch
                                           // without drift correction
+    long long int world_to_body_msg_utime_;
     //Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
     Eigen::Isometry3d world_to_frame_vicon_first_; // Ground truth (initialization)
@@ -444,8 +445,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
   //pairedPointsMeanDistance(reference, output, icp);
 
-  // To director
-  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+  // To director aligned reading cloud (Point Cloud 1, Frame 1)
+  drawPointCloudCollections(lcm_, 1, local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   T = T1 * initialT_;
@@ -467,7 +468,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   {
     valid_correction_ = FALSE;
     // To director
-    drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
 
     // To file: DEBUG
     std::stringstream vtk_fname_read;
@@ -512,7 +513,7 @@ void App::operator()() {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
 
-        // To director
+        // To director first reference cloud (Point Cloud 0, Frame 0)
         drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
       }
       else
@@ -626,10 +627,12 @@ void App::operator()() {
           // Publish corrected pose
           bot_core::pose_t msg_out;
           Eigen::Isometry3d world_to_body_last;
+          long long int world_to_body_last_utime;
           std::unique_lock<std::mutex> lock(robot_state_mutex_);
           {
             // Get latest world to body transform available
             world_to_body_last = world_to_body_msg_;
+            world_to_body_last_utime = world_to_body_msg_utime_;
           }
 
           if (cl_cfg_.working_mode == "robot")
@@ -640,6 +643,9 @@ void App::operator()() {
               corrected_pose_ = current_correction_ * world_to_body_last;
               updated_correction_ = FALSE;
 
+              // Publish POSE_BODY (Frame 3) and POSE_BODY_SCANMATCHER (Frame 4) in Director
+              drawFrameCollections(lcm_, 3, world_to_body_last, world_to_body_last_utime);
+              drawFrameCollections(lcm_, 4, corrected_pose_, current_sweep->getUtimeEnd());
               // To correct robot drift publish CORRECTED POSE
               msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
               lcm_->publish(cl_cfg_.output_channel,&msg_out);
@@ -820,11 +826,14 @@ void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& ch
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
 
   Eigen::Isometry3d world_to_body_last;
+  long long int world_to_body_last_utime;
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
   {
     // Update world to body transform (from kinematics msg) 
     world_to_body_msg_ = getPoseAsIsometry3d(msg);
+    world_to_body_msg_utime_ = msg->utime;
     world_to_body_last = world_to_body_msg_;
+    world_to_body_last_utime = world_to_body_msg_utime_;
   }
 
   bot_core::pose_t msg_out;
