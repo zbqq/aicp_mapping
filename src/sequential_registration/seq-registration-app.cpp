@@ -91,6 +91,7 @@ class App{
     std::mutex data_mutex_;
     std::mutex robot_state_mutex_;
     std::mutex robot_behavior_mutex_;
+    std::mutex cloud_accumulate_mutex_;
     // %%%%%%%%%%%%%%%%%%%%%%%%
 
     BotParam* botparam_;
@@ -116,6 +117,9 @@ class App{
     bool pose_initialized_;
     bool updated_correction_;
     bool vicon_initialized_;
+
+    // Avoid cloud distortion clearing buffer after pose update
+    bool clear_clouds_buffer_;
 
     // Robot behavior
     bool accumulate_;
@@ -189,8 +193,8 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   forced_updates_counter_ = 0;
   overlap_updates_counter_ = 0;
 
-
   accumulate_ = TRUE;
+  clear_clouds_buffer_ = FALSE;
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
 
@@ -646,9 +650,15 @@ void App::operator()() {
               // Publish POSE_BODY (Frame 3) and POSE_BODY_SCANMATCHER (Frame 4) in Director
               drawFrameCollections(lcm_, 3, world_to_body_last, world_to_body_last_utime);
               drawFrameCollections(lcm_, 4, corrected_pose_, current_sweep->getUtimeEnd());
+
               // To correct robot drift publish CORRECTED POSE
               msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
               lcm_->publish(cl_cfg_.output_channel,&msg_out);
+
+              {
+                std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+                clear_clouds_buffer_ = TRUE;
+              }
             }
           }
 
@@ -711,7 +721,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   {
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     world_to_body_last = world_to_body_msg_;
-  } 
+  }
+
   // Populate SweepScan with current LidarScan data structure
   // 2. Get lidar pose
   // bot_frames_structure,from_frame,to_frame,utime,result
@@ -734,7 +745,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     robot_behavior_now = robot_behavior_now_;
   }
 
-  if (cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_))
+  if ((cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_)) && !clear_clouds_buffer_)
   // Accumulate EITHER always OR only when transition from walking to standing happens
   // Pyhton script convert_robot_behavior_type.py must be running.
   {
@@ -746,10 +757,16 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
   else
   {
+    {
+      std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+      clear_clouds_buffer_ = FALSE;
+      cout << "Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+    }
+
     if ( accu_->getCounter() > 0 )
       accu_->clearCloud();
-      if (!lidar_scans_list_.empty())
-        lidar_scans_list_.clear();
+    if ( !lidar_scans_list_.empty() )
+      lidar_scans_list_.clear();
   }
 
   delete current_scan;
