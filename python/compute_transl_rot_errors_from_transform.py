@@ -30,7 +30,7 @@ def on_pose(channel, data):
 
   errorsToPub = double_array_t()
   errorsToPub.utime = errorTransform.utime
-  errorsToPub.num_values = 2
+  errorsToPub.num_values = 8
   errorsToPub.values = [0] * errorsToPub.num_values
 
   # Compute 3D translation error
@@ -40,11 +40,25 @@ def on_pose(channel, data):
   errorRotMatrix = quat_to_rot(errorTransform.orientation);
 
   traceRot = errorRotMatrix.trace();
-  rotErr = math.acos ( (traceRot-1)/2 ) * 180.0 / math.pi;
+  rotErr = 180.0 - (math.acos ( (traceRot-1)/2 ) * 180.0 / math.pi);
+
+  # Decomposed errors
+  xErr = errorTransform.pos[0]
+  yErr = errorTransform.pos[1]
+  zErr = errorTransform.pos[2]
+  yawErr = math.atan ( errorRotMatrix[1,0] / errorRotMatrix[0,0] )
+  pitchErr = math.atan ( - errorRotMatrix[2,0] / math.sqrt( pow(errorRotMatrix[2,1], 2.0) + pow(errorRotMatrix[2,2], 2.0) ) )
+  rollErr = math.atan ( errorRotMatrix[2,1] / errorRotMatrix[2,2] )
 
   # Set output variable
   errorsToPub.values[0] = translErr
   errorsToPub.values[1] = rotErr
+  errorsToPub.values[2] = xErr
+  errorsToPub.values[3] = yErr
+  errorsToPub.values[4] = zErr
+  errorsToPub.values[5] = yawErr
+  errorsToPub.values[6] = pitchErr
+  errorsToPub.values[7] = rollErr
 
   # Get time in seconds
   global index

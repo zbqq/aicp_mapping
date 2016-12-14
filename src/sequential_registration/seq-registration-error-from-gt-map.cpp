@@ -305,6 +305,8 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
 
 void App::doRegistration(DP &reference, DP &reading, DP &output, PM::TransformationParameters &T)
 {
+  DP non_filtered_reading(reading);
+
   // PRE-FILTERING using filteringUtils
   if (cl_cfg_.algorithm == "aicp")
   {
@@ -312,14 +314,10 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
     regionGrowingPlaneSegmentationFilter(reading);
   }
 
-  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // To file: DEBUG
-  std::stringstream vtk_fname;
-  vtk_fname << "reading_";
-  vtk_fname << to_string(sweep_scans_list_->getNbClouds());
-  vtk_fname << ".vtk";
-  savePointCloudVTK(vtk_fname.str().c_str(), reading);
-  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // To director current cloud (Point Cloud 5, Frame 5)
+  drawPointCloudCollections(lcm_, 5, local_, reference, 1);
+  // To director current cloud (Point Cloud 6, Frame 6)
+  drawPointCloudCollections(lcm_, 6, local_, reading, 1);
 
   // ............do registration.............
   // First ICP loop
@@ -346,8 +344,20 @@ void App::doRegistration(DP &reference, DP &reading, DP &output, PM::Transformat
 
   getResidualError(icp, 0.70, residualMeanDist_, residualMedDist_, residualQuantDist_);
 
-  // To director
-  //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+  // To director aligned reading cloud (Point Cloud 1, Frame 1)
+  drawPointCloudCollections(lcm_, 1, local_, output, 1);
+
+  //Original reading aligned
+  icp.transformations.apply(non_filtered_reading, T1);
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /*// To file: DEBUG
+  std::stringstream vtk_fname;
+  vtk_fname << "reading_";
+  vtk_fname << to_string(sweep_scans_list_->getNbClouds());
+  vtk_fname << ".vtk";
+  savePointCloudVTK(vtk_fname.str().c_str(), not_filtered_reading);*/
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   T = T1;
@@ -379,7 +389,7 @@ void App::operator()() {
 
       // For storing current cloud
       SweepScan* current_sweep = new SweepScan();
-      vector<LidarScan> first_sweep_scans_list = scans_queue.front();
+      vector<LidarScan> planar_scans_list = scans_queue.front();
       scans_queue.pop_front();
 
       if(sweep_scans_list_->isEmpty())
@@ -393,13 +403,13 @@ void App::operator()() {
         empty_sweep_scans_list.push_back(*empty_scan);
         current_sweep->populateSweepScan(empty_sweep_scans_list, reference_gt_, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
-
-        // To director
-        drawPointCloudCollections(lcm_, 0, local_, reference_gt_, 1);
       }
 
       // Get reference
       DP ref = sweep_scans_list_->getCurrentReference().getCloud();
+
+      // To director first reference cloud (Point Cloud 0, Frame 0)
+      drawPointCloudCollections(lcm_, 0, local_, reference_gt_, 1);
 
       TimingUtils::tic();
 
@@ -411,22 +421,54 @@ void App::operator()() {
       TimingUtils::toc();
 
       // Compute correction to pose estimate:
-      current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), TRUE);
+      current_sweep->populateSweepScan(planar_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), TRUE);
 
       current_correction_ = getTransfParamAsIsometry3d(Ttot);
       updated_correction_ = TRUE;
 
-      // Publish computed error
-      bot_core::pose_t msg_out;
+      // Publish
+      bot_core::double_array_t msg_out;
 
       // Apply correction if available (identity otherwise)
       if (updated_correction_)
       {
         updated_correction_ = FALSE;
 
-        // To correct robot drift publish COMPUTED_ERROR_TRANSFORM
-        msg_out = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
-        lcm_->publish(cl_cfg_.output_channel,&msg_out);
+        if (residualMedDist_ < 0.003 && residualQuantDist_ < 0.004)
+        {
+          /*// To correct robot drift publish COMPUTED_ERROR_TRANSFORM
+          msg_out = getIsometry3dAsBotPose(current_correction_, current_sweep->getUtimeEnd());
+          lcm_->publish(cl_cfg_.output_channel,&msg_out);*/
+
+          Eigen::Isometry3d world_to_body_end_of_sweep = current_sweep->getBodyPose();
+          Eigen::Isometry3d corrected_pose = current_correction_ * world_to_body_end_of_sweep;
+
+          // Publish ESTIMATED_POSE and CORRECTED_POSE to Director
+          drawFrameCollections(lcm_, 7, world_to_body_end_of_sweep, current_sweep->getUtimeEnd());
+          drawFrameCollections(lcm_, 8, corrected_pose, current_sweep->getUtimeEnd());
+
+          // Compute difference between estimated and corrected
+          bot_core::pose_t est_pose = getIsometry3dAsBotPose(world_to_body_end_of_sweep, current_sweep->getUtimeEnd());
+          bot_core::pose_t corr_pose = getIsometry3dAsBotPose(corrected_pose, current_sweep->getUtimeEnd());
+          // Translation
+          float transl_err = sqrt( pow(corr_pose.pos[0] - est_pose.pos[0], 2.0) + pow(corr_pose.pos[1] - est_pose.pos[1], 2.0) + pow(corr_pose.pos[2] - est_pose.pos[2], 2.0));
+          // Rotation
+          Eigen::Matrix3d delta_rot = world_to_body_end_of_sweep.rotation() * corrected_pose.rotation().inverse();
+          float trace_rot = delta_rot(0,0) + delta_rot(1,1) + delta_rot(2,2);
+          float rot_err = acos ( (trace_rot-1)/2.0 ) * 180.0 / M_PI;
+
+          // To correct robot drift publish POSE_ERRORS
+          msg_out.utime = current_sweep->getUtimeEnd();
+          msg_out.num_values = 2;
+          msg_out.values.push_back(transl_err);
+          msg_out.values.push_back(rot_err);
+
+          lcm_->publish(cl_cfg_.output_channel,&msg_out);
+        }
+        else
+        {
+          cout << "Alignment not trusted: Correction DISCARDED." << endl;
+        }
       }
 
       // Ttot is the full transform to move the input on the reference cloud
@@ -439,11 +481,12 @@ void App::operator()() {
       cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
 
       // To file
+      /*
       std::stringstream vtk_fname;
       vtk_fname << "cloud_";
       vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
       vtk_fname << ".vtk";
-      savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+      savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());*/
         
       current_sweep->~SweepScan();
 
@@ -538,7 +581,8 @@ int main(int argc, char **argv){
   cl_cfg.ground_truth_clouds.clear();
   cl_cfg.algorithm = "aicp";
   cl_cfg.pose_body_channel = "POSE_BODY";
-  cl_cfg.output_channel = "COMPUTED_ERROR_TRANSFORM"; // Create new channel...
+  //cl_cfg.output_channel = "COMPUTED_ERROR_TRANSFORM"; // Create new channel...
+  cl_cfg.output_channel = "POSE_ERRORS"; // Create new channel...
 
   CloudAccumulateConfig ca_cfg;
   ca_cfg.batch_size = 240; // 240 is about 1 sweep

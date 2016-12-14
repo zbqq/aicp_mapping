@@ -4,7 +4,16 @@
 def makePlots():
     # translation error plot
     addPlot(yLimits=[0, 0.9])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[2])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[3])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[4])
     addSignal('POSE_ERRORS', msg.utime, msg.values[0])
+
+    # rotation error plot
+    addPlot(yLimits=[0, 25])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[5])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[6])
+    addSignal('POSE_ERRORS', msg.utime, msg.values[7])
 
     # rotation error plot
     addPlot(yLimits=[0, 25])
