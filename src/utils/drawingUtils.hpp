@@ -8,14 +8,14 @@
 #include <icp-registration/icp_utils.h>
 #include <pronto_utils/pronto_vis.hpp> // visualize pt clds
 
-void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime);
-void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime);
+void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root = "Point Cloud");
+void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root = "Point Cloud");
 
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, std::vector<Eigen::Vector3f> point_cloud);
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, DP &dp_cloud);
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud);
 
-void drawFrameCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, long long int utime);
+void drawFrameCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, long long int utime, std::string frame_name_root = "Frame");
 
 void drawFrameLCMGL(bot_lcmgl_t *lcmgl);
 void drawFrameLCMGL(bot_lcmgl_t *lcmgl, Eigen::Isometry3d transform);

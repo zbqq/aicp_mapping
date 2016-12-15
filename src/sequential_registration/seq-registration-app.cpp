@@ -56,6 +56,7 @@ struct CommandLineConfig
   std::string vicon_channel;
   std::string output_channel;
   std::string working_mode;
+  bool verbose;
   std::string algorithm;
   bool register_if_walking;
   bool apply_correction;
@@ -368,6 +369,13 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   vtk_fname << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname << ".vtk";
   savePointCloudVTK(vtk_fname.str().c_str(), reading);*/
+
+  if (cl_cfg_.verbose)
+  {
+    // Publish clouds in Director
+    drawPointCloudCollections(lcm_, 5000, local_, reading, 1, "Reading");
+    drawPointCloudCollections(lcm_, 5010, local_, reference, 1, "Reference");
+  }
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // ............do registration.............
@@ -438,6 +446,12 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
 
   getResidualError(icp, current_ratio, residualMeanDist_, residualMedDist_, residualQuantDist_);
 
+  if (cl_cfg_.verbose)
+  {
+    Eigen::Isometry3d T1_eigen = getTransfParamAsIsometry3d(T1);
+    drawFrameCollections(lcm_, 7, T1_eigen, 0, "alignment");
+  }
+
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
   // Distance dp_cloud points from KNN in ref
@@ -448,9 +462,6 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   PM::Matrix distsOut1 = distancesKNN(reference, output);
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
   //pairedPointsMeanDistance(reference, output, icp);
-
-  // To director aligned reading cloud (Point Cloud 1, Frame 1)
-  drawPointCloudCollections(lcm_, 1, local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   T = T1 * initialT_;
@@ -473,6 +484,7 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     valid_correction_ = FALSE;
     // To director
     //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1, "Misaligned");
 
     // To file: DEBUG
     std::stringstream vtk_fname_read;
@@ -516,9 +528,6 @@ void App::operator()() {
       {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
-
-        // To director first reference cloud (Point Cloud 0, Frame 0)
-        drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
       }
       else
       {
@@ -585,14 +594,6 @@ void App::operator()() {
             i ++;
           }
 
-          /*
-          // To file
-          std::stringstream vtk_halfRefName;
-          vtk_halfRefName << "halfRef_";
-          vtk_halfRefName << to_string(sweep_scans_list_->getCurrentCloud().getId()-1);
-          vtk_halfRefName << ".vtk";
-          savePointCloudVTK(vtk_halfRefName.str().c_str(), sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentCloud().getId()-1).getCloud());*/
-
           // Get just updated reference
           ref = sweep_scans_list_->getCurrentReference().getCloud();
 
@@ -644,12 +645,20 @@ void App::operator()() {
             // Apply correction if available (identity otherwise)
             if (updated_correction_)
             {
-              corrected_pose_ = current_correction_ * world_to_body_last;
+              Eigen::Isometry3d world_to_body_end_of_sweep = current_sweep->getBodyPose();
+              long long int world_to_body_end_of_sweep_utime = current_sweep->getUtimeEnd();
+
+              corrected_pose_ = current_correction_ * world_to_body_end_of_sweep;
               updated_correction_ = FALSE;
 
-              // Publish POSE_BODY (Frame 3) and POSE_BODY_SCANMATCHER (Frame 4) in Director
-              drawFrameCollections(lcm_, 3, world_to_body_last, world_to_body_last_utime);
-              drawFrameCollections(lcm_, 4, corrected_pose_, current_sweep->getUtimeEnd());
+              if (cl_cfg_.verbose)
+              {
+                // Publish frames in Director
+                drawFrameCollections(lcm_, 3, world_to_body_end_of_sweep, world_to_body_end_of_sweep_utime, "body (end sweep)");
+                drawFrameCollections(lcm_, 4, world_to_body_last, world_to_body_last_utime, "body (tip)"); // world_to_body_last
+                drawFrameCollections(lcm_, 5, current_correction_, world_to_body_end_of_sweep_utime, "current_correction");
+                drawFrameCollections(lcm_, 6, corrected_pose_, world_to_body_end_of_sweep_utime, "body (corrected)");
+              }
 
               // To correct robot drift publish CORRECTED POSE
               msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
@@ -677,19 +686,10 @@ void App::operator()() {
         }
         else
         {
-          // Ttot is not updated, therefore I keep cloud as from K-I state estimate
-          // Store current sweep (not registered)
-          //sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
           force_reference_update_ = TRUE;         
           cout << "NOT VALID CORRECTION" << endl;
-
-          // To director
-          //drawPointCloudCollections(lcm_, (sweep_scans_list_->getNbClouds()-1), local_, out, 1);
         }
-
-        // To director
-        //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
       }
 
       // To file
@@ -701,6 +701,9 @@ void App::operator()() {
         vtk_fname << ".vtk";
         savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
       }
+
+      if (cl_cfg_.verbose)
+        drawPointCloudCollections(lcm_, 6000, local_, sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
         
       current_sweep->~SweepScan();
 
@@ -859,6 +862,7 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   if (cl_cfg_.working_mode == "debug")
   {
     // Apply correction if available (identity otherwise)
+    // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
     corrected_pose_ = current_correction_ * world_to_body_last;
 
     // To correct robot drift publish CORRECTED POSE
@@ -908,6 +912,7 @@ int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
   cl_cfg.robot_name = "val";
   cl_cfg.working_mode = "robot";
+  cl_cfg.verbose = FALSE;
   cl_cfg.algorithm = "aicp";
   cl_cfg.register_if_walking = TRUE;
   cl_cfg.apply_correction = FALSE;
@@ -930,12 +935,13 @@ int main(int argc, char **argv){
   ConciseArgs parser(argc, argv, "aicp-registration");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
+  parser.add(cl_cfg.verbose, "v", "verbose", "Publish frames and clouds to LCM for debug");
   parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
   parser.add(cl_cfg.register_if_walking, "w", "register_if_walking", "Compute correction also when robot is walking?");
   parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
-  parser.add(cl_cfg.pose_body_channel, "p", "pose_body_channel", "Kinematics-inertia pose estimate");
-  parser.add(cl_cfg.vicon_channel, "v", "vicon_channel", "Ground truth pose from Vicon");
-  parser.add(cl_cfg.output_channel, "o", "output_channel", "Corrected pose");
+  parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Kinematics-inertia pose estimate");
+  parser.add(cl_cfg.vicon_channel, "vc", "vicon_channel", "Ground truth pose from Vicon");
+  parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
   parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");
