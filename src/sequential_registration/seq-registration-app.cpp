@@ -487,11 +487,11 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1, "Misaligned");
 
     // To file: DEBUG
-    std::stringstream vtk_fname_read;
+    /*std::stringstream vtk_fname_read;
     vtk_fname_read << "misaligned_";
     vtk_fname_read << to_string(sweep_scans_list_->getNbClouds());
     vtk_fname_read << ".vtk";
-    savePointCloudVTK(vtk_fname_read.str().c_str(), output);
+    savePointCloudVTK(vtk_fname_read.str().c_str(), output);*/
   }
 }
 
@@ -693,7 +693,7 @@ void App::operator()() {
       }
 
       // To file
-      if((sweep_scans_list_->getNbClouds() == 1) || (sweep_scans_list_->getNbClouds() % 1 == 0))
+      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
       {
         std::stringstream vtk_fname;
         vtk_fname << "cloud_";
