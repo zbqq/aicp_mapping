@@ -3,7 +3,7 @@
 Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration with Lightweight Communications and Marshalling (LCM) integration. The registratetion strategy is based on the [libpointmatcher](https://github.com/ethz-asl/libpointmatcher) farmework. 
 
 AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston
-Dynamics Atlas robots.
+Dynamics Atlas humanoid robots, as well as the IIT HyQ quadruped.
 
 ### Quick Start
 
@@ -39,15 +39,18 @@ Options:
 - Option _"-s debug"_ is meant to be used during debug. The corrected pose message is published at the same frequency as the pose estimate from the state estimator (for visualization purposes).
 
 ### Credits
-The following paper has been submitted for review:
+The following paper has been accepted for publication in the Proceedings of 2017 IEEE International Conference on Robotics and Automation (ICRA):
 
 ```
-@inproceedings{nobilifallonICRA17,
-  author    = {Simona Nobili and Raluca Scona and Marco Caravagna and Maurice Fallon},
-  title     = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
-  booktitle = {{Submitted to IEEE International Conference on Robotics and Automation (ICRA)}},
-  month     = {Sept},
-  year      = {2016},
+@inproceedings{Nobili17icra,
+  title  = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
+  author = {S. Nobili and R. Scona and M. Caravagna and M. Fallon},
+  booktitle = icra,
+  location = {Singapore},
+  month = may,
+  year   = {2017},
+  note =    {Accepted, to appear}
+
 }
 ```
 **Since this work is still under review, github users who have been granted access to this repository are not allowed to share the content. Simona.**
