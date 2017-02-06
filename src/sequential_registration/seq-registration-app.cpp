@@ -528,6 +528,12 @@ void App::operator()() {
       {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
+
+        if (cl_cfg_.verbose)
+        {
+          // To director first reference cloud (Point Cloud 0, Frame 0)
+          drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
+        }
       }
       else
       {
