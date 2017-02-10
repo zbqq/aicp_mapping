@@ -29,6 +29,7 @@
 #include <thread>
 #include <boost/shared_ptr.hpp>
 #include <boost/assign/std/vector.hpp>
+#include <boost/filesystem.hpp>
 #include <ConciseArgs>
 
 #include <bot_param/param_client.h>
@@ -127,8 +128,10 @@ class App{
     int robot_behavior_now_;
     int robot_behavior_previous_;
 
-    // visualisation
+    // Visualisation
     pronto_vis* pc_vis_;
+    // Create debug data folder
+    std::stringstream data_directory_path_;
 
     // Overlap parameter
     float overlap_;
@@ -244,6 +247,14 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   // Visualiser
   pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+  // Create debug data folder
+  data_directory_path_ << "/tmp/aicp_data";
+  const char* path = data_directory_path_.str().c_str();
+  boost::filesystem::path dir(path);
+  if(boost::filesystem::exists(path))
+    boost::filesystem::remove_all(path);
+  if(boost::filesystem::create_directory(dir))
+    cerr << "AICP debug data directory: " << path << endl;
 
   // Pose initialization
   lcm_->subscribe(cl_cfg_.pose_body_channel, &App::poseInitHandler, this);
@@ -365,7 +376,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // To file: DEBUG
   /*std::stringstream vtk_fname;
-  vtk_fname << "beforeICP_";
+  vtk_fname << data_directory_path_.str();
+  vtk_fname << "/beforeICP_";
   vtk_fname << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname << ".vtk";
   savePointCloudVTK(vtk_fname.str().c_str(), reading);*/
@@ -417,7 +429,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   /*// To file: DEBUG
   std::stringstream vtk_fname2;
-  vtk_fname2 << "initializedReading_";
+  vtk_fname2 << data_directory_path_.str();
+  vtk_fname2 << "/initializedReading_";
   vtk_fname2 << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname2 << ".vtk";
   savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
@@ -488,7 +501,8 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
 
     // To file: DEBUG
     /*std::stringstream vtk_fname_read;
-    vtk_fname_read << "misaligned_";
+    vtk_fname_read << data_directory_path_.str();
+    vtk_fname_read << "/misaligned_";
     vtk_fname_read << to_string(sweep_scans_list_->getNbClouds());
     vtk_fname_read << ".vtk";
     savePointCloudVTK(vtk_fname_read.str().c_str(), output);*/
@@ -605,7 +619,8 @@ void App::operator()() {
 
           // To file
           std::stringstream vtk_refName;
-          vtk_refName << "ref_";
+          vtk_refName << data_directory_path_.str();
+          vtk_refName << "/ref_";
           vtk_refName << to_string(sweep_scans_list_->getCurrentReference().getId());
           vtk_refName << ".vtk";
           savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentReference().getCloud());
@@ -702,7 +717,8 @@ void App::operator()() {
       if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
       {
         std::stringstream vtk_fname;
-        vtk_fname << "cloud_";
+        vtk_fname << data_directory_path_.str();
+        vtk_fname << "/cloud_";
         vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
         vtk_fname << ".vtk";
         savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
