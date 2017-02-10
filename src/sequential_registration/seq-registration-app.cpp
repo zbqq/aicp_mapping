@@ -8,7 +8,7 @@
 // on a second thread. The first cloud is selected as the first reference for registration. The reference
 // cloud is updated with last (well) aligned cloud:
 //     if (current overlap < overlap_update_threshold),
-//     if (previous estimated correction > forced_update_threshold).
+//     if (statistics on alignment residuals > forced_update_threshold).
 
 // Get path to registration base
 #ifdef CONFDIR
