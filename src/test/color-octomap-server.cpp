@@ -60,8 +60,6 @@ int main(int argc, char ** argv)
     msg.transform[i][i] = 1;
   }
 
-  std::cout << "dfsdfsd\n";
-
   std::stringstream datastream;
   tree->write(datastream);
   std::string datastring = datastream.str();

@@ -21,6 +21,9 @@ class SweepScan
     Eigen::Isometry3d getBodyPose(){ return world_to_body; };
     std::vector<LidarScan>& getScans(){ return planar_scans; };
     int getId(){ return cloud_id; };
+    void setId(int newId){ cloud_id = newId; };
+
+    int getItsReferenceId(){ return its_reference_id_; };
 
     bool isEmpty(){ return !initialized_; };
 
@@ -29,12 +32,27 @@ class SweepScan
     //PM::Matrix getNormals(){ return dp_cloud.getDescriptorCopyByName("normals"); };
 
     void populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id);
+    void populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId, bool enRef);
     void resetSweepScan();
+    bool setReference()
+    {
+        if(enabled_reference_)
+            is_reference_ = true;
+        return enabled_reference_;
+    };
+
+    void addPointsToSweepScan(DP other_cloud);
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr getPCLCloud();
 
   private:
     bool initialized_;
+    bool is_reference_; // Is this cloud a reference cloud?
+    bool enabled_reference_; // Can this cloud be used as a reference cloud?
+    
+    // If scan is a reading cloud this field contains the id of the reference used for alignment
+    // If scan is the first reference cloud this field is set to -1 
+    int its_reference_id_;
 
     int cloud_id;
     long long int utime_start; // Time stamp of first planar scan

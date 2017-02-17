@@ -3,6 +3,10 @@
 SweepScan::SweepScan()
 { 
   cloud_id = -1;
+
+  is_reference_ = false;
+  enabled_reference_ = true;
+  its_reference_id_ = -1;
   
   planar_scans.clear();
 
@@ -19,10 +23,20 @@ SweepScan::~SweepScan()
 { 
 }
 
+// Called to initialize first reference cloud only
 void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id)
+{
+  populateSweepScan(scans, cloud, id, -1, true);
+  is_reference_ = true;
+}
+
+void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, DP& cloud, int id, int refId, bool enRef)
 {
   cloud_id = id;
   dp_cloud = cloud;
+
+  enabled_reference_ = enRef;
+  its_reference_id_ = refId;
   
   planar_scans.assign(scans.begin(), scans.end());
 
@@ -70,9 +84,16 @@ void cleanDataPoint(DP& cloud)
   */
 }
 
+void SweepScan::addPointsToSweepScan(DP other_cloud)
+{
+  dp_cloud.concatenate(other_cloud);
+}
+
 void SweepScan::resetSweepScan()
 {
   cloud_id = -1;
+  is_reference_ = false;
+  its_reference_id_ = -1;
   cleanDataPoint(dp_cloud);
   
   planar_scans.clear();
@@ -87,8 +108,7 @@ void SweepScan::resetSweepScan()
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr SweepScan::getPCLCloud()
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZRGB> ());
-
-  fromPCLToDataPoints(dp_cloud, *cloudPCL);
+  fromDataPointsToPCL(dp_cloud, *cloudPCL);
 
   return cloudPCL;
 }

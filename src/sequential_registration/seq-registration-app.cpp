@@ -1,7 +1,14 @@
-// sequential-registration (while playing log file)
+// Run: sequential-registration -h
 
-// Input: POSE_BODY, Output POSE_BODY_CORRECTED
-// Computes T_DICP and corrects the estimate from ihmc (POSE_BODY)
+// Input: POSE_BODY
+// Output: POSE_BODY_CORRECTED
+// Computes T_AICP and corrects the state estimate in POSE_BODY message.
+
+// The algorithm accumulates scans on a thread and registers the accumulated scans (clouds) in parallel
+// on a second thread. The first cloud is selected as the first reference for registration. The reference
+// cloud is updated with last (well) aligned cloud:
+//     if (current overlap < overlap_update_threshold),
+//     if (statistics on alignment residuals > forced_update_threshold).
 
 // Get path to registration base
 #ifdef CONFDIR
@@ -22,6 +29,7 @@
 #include <thread>
 #include <boost/shared_ptr.hpp>
 #include <boost/assign/std/vector.hpp>
+#include <boost/filesystem.hpp>
 #include <ConciseArgs>
 
 #include <bot_param/param_client.h>
@@ -49,6 +57,7 @@ struct CommandLineConfig
   std::string vicon_channel;
   std::string output_channel;
   std::string working_mode;
+  bool verbose;
   std::string algorithm;
   bool register_if_walking;
   bool apply_correction;
@@ -84,6 +93,7 @@ class App{
     std::mutex data_mutex_;
     std::mutex robot_state_mutex_;
     std::mutex robot_behavior_mutex_;
+    std::mutex cloud_accumulate_mutex_;
     // %%%%%%%%%%%%%%%%%%%%%%%%
 
     BotParam* botparam_;
@@ -99,6 +109,7 @@ class App{
     Eigen::Isometry3d head_to_lidar_; // Fixed tf from the lidar to the robot's head frame
     Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch
                                           // without drift correction
+    long long int world_to_body_msg_utime_;
     //Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
     Eigen::Isometry3d world_to_frame_vicon_first_; // Ground truth (initialization)
@@ -109,13 +120,18 @@ class App{
     bool updated_correction_;
     bool vicon_initialized_;
 
+    // Avoid cloud distortion clearing buffer after pose update
+    bool clear_clouds_buffer_;
+
     // Robot behavior
     bool accumulate_;
     int robot_behavior_now_;
     int robot_behavior_previous_;
 
-    // visualisation
+    // Visualisation
     pronto_vis* pc_vis_;
+    // Create debug data folder
+    std::stringstream data_directory_path_;
 
     // Overlap parameter
     float overlap_;
@@ -129,8 +145,21 @@ class App{
     Eigen::VectorXf yaw_perturbs_;
 
     // Correction variables
+    bool valid_correction_;
+    bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d current_correction_;
+
+    // Residuals params
+    float residualMeanDist_;
+    float residualMedDist_;
+    float residualQuantDist_;
+    // Reference cloud update  triggers
+    float overlap_update_threshold_;
+    float forced_update_threshold_;
+    // Reference cloud update counters
+    int forced_updates_counter_;
+    int overlap_updates_counter_;
 
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf, 
@@ -158,7 +187,18 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   updated_correction_ = TRUE;
   vicon_initialized_ = FALSE;
 
+  valid_correction_ = FALSE;
+  force_reference_update_ = FALSE;
+
+  // Reference cloud update triggers
+  overlap_update_threshold_ = 12;
+  forced_update_threshold_ = 0.01;
+  // Reference cloud update counters
+  forced_updates_counter_ = 0;
+  overlap_updates_counter_ = 0;
+
   accumulate_ = TRUE;
+  clear_clouds_buffer_ = FALSE;
   robot_behavior_now_ = -1;
   robot_behavior_previous_ = -1;
 
@@ -207,6 +247,14 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   // Visualiser
   pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+  // Create debug data folder
+  data_directory_path_ << "/tmp/aicp_data";
+  const char* path = data_directory_path_.str().c_str();
+  boost::filesystem::path dir(path);
+  if(boost::filesystem::exists(path))
+    boost::filesystem::remove_all(path);
+  if(boost::filesystem::create_directory(dir))
+    cerr << "AICP debug data directory: " << path << endl;
 
   // Pose initialization
   lcm_->subscribe(cl_cfg_.pose_body_channel, &App::poseInitHandler, this);
@@ -317,20 +365,29 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
     regionGrowingPlaneSegmentationFilter(reference);
     regionGrowingPlaneSegmentationFilter(reading);
   }
-
+/*
   // Overlap
   DP ref_try, read_try;
   ref_try = reference;
   read_try = reading;
   overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
   cout << "Overlap: " << overlap_ << "%" << endl;
+*/
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // To file: DEBUG
   /*std::stringstream vtk_fname;
-  vtk_fname << "beforeICP_";
+  vtk_fname << data_directory_path_.str();
+  vtk_fname << "/beforeICP_";
   vtk_fname << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname << ".vtk";
   savePointCloudVTK(vtk_fname.str().c_str(), reading);*/
+
+  if (cl_cfg_.verbose)
+  {
+    // Publish clouds in Director
+    drawPointCloudCollections(lcm_, 5000, local_, reading, 1, "Reading");
+    drawPointCloudCollections(lcm_, 5010, local_, reference, 1, "Reference");
+  }
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   // ............do registration.............
@@ -370,9 +427,10 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   }
 
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // To file: DEBUG
-  /*std::stringstream vtk_fname2;
-  vtk_fname2 << "afterInitICP_";
+  /*// To file: DEBUG
+  std::stringstream vtk_fname2;
+  vtk_fname2 << data_directory_path_.str();
+  vtk_fname2 << "/initializedReading_";
   vtk_fname2 << to_string(sweep_scans_list_->getNbClouds());
   vtk_fname2 << ".vtk";
   savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
@@ -399,6 +457,14 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   PM::ICP icp = registr_->getIcp();
   DP readFiltered = icp.getReadingFiltered();
 
+  getResidualError(icp, current_ratio, residualMeanDist_, residualMedDist_, residualQuantDist_);
+
+  if (cl_cfg_.verbose)
+  {
+    Eigen::Isometry3d T1_eigen = getTransfParamAsIsometry3d(T1);
+    drawFrameCollections(lcm_, 7, T1_eigen, 0, "alignment");
+  }
+
   // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
   /*
   // Distance dp_cloud points from KNN in ref
@@ -409,46 +475,38 @@ void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose
   PM::Matrix distsOut1 = distancesKNN(reference, output);
   writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
   //pairedPointsMeanDistance(reference, output, icp);
-
-  // To director
-  drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/*
-  // Second ICP loop
-  string configName2;
-  configName2.append(REG_BASE);
-  configName2.append("/filters_config/icp_max_atlas_finals.yaml");
-  registr_->setConfigFile(configName2);
-  PM::TransformationParameters T2 = PM::TransformationParameters::Identity(4,4);
 
-  try {
-    registr_->getICPTransform(output, reference);
-    T2 = registr_->getTransform();
-    cout << "3D Transformation (Max Distance Outlier Filter):" << endl << T2 << endl;
-    output = registr_->getDataOut();
-
-    // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
-    // // Distance out_max_filter points from KNN in ref
-    // PM::Matrix distsOut2 = distancesKNN(reference, output);
-    // writeLineToFile(distsOut2, "distsAfterAdvancedRegistration.txt", line_number);
-    pairedPointsMeanDistance(reference, output, icp);
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  }
-  catch (std::runtime_error e) {
-    cout << "Exception: No points for Max Outlier Distance --> T2 = Identity \n";
-    T2 = PM::TransformationParameters::Identity(4,4);
-  }
-
-  T = T2 * T1;*/
   T = T1 * initialT_;
   // Variable to apply correction (initialize the alignment)
   float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
   cout << "distT = " << distT << endl;
+  cout << "dist_x = " << pow(T1(0,3),2) << endl;
+  cout << "dist_y = " << pow(T1(1,3),2) << endl;
+  cout << "dist_z = " << pow(T1(2,3),2) << endl;
   
-  if (distT < 0.50)
+  if (residualMeanDist_ < forced_update_threshold_ ||
+      residualMedDist_ < forced_update_threshold_ ||
+      residualQuantDist_ < forced_update_threshold_)
+  {
     initialT_ = T;
+    valid_correction_ = TRUE;
+  }
   else
-    initialT_ = PM::TransformationParameters::Identity(4,4);
+  {
+    valid_correction_ = FALSE;
+    // To director
+    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
+    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1, "Misaligned");
+
+    // To file: DEBUG
+    /*std::stringstream vtk_fname_read;
+    vtk_fname_read << data_directory_path_.str();
+    vtk_fname_read << "/misaligned_";
+    vtk_fname_read << to_string(sweep_scans_list_->getNbClouds());
+    vtk_fname_read << ".vtk";
+    savePointCloudVTK(vtk_fname_read.str().c_str(), output);*/
+  }
 }
 
 void App::operator()() {
@@ -471,7 +529,7 @@ void App::operator()() {
     }
 
     // process workload
-    for (auto cloud : work_queue) {      
+    for (auto cloud : work_queue) {
       DP dp_cloud;
       fromPCLToDataPoints(dp_cloud, *cloud);
 
@@ -480,82 +538,198 @@ void App::operator()() {
       vector<LidarScan> first_sweep_scans_list = scans_queue.front();
       scans_queue.pop_front();
 
-      // To file
-      std::stringstream vtk_fname;
-      vtk_fname << "accum_advICP_";
-      vtk_fname << to_string(sweep_scans_list_->getNbClouds());
-        
       if(sweep_scans_list_->isEmpty())
       {
         current_sweep->populateSweepScan(first_sweep_scans_list, dp_cloud, sweep_scans_list_->getNbClouds());
         sweep_scans_list_->initializeCollection(*current_sweep);
 
-        // To director
-        drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
+        if (cl_cfg_.verbose)
+        {
+          // To director first reference cloud (Point Cloud 0, Frame 0)
+          drawPointCloudCollections(lcm_, 0, local_, dp_cloud, 1);
+        }
       }
       else
       {
         TimingUtils::tic();
 
-        // AICP: Registration against same reference
-        DP ref = sweep_scans_list_->getReference().getCloud();
-        // Incremental ICP
-        //DP ref = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getCloud();
+        // Get current reference cloud
+        DP ref = sweep_scans_list_->getCurrentReference().getCloud();
+
+        // Overlap
+        Eigen::Isometry3d ref_pose, read_pose;
+        DP ref_try, read_try;
+        if (sweep_scans_list_->getCurrentReference().getId() != 0)
+        {
+          ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentReference().getId()-1).getBodyPose();
+          ref_try = sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentReferenceId()-1).getCloud();
+        }
+        else
+        {
+          ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
+          ref_try = ref;
+        }
+
+        //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
+        read_pose = first_sweep_scans_list.back().getBodyPose();
+        read_try = dp_cloud;
+
+        overlap_ = overlapFilter(ref_try, read_try, ref_pose, read_pose, ca_cfg_.max_range, angularView_);
+        cout << "Overlap: " << overlap_ << "%" << endl;
+
+        if(force_reference_update_ || (overlap_ != -1 && overlap_ < overlap_update_threshold_))
+        {
+          cout << "Reference UPDATE, FORCED: " << force_reference_update_ << ", Overlap = " << overlap_ << endl;
+          // Reference Update Statistics
+          if (force_reference_update_)
+          {
+            forced_updates_counter_ ++;
+            force_reference_update_ = FALSE;
+          }
+          else
+          {
+            overlap_updates_counter_ ++;
+          }
+
+          /*
+          // Add new cloud from the combination of previous and new reference. In order:
+          // last aligned cloud (previous),
+          // followed by combined cloud (new reference).
+          SweepScan previous_sweep = sweep_scans_list_->getCurrentCloud();
+          sweep_scans_list_->addSweep(previous_sweep, PM::TransformationParameters::Identity(4,4));
+          // Combine old and new reference clouds (ref is the previous/old reference)
+          sweep_scans_list_->getCurrentCloud().addPointsToSweepScan(ref);
+          sweep_scans_list_->getCurrentCloud().setId(sweep_scans_list_->getCurrentCloud().getId()+1);*/
+
+          // Updating reference with combined clouds...
+          bool referenceSet = FALSE;
+          int current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
+          int i = 0;
+          while (!referenceSet)
+          {
+            referenceSet = sweep_scans_list_->getCloud(current_cloud_id - i).setReference();
+            cout << "TRIED REFERENCE " << current_cloud_id - i << ", Set: " << referenceSet << endl;
+            if (referenceSet)
+              sweep_scans_list_->updateReference(current_cloud_id - i);
+            i ++;
+          }
+
+          // Get just updated reference
+          ref = sweep_scans_list_->getCurrentReference().getCloud();
+
+          // To file
+          std::stringstream vtk_refName;
+          vtk_refName << data_directory_path_.str();
+          vtk_refName << "/ref_";
+          vtk_refName << to_string(sweep_scans_list_->getCurrentReference().getId());
+          vtk_refName << ".vtk";
+          savePointCloudVTK(vtk_refName.str().c_str(), sweep_scans_list_->getCurrentReference().getCloud());
+
+          // Assuming after reference update overlap is sufficient
+          //(reference and reading clouds are consecutive clouds)
+          overlap_ = 75;
+        }
+
         DP out;
         PM::TransformationParameters Ttot;
-
-        //Overlap
-        Eigen::Isometry3d ref_pose = sweep_scans_list_->getReference().getBodyPose();
-        //Eigen::Isometry3d ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getNbClouds()-1).getBodyPose();
-        Eigen::Isometry3d read_pose = first_sweep_scans_list.back().getBodyPose();
 
         this->doRegistration(ref, dp_cloud, ref_pose, read_pose, out, Ttot);
 
         TimingUtils::toc();
 
-        current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds());
-
         // Compute correction to pose estimate:
-        current_correction_ = getTransfParamAsIsometry3d(Ttot);
-        updated_correction_ = TRUE;
-
-        // Publish corrcted pose
-        bot_core::pose_t msg_out;
-        Eigen::Isometry3d world_to_body_last;
-        std::unique_lock<std::mutex> lock(robot_state_mutex_);
+        if(valid_correction_)
         {
-          // Get latest world to body transform available
-          world_to_body_last = world_to_body_msg_;
-        }
+          bool enableRef = FALSE;
+          if (residualMeanDist_ < forced_update_threshold_ &&
+              residualMedDist_ < forced_update_threshold_ &&
+              residualQuantDist_ < forced_update_threshold_)
+            enableRef = TRUE;
+          current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
 
-        if (cl_cfg_.working_mode == "robot")
-        {
-          // Apply correction if available (identity otherwise)
-          if (updated_correction_)
+          current_correction_ = getTransfParamAsIsometry3d(Ttot);
+          updated_correction_ = TRUE;
+
+          // Publish corrected pose
+          bot_core::pose_t msg_out;
+          Eigen::Isometry3d world_to_body_last;
+          long long int world_to_body_last_utime;
+          std::unique_lock<std::mutex> lock(robot_state_mutex_);
           {
-            corrected_pose_ = current_correction_ * world_to_body_last;
-            updated_correction_ = FALSE;
-
-            // To correct robot drift publish CORRECTED POSE
-            msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
-            lcm_->publish(cl_cfg_.output_channel,&msg_out);
+            // Get latest world to body transform available
+            world_to_body_last = world_to_body_msg_;
+            world_to_body_last_utime = world_to_body_msg_utime_;
           }
+
+          if (cl_cfg_.working_mode == "robot")
+          {
+            // Apply correction if available (identity otherwise)
+            if (updated_correction_)
+            {
+              Eigen::Isometry3d world_to_body_end_of_sweep = current_sweep->getBodyPose();
+              long long int world_to_body_end_of_sweep_utime = current_sweep->getUtimeEnd();
+
+              corrected_pose_ = current_correction_ * world_to_body_end_of_sweep;
+              updated_correction_ = FALSE;
+
+              if (cl_cfg_.verbose)
+              {
+                // Publish frames in Director
+                drawFrameCollections(lcm_, 3, world_to_body_end_of_sweep, world_to_body_end_of_sweep_utime, "body (end sweep)");
+                drawFrameCollections(lcm_, 4, world_to_body_last, world_to_body_last_utime, "body (tip)"); // world_to_body_last
+                drawFrameCollections(lcm_, 5, current_correction_, world_to_body_end_of_sweep_utime, "current_correction");
+                drawFrameCollections(lcm_, 6, corrected_pose_, world_to_body_end_of_sweep_utime, "body (corrected)");
+              }
+
+              // To correct robot drift publish CORRECTED POSE
+              msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
+              lcm_->publish(cl_cfg_.output_channel,&msg_out);
+
+              {
+                std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+                clear_clouds_buffer_ = TRUE;
+              }
+            }
+          }
+
+          // Ttot is the full transform to move the input on the reference cloud
+          // Store current sweep 
+          sweep_scans_list_->addSweep(*current_sweep, Ttot);
+          valid_correction_ = FALSE;
+          cout << "VALID CORRECTION" << endl;
+
+          // DEBUG
+          cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
+          cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
+          cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
+          cout << "Overlap Updates: " << overlap_updates_counter_ << endl;
+          cout << "Forced Updates: " << forced_updates_counter_ << endl;
         }
+        else
+        {
 
-        // Ttot is the full transform to move the input on the reference cloud
-        // Store current sweep 
-        sweep_scans_list_->addSweep(*current_sweep, Ttot);
-
-        // To director
-        //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, out, 1);
+          force_reference_update_ = TRUE;         
+          cout << "NOT VALID CORRECTION" << endl;
+        }
       }
-     
+
       // To file
-      /*vtk_fname << ".vtk";
-      if(sweep_scans_list_->getNbClouds() % 8 == 0)
-        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());*/
+      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
+      {
+        std::stringstream vtk_fname;
+        vtk_fname << data_directory_path_.str();
+        vtk_fname << "/cloud_";
+        vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
+        vtk_fname << ".vtk";
+        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+      }
+
+      if (cl_cfg_.verbose)
+        drawPointCloudCollections(lcm_, 6000, local_, sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
         
-      current_sweep->~SweepScan(); 
+      current_sweep->~SweepScan();
+
+      cout << "--------------------------------------------------------------------------------------" << endl;
     }
   }
 }
@@ -572,7 +746,8 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   {
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     world_to_body_last = world_to_body_msg_;
-  } 
+  }
+
   // Populate SweepScan with current LidarScan data structure
   // 2. Get lidar pose
   // bot_frames_structure,from_frame,to_frame,utime,result
@@ -595,7 +770,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     robot_behavior_now = robot_behavior_now_;
   }
 
-  if (cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_))
+  if ((cl_cfg_.register_if_walking || (robot_behavior_now != 1 && accumulate_)) && !clear_clouds_buffer_)
   // Accumulate EITHER always OR only when transition from walking to standing happens
   // Pyhton script convert_robot_behavior_type.py must be running.
   {
@@ -607,10 +782,16 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
   else
   {
+    {
+      std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+      clear_clouds_buffer_ = FALSE;
+      cout << "Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+    }
+
     if ( accu_->getCounter() > 0 )
       accu_->clearCloud();
-      if (!lidar_scans_list_.empty())
-        lidar_scans_list_.clear();
+    if ( !lidar_scans_list_.empty() )
+      lidar_scans_list_.clear();
   }
 
   delete current_scan;
@@ -687,11 +868,14 @@ void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& ch
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
 
   Eigen::Isometry3d world_to_body_last;
+  long long int world_to_body_last_utime;
   std::unique_lock<std::mutex> lock(robot_state_mutex_);
   {
     // Update world to body transform (from kinematics msg) 
     world_to_body_msg_ = getPoseAsIsometry3d(msg);
+    world_to_body_msg_utime_ = msg->utime;
     world_to_body_last = world_to_body_msg_;
+    world_to_body_last_utime = world_to_body_msg_utime_;
   }
 
   bot_core::pose_t msg_out;
@@ -700,6 +884,7 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
   if (cl_cfg_.working_mode == "debug")
   {
     // Apply correction if available (identity otherwise)
+    // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
     corrected_pose_ = current_correction_ * world_to_body_last;
 
     // To correct robot drift publish CORRECTED POSE
@@ -749,6 +934,7 @@ int main(int argc, char **argv){
   CommandLineConfig cl_cfg;
   cl_cfg.robot_name = "val";
   cl_cfg.working_mode = "robot";
+  cl_cfg.verbose = FALSE;
   cl_cfg.algorithm = "aicp";
   cl_cfg.register_if_walking = TRUE;
   cl_cfg.apply_correction = FALSE;
@@ -771,12 +957,13 @@ int main(int argc, char **argv){
   ConciseArgs parser(argc, argv, "aicp-registration");
   parser.add(cl_cfg.robot_name, "r", "robot_name", "Valkyrie, Atlas or Hyq? (i.e. val, atlas, hyq)");
   parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
+  parser.add(cl_cfg.verbose, "v", "verbose", "Publish frames and clouds to LCM for debug");
   parser.add(cl_cfg.algorithm, "a", "algorithm", "AICP or ICP? (i.e. aicp or icp)");
   parser.add(cl_cfg.register_if_walking, "w", "register_if_walking", "Compute correction also when robot is walking?");
   parser.add(cl_cfg.apply_correction, "c", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
-  parser.add(cl_cfg.pose_body_channel, "p", "pose_body_channel", "Kinematics-inertia pose estimate");
-  parser.add(cl_cfg.vicon_channel, "v", "vicon_channel", "Ground truth pose from Vicon");
-  parser.add(cl_cfg.output_channel, "o", "output_channel", "Corrected pose");
+  parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Kinematics-inertia pose estimate");
+  parser.add(cl_cfg.vicon_channel, "vc", "vicon_channel", "Ground truth pose from Vicon");
+  parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose");
   parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
   parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
   parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");

@@ -36,6 +36,8 @@ PM::Matrix distancesKNN(DP &A, DP &B, const char *filename);
 float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp);
 float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filename);
 
+void getResidualError(PM::ICP &icp, float overlap, float &meanDist, float &medDist, float &quantDist);
+
 string readLineFromFile(string& filename, int line_number);
 
 PM::TransformationParameters parseTransformationDeg(string& transform,

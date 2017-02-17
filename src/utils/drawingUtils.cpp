@@ -3,15 +3,15 @@
 
 using namespace Eigen;
 
-void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime)
+void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root)
 {
   pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
   fromDataPointsToPCL(dp_cloud, pcl_cloud);
 
-  drawPointCloudCollections(lcm, index, pose, pcl_cloud, utime);
+  drawPointCloudCollections(lcm, index, pose, pcl_cloud, utime, pc_name_root);
 }
 
-void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime)
+void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root)
 {
   pronto_vis* pc_vis;
   pc_vis = new pronto_vis( lcm->getUnderlyingLCM() );
@@ -19,10 +19,10 @@ void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eige
   int reset = 1;
   // Names
   std::stringstream pc_name;
-  pc_name << "Point Cloud ";
+  pc_name << pc_name_root << " ";
   pc_name << to_string(index);
   std::stringstream frame_name;
-  frame_name << "Frame ";
+  frame_name << "PC Frame ";
   frame_name << to_string(index);
   // Indexes
   int pc_index = index+100;
@@ -103,7 +103,7 @@ void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, std::vector<Vector3f> point_cloud)
   bot_lcmgl_switch_buffer(lcmgl);
 }
 
-void drawFrameCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, long long int utime)
+void drawFrameCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, long long int utime, std::string frame_name_root)
 {
   pronto_vis* pc_vis;
   pc_vis = new pronto_vis( lcm->getUnderlyingLCM() );
@@ -111,7 +111,7 @@ void drawFrameCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Is
   int reset =1;
   // Name
   std::stringstream frame_name;
-  frame_name << "Frame ";
+  frame_name << frame_name_root << " ";
   frame_name << to_string(index);
   // obj: id name type reset
   pc_vis->obj_cfg_list.push_back( obj_cfg(index,frame_name.str().c_str(),5,reset) );
