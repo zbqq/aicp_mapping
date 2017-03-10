@@ -45,7 +45,7 @@ The following paper has been accepted for publication in the Proceedings of 2017
 @inproceedings{Nobili17icra,
   title  = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
   author = {S. Nobili and R. Scona and M. Caravagna and M. Fallon},
-  booktitle = icra,
+  booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
   location = {Singapore},
   month = may,
   year   = {2017},
