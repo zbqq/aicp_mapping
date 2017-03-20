@@ -49,3 +49,18 @@ int savePlanarCloudCSV (const std::string &file_name, const pcl::PCLPointCloud2 
   fs.close ();
   return (0); 
 }
+
+void savePointCloudPCLwithPose(const std::string file_name, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Eigen::Isometry3d sensor_pose)
+{
+  cloud->sensor_origin_.x() = sensor_pose.translation().x();
+  cloud->sensor_origin_.y() = sensor_pose.translation().y();
+  cloud->sensor_origin_.z() = sensor_pose.translation().z();
+  Eigen::Quaterniond pose_quat(sensor_pose.rotation());
+  cloud->sensor_orientation_.x() =  pose_quat.x();
+  cloud->sensor_orientation_.y() =  pose_quat.y();
+  cloud->sensor_orientation_.z() =  pose_quat.z();
+  cloud->sensor_orientation_.w() =  pose_quat.w();
+
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointXYZRGB> (file_name, *cloud, false);
+}
