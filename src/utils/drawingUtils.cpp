@@ -1,7 +1,4 @@
-#include <iostream>
 #include "drawingUtils.hpp"
-
-using namespace Eigen;
 
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root)
 {

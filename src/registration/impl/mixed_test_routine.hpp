@@ -1,8 +1,33 @@
-#ifndef ICP_TESTING_ROUTINE_HPP_
-#define ICP_TESTING_ROUTINE_HPP_
+#ifndef MIXED_TEST_ROUTINE_HPP_
+#define MIXED_TEST_ROUTINE_HPP_
 
-#include "icp_utils.h"
-#include "cloud_accumulate/cloud_accumulate.hpp"
+#include "ioUtils/fileIO.h"
+#include "pointmatcherUtils/icpMonitor.h"
+//#include "cloud_accumulate/cloud_accumulate.hpp"
+
+//#include "boost/filesystem.hpp"
+
+//#include <unistd.h>
+//#include <sys/types.h>
+//#include <pwd.h>
+
+//#include <cassert>
+//#include <fstream>
+//#include <iostream>
+//#include <algorithm>
+
+//#include <iomanip>
+//#include <random>
+
+//#include <pcl/common/io.h>
+
+//using namespace std;
+//using namespace PointMatcherSupport;
+
+//typedef PointMatcher<float> PM;
+//typedef PM::DataPoints DP;
+//typedef PM::Parameters Parameters;
+
 
 class RoutineConfig
 {
@@ -46,5 +71,6 @@ class RegistrationRoutine
   private:
     void getICPTransform(DP &cloud_in, DP &cloud_ref, PM::TransformationParameters &T, DP &cloud_out, PM::ICP &icp);
 };
+
 
 #endif

@@ -1,12 +1,19 @@
-#ifndef SRC_DRAWINGUTIL_HPP_
-#define SRC_DRAWINGUTIL_HPP_
+#ifndef DRAWING_UTILS_HPP_
+#define DRAWING_UTILS_HPP_
 
-#include <Eigen/Dense>
 #include "bot_lcmgl_client/lcmgl.h"
+
+//LCM
 #include <lcm/lcm-cpp.hpp>
 
-#include <icp-registration/icp_utils.h>
-#include <pronto_utils/pronto_vis.hpp> // visualize pt clds
+//Project lib
+#include <ioUtils/cloudIO.h>
+
+//Pronto
+#include <pronto_utils/pronto_vis.hpp> // visualize point clouds
+
+using namespace std;
+using namespace Eigen;
 
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root = "Point Cloud");
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root = "Point Cloud");

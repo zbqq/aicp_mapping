@@ -1,7 +1,7 @@
 // Code for registration of 10 clouds 
 // in all of their possible combinations.
 
-#include "icp_testing_routine.hpp"
+#include "mixed_test_routine.hpp"
 
 RoutineConfig::RoutineConfig(){
   if ((homedir = getenv("HOME")) == NULL) {

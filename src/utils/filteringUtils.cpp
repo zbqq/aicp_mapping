@@ -1,7 +1,4 @@
-#include <iostream>
 #include "filteringUtils.hpp"
-
-using namespace Eigen;
 
 void planeModelSegmentationFilter(DP &dp_cloud_blob)
 {

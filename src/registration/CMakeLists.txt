@@ -1,69 +1,55 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
 
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+project(aicp)
 
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+set(PCL_LIBRARIES pcl_io-1.7 pcl_common-1.7 pcl_filters-1.7 pcl_features-1.7 pcl_io-1.7 pcl_surface-1.7 pcl_segmentation-1.7 pcl_visualization-1.7 pcl_search-1.7 pcl_kdtree-1.7 pcl_keypoints-1.7)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PCL_IO pcl_io-1.7)
-if(PCL_IO_FOUND)
-  message("---- PCL IO was found (in registration)\n")
-  set(PCL_IO_PKG_CONFIG "pcl_io-1.7")
-endif()
-
-pkg_check_modules(PCL_IO_1_8 pcl_io-1.8)
-if(PCL_IO_1_8_FOUND)
-  message("---- PCL IO_1_8 was found (in registration)\n")
-  set(PCL_IO_PKG_CONFIG "pcl_io-1.8")
-endif()
-
-if(NOT PCL_IO_FOUND AND NOT PCL_IO_1_8_FOUND)
-  message("---- PCL IO not found in registration\n")
-endif()
+find_package(libpointmatcher REQUIRED)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
  
-##############
-add_library(icp-registration SHARED icp_testing_routine.cpp icp_3Dreg_and_plot.cpp icp_utils.cpp clouds_io_utils.cpp)
-pods_use_pkg_config_packages(icp-registration path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
-    laser-util
-    pronto_vis eigen3 bot2-frames)
-
-target_link_libraries(icp-registration pointmatcher cloud_accumulate ${VTK_LIBRARIES})
-set_target_properties(icp-registration PROPERTIES SOVERSION 1)
-pods_install_libraries(icp-registration)
-pods_install_headers(icp_3Dreg_and_plot.hpp icp_testing_routine.hpp icp_utils.h vtkUtils.h clouds_io_utils.h DESTINATION icp-registration)
-
-pods_install_pkg_config_file(icp-registration
-    LIBS -licp-registration 
-    REQUIRES 
-    VERSION 0.0.1)
+############## registration library
+add_library(aicpRegistration SHARED impl/icp_3Dreg_and_plot.cpp impl/mixed_test_routine.cpp)
+set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
+pods_install_libraries(aicpRegistration)
+pods_install_headers(impl/icp_3Dreg_and_plot.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
+target_link_libraries(aicpRegistration ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
+pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(aicpRegistration 
+  LIBS -laicpRegistration
+  REQUIRES
+  VERSION 0.0.1)
 
 ###############
-add_executable(drc-lidar-accumulate lidar_accumulate.cpp clouds_io_utils.cpp)
-pods_use_pkg_config_packages(drc-lidar-accumulate icp-registration  bot2-frames laser-util
-    path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
-    pronto_vis   eigen3)
-target_link_libraries (drc-lidar-accumulate lcm pronto_math cloud_accumulate 
-                        boost_system boost_thread)
-pods_install_executables(drc-lidar-accumulate)
+#add_executable(drc-lidar-accumulate lidar_accumulate.cpp clouds_io_utils.cpp)
+#pods_use_pkg_config_packages(drc-lidar-accumulate icp-registration  bot2-frames laser-util
+#    path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+#    pronto_vis   eigen3)
+#target_link_libraries (drc-lidar-accumulate lcm pronto_math cloud_accumulate 
+#                        boost_system boost_thread)
+#pods_install_executables(drc-lidar-accumulate)
 
 ###############
-add_executable(drc-icp-plot icp_registration_app.cpp icp_3Dreg_and_plot.cpp)
-pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
-    pronto_vis eigen3 bot2-frames)
-target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRARIES}
-                        boost_system boost_thread)
-pods_install_executables(drc-icp-plot)
+#add_executable(drc-icp-plot icp_registration_app.cpp icp_3Dreg_and_plot.cpp)
+#pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+#    pronto_vis eigen3 bot2-frames)
+#target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRARIES}
+#                        boost_system boost_thread)
+#pods_install_executables(drc-icp-plot)
 
 ###############
-add_executable(drc-icp-plot-advanced icp_registration_advanced_app.cpp icp_3Dreg_and_plot.cpp)
-pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
-    pronto_vis eigen3 bot2-frames)
-target_link_libraries(drc-icp-plot-advanced icp-registration lcm pronto_math ${VTK_LIBRARIES}
-                        boost_system boost_thread)
-pods_install_executables(drc-icp-plot-advanced)
+#add_executable(drc-icp-plot-advanced icp_registration_advanced_app.cpp icp_3Dreg_and_plot.cpp)
+#pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+#    pronto_vis eigen3 bot2-frames)
+#target_link_libraries(drc-icp-plot-advanced icp-registration lcm pronto_math ${VTK_LIBRARIES}
+#                        boost_system boost_thread)
+#pods_install_executables(drc-icp-plot-advanced)
 
 

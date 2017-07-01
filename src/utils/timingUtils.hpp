@@ -1,3 +1,6 @@
+#ifndef TIMING_UTILS_HPP_
+#define TIMING_UTILS_HPP_
+
 #include <iostream>
 #include <stack>
 #include <ctime>
@@ -16,3 +19,5 @@ class TimingUtils{
   private:
     static std::stack<clock_t> tictoc_stack;    
 };
+
+#endif

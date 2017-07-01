@@ -1,9 +1,7 @@
-#ifndef SRC_FILTERINGUTIL_HPP_
-#define SRC_FILTERINGUTIL_HPP_
+#ifndef FILTERING_UTILS_HPP_
+#define FILTERING_UTILS_HPP_
 
-#include <vector>
-#include <Eigen/Dense>
-
+//PCL
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -13,7 +11,6 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
-
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/features/normal_3d.h>
@@ -22,7 +19,8 @@
 #include <pcl/common/transforms.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-#include <icp-registration/icp_utils.h>
+//Project lib
+#include <ioUtils/cloudIO.h>
 
 void planeModelSegmentationFilter(DP &dp_cloud_blob);
 void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob);
