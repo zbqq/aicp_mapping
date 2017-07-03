@@ -1,4 +1,4 @@
-#include "timingUtils.hpp"
+#include "timing.hpp"
 
 std::stack<clock_t> TimingUtils::tictoc_stack;
 

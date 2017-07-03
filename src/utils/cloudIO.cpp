@@ -65,7 +65,7 @@ void savePointCloudPCLwithPose(const std::string file_name, pcl::PointCloud<pcl:
   writer.write<pcl::PointXYZRGB> (file_name, *cloud, false);
 }
 
-void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_out)
+void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZ> &cloud_out)
 {
   cloud_out.points.resize(cloud_in.getNbPoints());
   for (int i = 0; i < cloud_in.getNbPoints(); i++) {
@@ -78,9 +78,8 @@ void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_
   cloud_out.height = 1;
 }
 
-void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud_in)
+void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZ> &cloud_in)
 {
-  // parse points
   int pointCount = cloud_in.width;
 
   PM::Matrix features(4, pointCount);
@@ -96,9 +95,37 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud
   cloud_out.addFeature("y", features.row(1));
   cloud_out.addFeature("z", features.row(2));
   cloud_out.addFeature("pad", features.row(3));
+}
 
-  // NOTE: We use PointXYZRGB as a point structure representing Euclidean xyz only. The RGB field of the structure
-  // is not set because just one color should represent the whole cloud
-  // (see http://docs.pointclouds.org/1.7.0/point__types_8hpp_source.html, line 871).
-  // Instead we have a different color for each point in the cloud.
+// TODO: These methods should deal with rgb field as well
+void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_out)
+{
+  cloud_out.points.resize(cloud_in.getNbPoints());
+  for (int i = 0; i < cloud_in.getNbPoints(); i++) {
+    cloud_out.points[i].x = (cloud_in.features.col(i))[0];
+    cloud_out.points[i].y = (cloud_in.features.col(i))[1];
+    cloud_out.points[i].z = (cloud_in.features.col(i))[2];
+    //cout << "i=" << i << " " << cloud_out.points[i].x << " " << cloud_out.points[i].y << " " << cloud_out.points[i].z << endl;
+  }
+  cloud_out.width = cloud_out.points.size();
+  cloud_out.height = 1;
+}
+
+void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud_in)
+{
+  int pointCount = cloud_in.width;
+
+  PM::Matrix features(4, pointCount);
+
+  for (int p = 0; p < pointCount; ++p)
+  {
+    features(0, p) = cloud_in.points[p].x;
+    features(1, p) = cloud_in.points[p].y;
+    features(2, p) = cloud_in.points[p].z;
+    features(3, p) = 1.0;
+  }
+  cloud_out.addFeature("x", features.row(0));
+  cloud_out.addFeature("y", features.row(1));
+  cloud_out.addFeature("z", features.row(2));
+  cloud_out.addFeature("pad", features.row(3));
 }

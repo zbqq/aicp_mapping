@@ -31,4 +31,6 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
 
 void getResidualError(PM::ICP &icp, float overlap, float &meanDist, float &medDist, float &quantDist);
 
+Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
+
 #endif

@@ -7,7 +7,7 @@
 #include <lcm/lcm-cpp.hpp>
 
 //Project lib
-#include <ioUtils/cloudIO.h>
+#include <commonUtils/cloudIO.h>
 
 //Pronto
 #include <pronto_utils/pronto_vis.hpp> // visualize point clouds

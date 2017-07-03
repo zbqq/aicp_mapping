@@ -20,7 +20,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 
 //Project lib
-#include <ioUtils/cloudIO.h>
+#include <commonUtils/cloudIO.h>
 
 void planeModelSegmentationFilter(DP &dp_cloud_blob);
 void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob);

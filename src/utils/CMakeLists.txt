@@ -16,18 +16,6 @@ find_package(libpointmatcher REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
 
 ##############
-add_library(ioUtils SHARED cloudIO.cpp fileIO.cpp)
-set_target_properties(ioUtils PROPERTIES SOVERSION 1)
-target_link_libraries(ioUtils ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
-pods_install_libraries(ioUtils)
-pods_install_headers(cloudIO.h vtkUtils.h fileIO.h DESTINATION ioUtils)
-pods_use_pkg_config_packages(ioUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(ioUtils 
-  LIBS 
-  REQUIRES eigen3 
-  VERSION 0.0.1)
-
-##############
 add_library(pointmatcherUtils SHARED icpMonitor.cpp)
 set_target_properties(pointmatcherUtils PROPERTIES SOVERSION 1)
 target_link_libraries(pointmatcherUtils ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
@@ -61,13 +49,9 @@ pods_install_pkg_config_file(filteringUtils
   REQUIRES eigen3 
   VERSION 0.0.1)
 
-##############
-add_library(timingUtils SHARED timingUtils.cpp)
-set_target_properties(timingUtils PROPERTIES SOVERSION 1)
-pods_install_libraries(timingUtils)
-pods_install_headers(timingUtils.hpp DESTINATION timingUtils)
-pods_use_pkg_config_packages(timingUtils ${REQUIRED_PACKAGES})
-pods_install_pkg_config_file(timingUtils 
-  LIBS 
-  REQUIRES eigen3 
-  VERSION 0.0.1)
+###############
+add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp cloudIO.h vtkUtils.h fileIO.h)
+set_target_properties(commonUtils PROPERTIES SOVERSION 1)
+pods_install_libraries(commonUtils)
+pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION commonUtils)
+pods_use_pkg_config_packages(commonUtils eigen3 ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})

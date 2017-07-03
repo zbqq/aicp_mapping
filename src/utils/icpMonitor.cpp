@@ -244,3 +244,26 @@ void getResidualError(PM::ICP &icp, float overlap, float &meanDist, float &medDi
   cout << "Median Residual Distance: " << medDist << " m" << endl;
   cout << "Quantile " << overlap << " Residual Distance: " <<  quantDist << " m" << endl;
 }
+
+Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T){
+  Eigen::Isometry3d pose_iso;
+  pose_iso.setIdentity();
+
+  Eigen::Matrix3f rot;
+  rot << T.block(0,0,3,3);
+  Eigen::Quaternionf quat(rot);
+  Eigen::Quaterniond quatd;
+  quatd = quat.cast <double> ();
+
+  Eigen::Vector3f transl;
+  transl << T(0,3), T(1,3), T(2,3);
+  Eigen::Vector3d transld;
+  transld = transl.cast <double> ();
+
+  pose_iso.translation() << transld;
+  Eigen::Quaterniond quatE = Eigen::Quaterniond(quatd.w(), quatd.x(),
+                                                quatd.y(), quatd.z());
+  pose_iso.rotate(quatE);
+
+  return pose_iso;
+}

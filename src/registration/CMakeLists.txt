@@ -16,16 +16,18 @@ find_package(libpointmatcher REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
  
 ############## registration library
-add_library(aicpRegistration SHARED impl/icp_3Dreg_and_plot.cpp impl/mixed_test_routine.cpp)
+add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
 pods_install_libraries(aicpRegistration)
-pods_install_headers(impl/icp_3Dreg_and_plot.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
-target_link_libraries(aicpRegistration ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
+pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
+#target_link_libraries(aicpRegistration ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
 pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(aicpRegistration 
-  LIBS -laicpRegistration
-  REQUIRES
-  VERSION 0.0.1)
+
+############### registration executable
+add_executable(aicp-registration main.cpp)
+target_link_libraries(aicp-registration boost_system)
+pods_use_pkg_config_packages(aicp-registration ${PCL_LIBRARIES} yaml-cpp)
+pods_install_executables(aicp-registration)
 
 ###############
 #add_executable(drc-lidar-accumulate lidar_accumulate.cpp clouds_io_utils.cpp)

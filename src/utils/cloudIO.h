@@ -18,7 +18,10 @@ int savePlanarCloudCSV (const std::string &file_name, const pcl::PCLPointCloud2 
 void savePointCloudPCLwithPose(const std::string file_name, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Eigen::Isometry3d sensor_pose = Eigen::Isometry3d::Identity());
 
 
+void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZ> &cloud_out);
+void fromPCLToDataPoints(DP &cloud_out, const pcl::PointCloud<pcl::PointXYZ> &cloud_in);
+
 void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_out);
-void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud_in);
+void fromPCLToDataPoints(DP &cloud_out, const pcl::PointCloud<pcl::PointXYZRGB> &cloud_in);
 
 #endif
