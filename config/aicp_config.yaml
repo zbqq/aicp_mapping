@@ -1,0 +1,14 @@
+AICP: {
+  Registration: {
+    type: "Pointmatcher", # GICP, Kaess
+    saveTransform: true,
+    saveInitializedReadingCloud: true,
+    saveRegisteredReadingCloud: true,
+
+    Pointmatcher: {
+      configFileName: "icp_autotuned_default.yaml", # points
+      initialTransform: "1.0,1.0,0", # x[m], y[m], yaw[deg]
+      printOutputStatistics: false,
+    }
+  }
+}

@@ -12,21 +12,21 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 set(PCL_LIBRARIES pcl_io-1.7 pcl_common-1.7 pcl_filters-1.7 pcl_features-1.7 pcl_io-1.7 pcl_surface-1.7 pcl_segmentation-1.7 pcl_visualization-1.7 pcl_search-1.7 pcl_kdtree-1.7 pcl_keypoints-1.7)
 
-find_package(libpointmatcher REQUIRED)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
+#find_package(libpointmatcher REQUIRED)
+#include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
  
 ############## registration library
 add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
+target_link_libraries(aicpRegistration pointmatcherUtils commonUtils)
 pods_install_libraries(aicpRegistration)
 pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
-#target_link_libraries(aicpRegistration ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})
-pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)
 
 ############### registration executable
 add_executable(aicp-registration main.cpp)
-target_link_libraries(aicp-registration boost_system)
-pods_use_pkg_config_packages(aicp-registration ${PCL_LIBRARIES} yaml-cpp)
+target_link_libraries(aicp-registration boost_system pointmatcherUtils commonUtils aicpRegistration)
+pods_use_pkg_config_packages(aicp-registration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3)
 pods_install_executables(aicp-registration)
 
 ###############

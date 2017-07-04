@@ -11,6 +11,7 @@ float hausdorffDistance(DP &ref, DP &out)
 
 float hausdorffDistance(DP &ref, DP &out, const char *filename)
 {
+  using namespace PointMatcherSupport;
   // Compute Haussdorff distance. Save to file (.vtp and .vtk extensions) entire point clouds (with outliers). 
   // A custom field (distance between matches) is associated to each cloud.
   //
@@ -87,6 +88,7 @@ PM::Matrix distancesKNN(DP &A, DP &B)
 
 PM::Matrix distancesKNN(DP &A, DP &B, const char *filename)
 {
+  using namespace PointMatcherSupport;
   // Compute distance nearest neighbors between 2 whole clouds. Save to file (.vtp and .vtk extensions) entire point clouds.
   // A custom field (distance between matches) is associated to each cloud.
   //
@@ -188,7 +190,8 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   //cout << "Robust mean distance: " << meanDist << " m" << endl;
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // Cloud which contains points belonging to the reference cloud. A matching point in the input cloud is associated to each of these. 
+  /*
+  // Cloud which contains points belonging to the reference cloud. A matching point in the input cloud is associated to each of these.
   DP matchedPointsRef = matchedPoints.reference;
   // Viceversa...
   DP matchedPointsRead = matchedPoints.reading;
@@ -198,7 +201,7 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
 
   savePointCloudVTK(filename, matchedPointsRef, dist);
   savePointCloudVTK("readingMatched.vtk", matchedPointsRead, dist);
-
+  */
   /*
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Complement:
@@ -240,9 +243,9 @@ void getResidualError(PM::ICP &icp, float overlap, float &meanDist, float &medDi
   medDist = matchedPoints.matches.getDistsQuantile(0.50);
   quantDist = matchedPoints.matches.getDistsQuantile(overlap);
 
-  cout << "Mean Residual Distance: " << meanDist << " m" << endl;
-  cout << "Median Residual Distance: " << medDist << " m" << endl;
-  cout << "Quantile " << overlap << " Residual Distance: " <<  quantDist << " m" << endl;
+  //cout << "Mean Residual Distance: " << meanDist << " m" << endl;
+  //cout << "Median Residual Distance: " << medDist << " m" << endl;
+  //cout << "Quantile " << overlap << " Residual Distance: " <<  quantDist << " m" << endl;
 }
 
 Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T){

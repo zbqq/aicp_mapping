@@ -2,12 +2,12 @@
 
 // Test 3D point clouds alignment
 //
-// Options: - take 2 clouds from user and give
+// Options: - takes 2 clouds from user and gives
 //            transformation between them (-a reference, -b reading)
 
-#include <sstream>  // std::stringstream
+#include <sstream>  // stringstream
 
-// registration
+// Project lib
 #include "aicpRegistration/registration.hpp"
 #include "aicpRegistration/common.hpp"
 
@@ -17,115 +17,188 @@
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config
 
+// pcl
+#include <pcl/common/common.h>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/io/pcd_io.h>
+
 // args
 #include <ConciseArgs>
 
 using namespace std;
 using namespace aicp;
 
-struct AppConfig
+struct CommandLineConfig
 {
   string configFile;
   string pointCloudA;
   string pointCloudB;
 };
 
-class App{
-  public:
-    App(AppConfig app_cfg);
-    
-    ~App(){
-    }  
-
-    AppConfig app_cfg_;
-    
-    //Registration* registr_;
-
-  private:
-    
-};
-
-App::App(AppConfig app_cfg_) : app_cfg_(app_cfg_){
-
-  //registr_ = new Registration(lcm_, reg_cfg_);
-  //std::cout << "Clouds matching at launch.\n";
-}
-
 int main(int argc, char **argv)
 {
-  /*RegistrationConfig reg_cfg;
-  reg_cfg.configFile3D_.clear();
-  reg_cfg.initTrans_.clear();
-  reg_cfg.initTrans_.append("0,0,0");
-*/
-  AppConfig app_cfg;
-  app_cfg.configFile.append(CONFIG_LOC);
-  app_cfg.configFile.append(PATH_SEPARATOR);
-  app_cfg.configFile.append("aicp_config.yaml");
-  app_cfg.pointCloudA = "";
-  app_cfg.pointCloudB = "";
+  CommandLineConfig cl_cfg;
+  cl_cfg.configFile.append(CONFIG_LOC);
+  cl_cfg.configFile.append(PATH_SEPARATOR);
+  cl_cfg.configFile.append("aicp_config.yaml");
+  cl_cfg.pointCloudA = "";
+  cl_cfg.pointCloudB = "";
 
   ConciseArgs parser(argc, argv, "test-registration");
-  parser.add(app_cfg.configFile, "c", "config_file", "Config file location");
-  parser.add(app_cfg.pointCloudA, "a", "point_cloud_reference", "Pointcloud A");
-  parser.add(app_cfg.pointCloudB, "a", "point_cloud_reading", "Pointcloud B");
+  parser.add(cl_cfg.configFile, "c", "config_file", "Config file location");
+  parser.add(cl_cfg.pointCloudA, "a", "point_cloud_reference", "Pointcloud A");
+  parser.add(cl_cfg.pointCloudB, "b", "point_cloud_reading", "Pointcloud B");
   parser.parse();
+
+  /*===================================
+  =        Load Input Clouds          =
+  ===================================*/
+  pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_A_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_B_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+
+  pcl::PointCloud<pcl::PointXYZ>& point_cloud_A = *point_cloud_A_ptr;
+  if (cl_cfg.pointCloudA.compare("") != 0) {
+    cout << "[Registration] Loading point cloud A..." << endl;
+    if (pcl::io::loadPCDFile (cl_cfg.pointCloudA, point_cloud_A) == -1) {
+      cerr << "Was not able to open file \""<<cl_cfg.pointCloudA<<"\"." << endl;
+      return EXIT_SUCCESS;
+    }
+    cout << "[Registration] Point cloud A loaded." << endl;
+  }
+  else {
+    cout << "Please specify point cloud file." << endl;
+    return EXIT_SUCCESS;
+  }
+
+  pcl::PointCloud<pcl::PointXYZ>& point_cloud_B = *point_cloud_B_ptr;
+  if (cl_cfg.pointCloudB.compare("") != 0) {
+    cout << "[Registration] Loading point cloud B..." << endl;
+    if (pcl::io::loadPCDFile (cl_cfg.pointCloudB, point_cloud_B) == -1) {
+      cerr << "Was not able to open file \""<<cl_cfg.pointCloudB<<"\"." << endl;
+      return EXIT_SUCCESS;
+    }
+    cout << "[Registration] Point cloud B loaded." << endl;
+  }
+  else {
+    cout << "Please specify point cloud file." << endl;
+    return EXIT_SUCCESS;
+  }
+
+  RegistrationParams params;
+  /*===================================
+  =            YAML Config            =
+  ===================================*/
+  string yamlConfig_;
+  YAML::Node yn_;
+  yamlConfig_ = cl_cfg.configFile;
+  yn_ = YAML::LoadFile(yamlConfig_);
+
+  YAML::Node registrationNode = yn_["AICP"]["Registration"];
+  for(YAML::const_iterator it=registrationNode.begin();it != registrationNode.end();++it) {
+
+    const string key = it->first.as<string>();
+
+    if(key.compare("type") == 0) {
+      params.type = it->second.as<string>();
+    }
+    else if(key.compare("saveInitializedReadingCloud") == 0) {
+      params.saveInitializedReadingCloud =  it->second.as<bool>();
+    }
+    else if(key.compare("saveRegisteredReadingCloud") == 0) {
+      params.saveRegisteredReadingCloud =  it->second.as<bool>();
+    }
+  }
+  if(params.type.compare("Pointmatcher") == 0) {
+
+    YAML::Node pointmatcherNode = registrationNode["Pointmatcher"];
+
+    for(YAML::const_iterator it=pointmatcherNode.begin();it != pointmatcherNode.end();++it) {
+      const string key = it->first.as<string>();
+
+      if(key.compare("configFileName") == 0) {
+        params.pointmatcher.configFileName.append(FILTERS_CONFIG_LOC);
+        params.pointmatcher.configFileName.append(PATH_SEPARATOR);
+        params.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
+      }
+      else if(key.compare("initialTransform") == 0) {
+        params.pointmatcher.initialTransform = it->second.as<string>();
+      }
+      else if(key.compare("printOutputStatistics") == 0) {
+        params.pointmatcher.printOutputStatistics =  it->second.as<bool>();
+      }
+    }
+  }
+  else if(params.type.compare("GICP") == 0) {
+
+    YAML::Node gicpNode = registrationNode["GICP"];
+
+    for(YAML::const_iterator it=gicpNode.begin();it != gicpNode.end();++it) {
+      const string key = it->first.as<string>();
+      const float val = it->second.as<float>();
 /*
-  if (reg_cfg.cloud_name_A.empty())
-  {
-    reg_cfg.cloud_name_A.append(reg_cfg.homedir);
-    reg_cfg.cloud_name_A.append("/logs/multisenselog__2015-11-16/pointclouds/multisense_00.vtk");	
-  }
-  if (reg_cfg.cloud_name_B.empty())
-  {    
-  	reg_cfg.cloud_name_B.append(reg_cfg.homedir);
-    reg_cfg.cloud_name_B.append("/logs/multisenselog__2015-11-16/pointclouds/multisense_01.vtk");	
-  }
-
-  //Set up LCM channel for visualization
-  boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
-  if(!lcm->good()){
-    std::cerr <<"ERROR: lcm is not good()" <<std::endl;
+      if(key.compare("tolerance") == 0) {
+        params.euclidean.tolerance = val;
+      }
+      else if(key.compare("minClusterSize") == 0) {
+        params.euclidean.minClusterSize = val;
+      }
+      else if(key.compare("maxClusterSize") == 0) {
+        params.euclidean.maxClusterSize = val;
+      }*/
+    }
   }
 
-  App* app = new App(lcm, reg_cfg, app_cfg);     
-  
-  // Load point clouds from file
-  DP ref = DP::load(reg_cfg.cloud_name_A);
-  DP data = DP::load(reg_cfg.cloud_name_B);
+  cout << "============================" << endl
+       << "Parsed YAML Config" << endl
+       << "============================" << endl;
 
-  //=================================
-  // TRANSFORM 3D CLOUD
-  //=================================
+  cout << "Registration Type: "                 << params.type                          << endl;
+  cout << "Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
+  cout << "Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
 
-  app->registr_->getICPTransform(data, ref);
-  
-  PM::TransformationParameters T = app->registr_->getTransform();
-  cout << "3D Transformation:" << endl << T << endl;
+  if(params.type.compare("Pointmatcher") == 0) {
+    cout << "Config File Name: "                << params.pointmatcher.configFileName   << endl;
+    cout << "Initial Transform: "               << params.pointmatcher.initialTransform << endl;
+    cout << "Print Registration Statistics: "   << params.pointmatcher.printOutputStatistics << endl;
+  }
+  else if(params.type.compare("GICP") == 0) {
+  }
+  cout << "============================" << endl;
 
-  //=================================
-  // ERROR
-  //=================================
-  DP out = app->registr_->getDataOut();
-  float hausDist = hausdorffDistance(ref, out);
-  
-  cout << "Hausdorff distance: " << hausDist << " m" << endl;
+  /*===================================
+  =          Register Clouds          =
+  ===================================*/
 
-  PM::ICP icp = app->registr_->getIcp();
-  float meanDist = pairedPointsMeanDistance(ref, out, icp);
-  
-  cout << "Paired points mean distance: " << meanDist << " m" << endl;
+  pcl::PointCloud<pcl::PointXYZ> initialized_reading_cloud;
+  pcl::PointCloud<pcl::PointXYZ> registered_reading_cloud;
+  Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
-  // Publish clouds: plot in pronto visualizer
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_plot = app->registr_->getCloud(0);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr in_plot = app->registr_->getCloud(2);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr result_plot = app->registr_->getCloud(1);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr init_in_plot = app->registr_->getCloud(3);
+  std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
+  registration->registerClouds(point_cloud_A, point_cloud_B, T);
 
-  app->registr_->publishCloud(app->pc_vis_, 60001, ref_plot);
-  app->registr_->publishCloud(app->pc_vis_, 60002, in_plot);
-  app->registr_->publishCloud(app->pc_vis_, 60003, result_plot);
-  app->registr_->publishCloud(app->pc_vis_, 60007, init_in_plot);*/
+  registration->getInitializedReading(initialized_reading_cloud);
+  registration->getOutputReading(registered_reading_cloud);
+
+  cout << "============================" << endl
+       << "Computed 3D Transform:" << endl
+       << "============================" << endl
+       << T << endl;
+
+  /*===================================
+  =            Save Clouds            =
+  ===================================*/
+  pcl::PCDWriter writer;
+  if (params.saveInitializedReadingCloud) {
+    stringstream ss;
+    ss << "initialized_reading_cloud.pcd";
+    writer.write<pcl::PointXYZ> (ss.str (), initialized_reading_cloud, false);
+  }
+  if (params.saveRegisteredReadingCloud) {
+    stringstream ss;
+    ss << "registered_reading_cloud.pcd";
+    writer.write<pcl::PointXYZ> (ss.str (), registered_reading_cloud, false);
+  }
   
   return 0;
 }

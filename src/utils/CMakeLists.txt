@@ -31,7 +31,7 @@ pods_install_pkg_config_file(pointmatcherUtils
 add_library(drawingUtils SHARED drawingUtils.cpp)
 set_target_properties(drawingUtils PROPERTIES SOVERSION 1)
 pods_install_libraries(drawingUtils)
-pods_install_headers( drawingUtils.hpp DESTINATION drawingUtils)
+pods_install_headers(drawingUtils.hpp DESTINATION drawingUtils)
 pods_use_pkg_config_packages(drawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
 pods_install_pkg_config_file(drawingUtils 
   LIBS 
@@ -50,8 +50,12 @@ pods_install_pkg_config_file(filteringUtils
   VERSION 0.0.1)
 
 ###############
-add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp cloudIO.h vtkUtils.h fileIO.h)
+add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
 set_target_properties(commonUtils PROPERTIES SOVERSION 1)
 pods_install_libraries(commonUtils)
 pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION commonUtils)
-pods_use_pkg_config_packages(commonUtils eigen3 ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_use_pkg_config_packages(commonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(commonUtils
+  LIBS
+  REQUIRES eigen3
+  VERSION 0.0.1)

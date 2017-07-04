@@ -14,11 +14,10 @@
 
 
 using namespace std;
-using namespace PointMatcherSupport;
+//using namespace PointMatcherSupport;
 
 typedef PointMatcher<float> PM;
 typedef PM::DataPoints DP;
-typedef PM::Parameters Parameters;
 
 float hausdorffDistance(DP &ref, DP &out);
 float hausdorffDistance(DP &ref, DP &out, const char *filename);

@@ -1,5 +1,5 @@
-#ifndef CLOUD_UTILS_HPP_
-#define CLOUD_UTILS_HPP_
+#ifndef CLOUD_IO_HPP_
+#define CLOUD_IO_HPP_
 
 //PCL
 #include <pcl/point_types.h>
@@ -19,9 +19,9 @@ void savePointCloudPCLwithPose(const std::string file_name, pcl::PointCloud<pcl:
 
 
 void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZ> &cloud_out);
-void fromPCLToDataPoints(DP &cloud_out, const pcl::PointCloud<pcl::PointXYZ> &cloud_in);
+void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZ> &cloud_in);
 
 void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_out);
-void fromPCLToDataPoints(DP &cloud_out, const pcl::PointCloud<pcl::PointXYZRGB> &cloud_in);
+void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud_in);
 
 #endif
