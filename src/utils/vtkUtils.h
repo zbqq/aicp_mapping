@@ -29,9 +29,6 @@
 #include <vtkCellArray.h>
 #include <vtkTimerLog.h>
 
-#include "pointmatcher/PointMatcher.h"
-
-
 //----------------------------------------------------------------------------
 namespace
 {

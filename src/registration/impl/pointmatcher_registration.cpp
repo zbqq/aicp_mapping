@@ -24,7 +24,7 @@ namespace aicp{
     //fromPCLToDataPoints(reference_cloud_, cloud_ref);
     //fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    //registerClouds(final_transform);
+    //registerCsudo make installlouds(final_transform);
   }
 
   void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform)
@@ -96,6 +96,40 @@ namespace aicp{
     PM::TransformationParameters T = icp_(reading_cloud_, reference_cloud_, init_transform_);
     //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
     cout << "[Pointmatcher] Accepted matches (inliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
+    // DEBUG pointmatcher functions:
+    Eigen::MatrixXf covariance = (icp_.errorMinimizer->getCovariance());
+    cout << "[Pointmatcher] Covariance: " << endl << covariance << endl;
+
+    Eigen::EigenSolver<Eigen::MatrixXf> es(covariance);
+    float sum_lambda = es.eigenvalues()(0,0).real()+es.eigenvalues()(1,0).real()+es.eigenvalues()(2,0).real()+
+                       es.eigenvalues()(3,0).real()+es.eigenvalues()(4,0).real()+es.eigenvalues()(5,0).real();
+    Eigen::VectorXf lambdas(6);
+    lambdas << (es.eigenvalues()(0,0).real()/sum_lambda),
+               (es.eigenvalues()(1,0).real()/sum_lambda),
+               (es.eigenvalues()(2,0).real()/sum_lambda),
+               (es.eigenvalues()(3,0).real()/sum_lambda),
+               (es.eigenvalues()(4,0).real()/sum_lambda),
+               (es.eigenvalues()(5,0).real()/sum_lambda);
+    cout << "Covariance Eigenvalues:" << endl << es.eigenvalues() << endl;
+    cout << "Lambdas:" << endl << lambdas << endl;
+
+    // DEBUG pointmatcher added functions:
+    Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
+    cout << "[Pointmatcher] System Covariance: " << endl << system_covariance << endl;
+
+    Eigen::EigenSolver<Eigen::MatrixXf> es2(system_covariance);
+    sum_lambda = es2.eigenvalues()(0,0).real()+es2.eigenvalues()(1,0).real()+es2.eigenvalues()(2,0).real()+
+                       es2.eigenvalues()(3,0).real()+es2.eigenvalues()(4,0).real()+es2.eigenvalues()(5,0).real();
+    Eigen::VectorXf system_lambdas(6);
+    system_lambdas << (es2.eigenvalues()(0,0).real()/sum_lambda),
+                      (es2.eigenvalues()(1,0).real()/sum_lambda),
+                      (es2.eigenvalues()(2,0).real()/sum_lambda),
+                      (es2.eigenvalues()(3,0).real()/sum_lambda),
+                      (es2.eigenvalues()(4,0).real()/sum_lambda),
+                      (es2.eigenvalues()(5,0).real()/sum_lambda);
+    cout << "System Covariance Eigenvalues:" << endl << es2.eigenvalues() << endl;
+    cout << "System Lambdas:" << endl << system_lambdas << endl;
+
 
     // Transform reading with T
     DP tmp_out_read_cloud_(reading_cloud_);

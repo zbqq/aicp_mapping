@@ -2,7 +2,9 @@
 #define AICP_POINTMATCHER_REGISTRATION_HPP_
 
 //libpointmatcher
-#include "pointmatcher/PointMatcher.h"
+//#include "pointmatcher/PointMatcher.h"
+//Eigen
+#include <Eigen/Eigenvalues>
 
 //Project lib
 #include "aicpRegistration/common.hpp"

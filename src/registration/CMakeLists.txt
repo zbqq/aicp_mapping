@@ -12,13 +12,28 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 set(PCL_LIBRARIES pcl_io-1.7 pcl_common-1.7 pcl_filters-1.7 pcl_features-1.7 pcl_io-1.7 pcl_surface-1.7 pcl_segmentation-1.7 pcl_visualization-1.7 pcl_search-1.7 pcl_kdtree-1.7 pcl_keypoints-1.7)
 
-#find_package(libpointmatcher REQUIRED)
-#include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
- 
+message(STATUS "Looking for pointmatcher")
+find_path(pointmatcher_INCLUDE_DIRS NAMES pointmatcher/IO.h pointmatcher/Parametrizable.h
+                                          pointmatcher/PointMatcher.h pointmatcher/PointMatcherPrivate.h
+                                          pointmatcher/Registrar.h pointmatcher/Timer.h]
+            NO_DEFAULT_PATH PATHS /home/edbot/rpg-navigation/software/libpointmatcher
+)
+find_library(pointmatcher_LIBRARIES NAMES pointmatcher NO_DEFAULT_PATH PATHS
+            /home/edbot/rpg-navigation/software/libpointmatcher/build
+)
+if(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
+        include_directories(${pointmatcher_INCLUDE_DIRS})
+        message("-- pointmatcher found.")
+else(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
+        message("-- pointmatcher not found.")
+endif(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
+message(${pointmatcher_INCLUDE_DIRS})
+message(${pointmatcher_LIBRARIES})
+
 ############## registration library
 add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
-target_link_libraries(aicpRegistration pointmatcherUtils commonUtils)
+target_link_libraries(aicpRegistration pointmatcherUtils commonUtils ${pointmatcher_LIBRARIES})
 pods_install_libraries(aicpRegistration)
 pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
 pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)

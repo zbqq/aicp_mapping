@@ -32,10 +32,10 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.40
+      ratio: 0.70
 
 errorMinimizer:
-  PointToPlaneErrorMinimizer
+  PointToPlaneWithCovErrorMinimizer
 
 transformationCheckers:
   - CounterTransformationChecker:
