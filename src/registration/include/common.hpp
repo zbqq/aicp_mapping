@@ -8,7 +8,8 @@ using namespace std;
 
 struct RegistrationParams {
   std::string type;
-  bool saveTransform;
+  std::string loadPosesFromFile;
+  bool saveCorrectedPose;
   bool saveInitializedReadingCloud;
   bool saveRegisteredReadingCloud;
 

@@ -33,7 +33,7 @@ message(${pointmatcher_LIBRARIES})
 ############## registration library
 add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
-target_link_libraries(aicpRegistration pointmatcherUtils commonUtils ${pointmatcher_LIBRARIES})
+target_link_libraries(aicpRegistration pointmatcherUtils commonUtils filteringUtils ${pointmatcher_LIBRARIES})
 pods_install_libraries(aicpRegistration)
 pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
 pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)

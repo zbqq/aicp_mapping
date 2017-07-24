@@ -364,3 +364,25 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
 
   return overlap*100.0;
 }
+
+// from "On Degeneracy of Optimization-based State Estimation Problems", Zhang, Kaess, Singh, ICRA 2016
+float degeneracyFilter(Eigen::MatrixXf system_covariance)
+{
+  Eigen::EigenSolver<Eigen::MatrixXf> es(system_covariance);
+  float sum_lambda = es.eigenvalues()(0,0).real()+es.eigenvalues()(1,0).real()+es.eigenvalues()(2,0).real()+
+                     es.eigenvalues()(3,0).real()+es.eigenvalues()(4,0).real()+es.eigenvalues()(5,0).real();
+  Eigen::VectorXf system_lambdas(6);
+  system_lambdas << (es.eigenvalues()(0,0).real()/sum_lambda), //x
+                    (es.eigenvalues()(1,0).real()/sum_lambda), //y
+                    (es.eigenvalues()(2,0).real()/sum_lambda), //z
+                    (es.eigenvalues()(3,0).real()/sum_lambda),
+                    (es.eigenvalues()(4,0).real()/sum_lambda),
+                    (es.eigenvalues()(5,0).real()/sum_lambda);
+  cout << "[Filtering Utils] Degeneracy Eigenvectors:" << endl << es.eigenvectors() << endl;
+  cout << "[Filtering Utils] Degeneracy Eigenvalues:" << endl << es.eigenvalues() << endl;
+  cout << "[Filtering Utils] Normalized Degeneracy Eigenvalues:" << endl << system_lambdas << endl;
+
+  int pos;
+  system_lambdas.head(3).minCoeff(&pos); // minimum eigenvalue between x, y, z only
+  return system_lambdas[pos]*100.0;
+}

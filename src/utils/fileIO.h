@@ -17,7 +17,7 @@ using namespace std;
 /* Get the line whose index is given as argument from file. */
 string readLineFromFile(string& filename, int line_number);
 
-
+Eigen::Matrix4f parseTransformationDeg(string transform);
 
 PM::TransformationParameters parseTransformationDeg(string& transform,
                         const int cloudDimension);

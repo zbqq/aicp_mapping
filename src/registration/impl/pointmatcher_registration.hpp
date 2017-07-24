@@ -13,6 +13,7 @@
 #include "commonUtils/cloudIO.h"
 #include "commonUtils/fileIO.h"
 #include "pointmatcherUtils/icpMonitor.h"
+#include "filteringUtils/filteringUtils.hpp"
 
 using namespace std;
 

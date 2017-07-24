@@ -1,5 +1,6 @@
 #include "fileIO.h"
 
+/* Note: it skips first lines (assuming header). */
 string readLineFromFile(string& filename, int line_number)
 {
   string lines, line;
@@ -18,9 +19,44 @@ string readLineFromFile(string& filename, int line_number)
     }
     trasfFile.close();
   }
-  else cout << "Unable to open init tranform file.";
+  else cout << "[File IO] Unable to open file " << filename << "." << endl;
 
   return line;
+}
+
+/* Get a transformation Eigen::Matrix4f
+given a string containing index, translation, quaternions: id x y z w x y z */
+
+Eigen::Matrix4f parseTransformationDeg(string transform)
+{
+  Eigen::Matrix4f parsedTrans = Eigen::Matrix4f::Identity(4,4);
+
+  float transValues[8] = {0};
+  stringstream transStringStream(transform);
+  for( int i = 0; i < 8; i++) {
+    if(!(transStringStream >> transValues[i])) {
+      cerr << "[File IO] Unable to parse ground truth poses." << endl;
+      return parsedTrans;
+    }
+  }
+
+  Eigen::Vector3f transl;
+  transl << transValues[1], transValues[2], transValues[3];
+  Eigen::Quaternionf quat;
+  quat.w() = transValues[4]; quat.x() = transValues[5];
+  quat.y() = transValues[6]; quat.z() = transValues[7];
+
+//  cout << "[File IO] quat: " << quat.w() << " "
+//                             << quat.x() << " "
+//                             << quat.y() << " "
+//                             << quat.z() << " "
+//                             << endl;
+//  cout << "[File IO] transl: " << transl << endl;
+
+  parsedTrans.block<3,3>(0,0) = quat.toRotationMatrix();
+  parsedTrans.block<3,1>(0,3) = transl.transpose();
+
+  return parsedTrans;
 }
 
 /* Get a transformation matrix (of the type defined in the libpointmatcher library)

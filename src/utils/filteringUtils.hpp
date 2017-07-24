@@ -1,6 +1,8 @@
 #ifndef FILTERING_UTILS_HPP_
 #define FILTERING_UTILS_HPP_
 
+#include <algorithm>    // std::min
+
 //PCL
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
@@ -36,4 +38,6 @@ float overlapFilter(DP& cloudA, DP& cloudB,
 float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
                    Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
                    float range, float angularView);
+
+float degeneracyFilter(Eigen::MatrixXf system_covariance);
 #endif

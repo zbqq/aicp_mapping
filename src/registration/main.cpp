@@ -102,6 +102,12 @@ int main(int argc, char **argv)
     if(key.compare("type") == 0) {
       params.type = it->second.as<string>();
     }
+    else if(key.compare("loadPosesFromFile") == 0) {
+      params.loadPosesFromFile = it->second.as<string>();
+    }
+    else if(key.compare("saveCorrectedPose") == 0) {
+      params.saveCorrectedPose =  it->second.as<bool>();
+    }
     else if(key.compare("saveInitializedReadingCloud") == 0) {
       params.saveInitializedReadingCloud =  it->second.as<bool>();
     }
@@ -136,16 +142,6 @@ int main(int argc, char **argv)
     for(YAML::const_iterator it=gicpNode.begin();it != gicpNode.end();++it) {
       const string key = it->first.as<string>();
       const float val = it->second.as<float>();
-/*
-      if(key.compare("tolerance") == 0) {
-        params.euclidean.tolerance = val;
-      }
-      else if(key.compare("minClusterSize") == 0) {
-        params.euclidean.minClusterSize = val;
-      }
-      else if(key.compare("maxClusterSize") == 0) {
-        params.euclidean.maxClusterSize = val;
-      }*/
     }
   }
 
@@ -154,6 +150,8 @@ int main(int argc, char **argv)
        << "============================" << endl;
 
   cout << "Registration Type: "                 << params.type                          << endl;
+  cout << "Load Poses from File: "              << params.loadPosesFromFile             << endl;
+  cout << "Save Corrected Pose: "               << params.saveCorrectedPose             << endl;
   cout << "Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
   cout << "Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
 
@@ -167,18 +165,32 @@ int main(int argc, char **argv)
   cout << "============================" << endl;
 
   /*===================================
+  =          Load Input Pose          =
+  ===================================*/
+
+  Eigen::Matrix4f ground_truth_sensor_pose = Eigen::Matrix4f::Identity(4,4);
+  if (!params.loadPosesFromFile.empty())
+  {
+     std::stringstream ss(extract_ints(cl_cfg.pointCloudB));
+     std::istringstream iss(ss.str());
+     int point_cloud_B_number;
+     iss >> point_cloud_B_number;
+     string line_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_B_number);
+     ground_truth_sensor_pose = parseTransformationDeg(line_from_file);
+     cout << "============================" << endl
+          << "Ground Truth Sensor Pose:" << endl
+          << "============================" << endl
+          << ground_truth_sensor_pose << endl;
+  }
+
+  /*===================================
   =          Register Clouds          =
   ===================================*/
 
-  pcl::PointCloud<pcl::PointXYZ> initialized_reading_cloud;
-  pcl::PointCloud<pcl::PointXYZ> registered_reading_cloud;
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
   registration->registerClouds(point_cloud_A, point_cloud_B, T);
-
-  registration->getInitializedReading(initialized_reading_cloud);
-  registration->getOutputReading(registered_reading_cloud);
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
@@ -190,14 +202,27 @@ int main(int argc, char **argv)
   ===================================*/
   pcl::PCDWriter writer;
   if (params.saveInitializedReadingCloud) {
+    pcl::PointCloud<pcl::PointXYZ> initialized_reading_cloud;
+    registration->getInitializedReading(initialized_reading_cloud);
     stringstream ss;
     ss << "initialized_reading_cloud.pcd";
     writer.write<pcl::PointXYZ> (ss.str (), initialized_reading_cloud, false);
   }
   if (params.saveRegisteredReadingCloud) {
+    pcl::PointCloud<pcl::PointXYZ> registered_reading_cloud;
+    registration->getOutputReading(registered_reading_cloud);
     stringstream ss;
     ss << "registered_reading_cloud.pcd";
     writer.write<pcl::PointXYZ> (ss.str (), registered_reading_cloud, false);
+  }
+
+  if (params.saveCorrectedPose) {
+    Eigen::Matrix4f corrected_sensor_pose;
+    corrected_sensor_pose = T * ground_truth_sensor_pose;
+    cout << "============================" << endl
+         << "Corrected Sensor Pose:" << endl
+         << "============================" << endl
+         << corrected_sensor_pose << endl;
   }
   
   return 0;
