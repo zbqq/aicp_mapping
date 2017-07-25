@@ -40,6 +40,42 @@ void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eige
   pc_vis->ptcld_to_lcm_from_list(pc_index, pcl_cloud, utime, utime);
 }
 
+void drawPointCloudNormalsCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGBNormal>& pcl_cloud, long long int utime, std::string pc_name_root)
+{
+  pronto_vis* pc_vis;
+  pc_vis = new pronto_vis( lcm->getUnderlyingLCM() );
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_tmp (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  int reset = 1;
+  // Names
+  std::stringstream pc_name;
+  pc_name << pc_name_root << " ";
+  pc_name << to_string(index);
+  std::stringstream frame_name;
+  frame_name << "PC Frame ";
+  frame_name << to_string(index);
+  // Indexes
+  int pc_index = index+1;
+  int frame_index = index;
+
+  Isometry3dTime poseT = Isometry3dTime(utime, pose);
+  pc_vis->pose_to_lcm_from_list(frame_index, poseT);
+
+  // Create normals list
+  std::vector<Eigen::Vector3d> normals_list;
+  for (size_t i = 0; i < pcl_cloud.points.size(); i++){
+    Eigen::Vector4f p = pcl_cloud.points[i].getNormalVector4fMap ();
+    normals_list.push_back ( Eigen::Vector3d( p[0],p[1],p[2] ) ) ;
+  }
+  pcl::copyPointCloud(pcl_cloud, *cloud_tmp);
+
+  // obj: id name type reset
+  // pts: id name type reset objcoll usergb rgb
+  obj_cfg oconfig = obj_cfg(frame_index,frame_name.str().c_str(),5,reset);
+  pc_vis->pose_to_lcm(oconfig, poseT);
+  ptcld_cfg pconfig = ptcld_cfg(pc_index, pc_name.str().c_str(), 1, 1, frame_index, 0, {0.1,0.7,0.1});
+  pc_vis->ptcld_to_lcm(pconfig, *cloud_tmp, normals_list, 0, 0);
+}
 
 // NOTE: Visualization using lcmgl shows (sometimes) imperfections
 // in clouds (random lines). The clouds are actually correct, but lcm cannot manage

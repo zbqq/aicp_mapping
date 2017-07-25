@@ -13,6 +13,7 @@
 
 #include "commonUtils/cloudIO.h"
 #include "commonUtils/common.hpp"
+#include "drawingUtils/drawingUtils.hpp"
 
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config
@@ -25,6 +26,10 @@
 
 // args
 #include <ConciseArgs>
+
+// lcm
+#include <lcm/lcm-cpp.hpp>
+#include <boost/shared_ptr.hpp>
 
 using namespace std;
 using namespace aicp;
@@ -114,6 +119,9 @@ int main(int argc, char **argv)
     else if(key.compare("saveRegisteredReadingCloud") == 0) {
       params.saveRegisteredReadingCloud =  it->second.as<bool>();
     }
+    else if(key.compare("enableLcmVisualization") == 0) {
+      params.enableLcmVisualization =  it->second.as<bool>();
+    }
   }
   if(params.type.compare("Pointmatcher") == 0) {
 
@@ -154,6 +162,7 @@ int main(int argc, char **argv)
   cout << "Save Corrected Pose: "               << params.saveCorrectedPose             << endl;
   cout << "Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
   cout << "Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
+  cout << "Enable Lcm Visualization: "          << params.enableLcmVisualization        << endl;
 
   if(params.type.compare("Pointmatcher") == 0) {
     cout << "Config File Name: "                << params.pointmatcher.configFileName   << endl;
@@ -176,7 +185,7 @@ int main(int argc, char **argv)
      int point_cloud_B_number;
      iss >> point_cloud_B_number;
      string line_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_B_number);
-     ground_truth_sensor_pose = parseTransformationDeg(line_from_file);
+     ground_truth_sensor_pose = parseTransformationQuaternions(line_from_file);
      cout << "============================" << endl
           << "Ground Truth Sensor Pose:" << endl
           << "============================" << endl
@@ -196,6 +205,13 @@ int main(int argc, char **argv)
        << "Computed 3D Transform:" << endl
        << "============================" << endl
        << T << endl;
+
+  Eigen::Matrix4f corrected_sensor_pose;
+  corrected_sensor_pose = T * ground_truth_sensor_pose;
+  cout << "============================" << endl
+       << "Corrected Sensor Pose:" << endl
+       << "============================" << endl
+       << corrected_sensor_pose << endl;
 
   /*===================================
   =            Save Clouds            =
@@ -217,13 +233,93 @@ int main(int argc, char **argv)
   }
 
   if (params.saveCorrectedPose) {
-    Eigen::Matrix4f corrected_sensor_pose;
-    corrected_sensor_pose = T * ground_truth_sensor_pose;
-    cout << "============================" << endl
-         << "Corrected Sensor Pose:" << endl
-         << "============================" << endl
-         << corrected_sensor_pose << endl;
+    stringstream ssA(extract_ints(cl_cfg.pointCloudA));
+    istringstream issA(ssA.str());
+    int point_cloud_A_number;
+    issA >> point_cloud_A_number;
+
+    stringstream ssB(extract_ints(cl_cfg.pointCloudB));
+    istringstream issB(ssB.str());
+    int point_cloud_B_number;
+    issB >> point_cloud_B_number;
+
+    stringstream ss;
+    ss << "corrected_poses/corrected_pose_";
+    ss << point_cloud_A_number;
+    ss << "_";
+    ss << point_cloud_B_number;
+    ss << ".txt";
+    write3DTransformToFile(corrected_sensor_pose, ss.str(), point_cloud_A_number, point_cloud_B_number);
   }
-  
+
+  if (params.enableLcmVisualization) {
+    /*===================================
+    =          Visualize Poses          =
+    ===================================*/
+
+    boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
+    if(!lcm->good()) {
+      std::cerr << "[Registration] LCM is not good for visualization." << std::endl;
+    }
+    Eigen::Isometry3d global_reference_frame = Eigen::Isometry3d::Identity();
+
+    pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_corrected_pose;
+    pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_ground_truth_pose;
+
+    // Fill in the corrected pose
+    cloud_corrected_pose.width    = 4;
+    cloud_corrected_pose.height   = 1;
+    cloud_corrected_pose.is_dense = false;
+    cloud_corrected_pose.points.resize (cloud_corrected_pose.width * cloud_corrected_pose.height);
+
+    for (int i = 0; i < 3; i++)
+    {
+      cloud_corrected_pose.points[i].x = corrected_sensor_pose(0,3);
+      cloud_corrected_pose.points[i].y = corrected_sensor_pose(1,3);
+      cloud_corrected_pose.points[i].z = corrected_sensor_pose(2,3);
+      cloud_corrected_pose.points[i].normal_x = corrected_sensor_pose(0,i);
+      cloud_corrected_pose.points[i].normal_y = corrected_sensor_pose(1,i);
+      cloud_corrected_pose.points[i].normal_z = corrected_sensor_pose(2,i);
+      cloud_corrected_pose.points[i].r = 255.0;
+      cloud_corrected_pose.points[i].g = 255.0;
+      cloud_corrected_pose.points[i].b = 255.0;
+      if (i == 0)
+        cloud_corrected_pose.points[i].r = 150.0;
+      else if (i == 1)
+        cloud_corrected_pose.points[i].g = 150.0;
+      else if (i == 2)
+        cloud_corrected_pose.points[i].b = 150.0;
+    }
+    drawPointCloudNormalsCollections(lcm, 1, global_reference_frame, cloud_corrected_pose, 0, "Corrected Pose B");
+
+    // Fill in the ground truth pose
+    cloud_ground_truth_pose.width    = 4;
+    cloud_ground_truth_pose.height   = 1;
+    cloud_ground_truth_pose.is_dense = false;
+    cloud_ground_truth_pose.points.resize (cloud_ground_truth_pose.width * cloud_ground_truth_pose.height);
+
+    for (int i = 0; i < 3; i++)
+    {
+      cloud_ground_truth_pose.points[i].x = ground_truth_sensor_pose(0,3);
+      cloud_ground_truth_pose.points[i].y = ground_truth_sensor_pose(1,3);
+      cloud_ground_truth_pose.points[i].z = ground_truth_sensor_pose(2,3);
+      cloud_ground_truth_pose.points[i].normal_x = ground_truth_sensor_pose(0,i);
+      cloud_ground_truth_pose.points[i].normal_y = ground_truth_sensor_pose(1,i);
+      cloud_ground_truth_pose.points[i].normal_z = ground_truth_sensor_pose(2,i);
+      cloud_ground_truth_pose.points[i].r = 0.0;
+      cloud_ground_truth_pose.points[i].g = 0.0;
+      cloud_ground_truth_pose.points[i].b = 0.0;
+      if (i == 0)
+        cloud_ground_truth_pose.points[i].r = 255.0;
+      else if (i == 1)
+        cloud_ground_truth_pose.points[i].g = 255.0;
+      else if (i == 2)
+        cloud_ground_truth_pose.points[i].b = 255.0;
+    }
+    drawPointCloudNormalsCollections(lcm, 3, global_reference_frame, cloud_ground_truth_pose, 0, "Ground Truth Pose B");
+
+    //while(0 == lcm->handle());
+  }
+
   return 0;
 }

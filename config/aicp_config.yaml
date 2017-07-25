@@ -1,13 +1,15 @@
 AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
-    saveTransform: true,
+    loadPosesFromFile: "pose_scanner_leica_affine.txt", # Ground truth poses
+    saveCorrectedPose: true, # Valid if loadPosesFromFile, otherwise saves init + transform
     saveInitializedReadingCloud: true,
     saveRegisteredReadingCloud: true,
+    enableLcmVisualization: true,
 
     Pointmatcher: {
       configFileName: "icp_autotuned_default.yaml", # points
-      initialTransform: "1.0,1.0,0", # x[m], y[m], yaw[deg]
+      initialTransform: "0.1,0.1,0.1", # x[m], y[m], yaw[deg]
       printOutputStatistics: false,
     }
   }

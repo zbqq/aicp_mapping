@@ -27,7 +27,7 @@ string readLineFromFile(string& filename, int line_number)
 /* Get a transformation Eigen::Matrix4f
 given a string containing index, translation, quaternions: id x y z w x y z */
 
-Eigen::Matrix4f parseTransformationDeg(string transform)
+Eigen::Matrix4f parseTransformationQuaternions(string transform)
 {
   Eigen::Matrix4f parsedTrans = Eigen::Matrix4f::Identity(4,4);
 
@@ -153,6 +153,32 @@ PM::TransformationParameters parseTransformationDeg(string& transform, const int
   return parsedTrans;
 }
 
+/* Given a transformation matrix write line to file
+ * in the format: idA idB x y z w x y z. The function adds lines
+to the same file until the program ends.*/
+void write3DTransformToFile(Eigen::Matrix4f &transform, string out_file, int id_cloud_A, int id_cloud_B)
+{
+  ofstream file (out_file);
+
+  Eigen::Quaternionf quat(transform.block<3,3>(0,0));
+
+  if (file.is_open())
+  {
+    //file << "idA idB x y z w x y z\n";
+    file << id_cloud_A << " " << id_cloud_B << " "
+         << transform(0,3) << " " << transform(1,3) << " " << transform(2,3) << " "
+         << quat.w() << " " << quat.x() << " " << quat.y() << " " << quat.z() << endl;
+
+    file.close();
+  }
+  else cout << "[File IO] Unable to open output file.";
+  cout << "[File IO] Written file: " << out_file << endl;
+}
+
+/* Given a transformation matrix write line to file
+ * in the format: id x y theta (meters,meters,radians), where id is a number
+from the concatenation of the indexes of the registered clouds. The function adds lines
+to the same file until the program ends.*/
 void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int num_clouds)
 {
   std::vector<string> v;

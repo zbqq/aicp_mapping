@@ -109,7 +109,7 @@ namespace aicp{
 
     out_read_cloud_ = tmp_out_read_cloud_;
 
-    final_transform = T * init_transform_; // initialization and registration
+    final_transform = T; // initialization is already included
 
     /*===================================
     =               Errors              =

@@ -18,6 +18,8 @@ using namespace Eigen;
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root = "Point Cloud");
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root = "Point Cloud");
 
+void drawPointCloudNormalsCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGBNormal>& pcl_cloud, long long int utime, std::string pc_name_root = "Normals");
+
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, std::vector<Eigen::Vector3f> point_cloud);
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, DP &dp_cloud);
 void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud);

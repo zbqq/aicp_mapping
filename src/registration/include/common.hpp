@@ -12,6 +12,7 @@ struct RegistrationParams {
   bool saveCorrectedPose;
   bool saveInitializedReadingCloud;
   bool saveRegisteredReadingCloud;
+  bool enableLcmVisualization;
 
     struct PointmatcherRegistrationParams
     {
