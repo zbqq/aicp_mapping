@@ -97,7 +97,7 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZ> &cloud_in
   cloud_out.addFeature("pad", features.row(3));
 }
 
-// TODO: These methods should deal with rgb field as well
+// TODO: These methods deal with rgb field (rgb assignment MUST be debugged)
 void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_out)
 {
   cloud_out.points.resize(cloud_in.getNbPoints());
@@ -105,7 +105,15 @@ void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGB> &cloud_
     cloud_out.points[i].x = (cloud_in.features.col(i))[0];
     cloud_out.points[i].y = (cloud_in.features.col(i))[1];
     cloud_out.points[i].z = (cloud_in.features.col(i))[2];
-    //cout << "i=" << i << " " << cloud_out.points[i].x << " " << cloud_out.points[i].y << " " << cloud_out.points[i].z << endl;
+    int color_row = cloud_in.getDescriptorStartingRow("color"); // (see pointmatcher/IO.h)
+    if (cloud_in.descriptorExists("color"))
+    {
+      cloud_out.points[i].r = (cloud_in.descriptors.col(i))[color_row];
+      cloud_out.points[i].g = (cloud_in.descriptors.col(i))[color_row+1];
+      cloud_out.points[i].b = (cloud_in.descriptors.col(i))[color_row+2];
+    }
+    else
+      std::cerr << "[Cloud IO] Cloud conversion with color failed." << std::endl;
   }
   cloud_out.width = cloud_out.points.size();
   cloud_out.height = 1;
@@ -116,6 +124,7 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud
   int pointCount = cloud_in.width;
 
   PM::Matrix features(4, pointCount);
+  PM::Matrix colors(3, pointCount);
 
   for (int p = 0; p < pointCount; ++p)
   {
@@ -123,9 +132,79 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud
     features(1, p) = cloud_in.points[p].y;
     features(2, p) = cloud_in.points[p].z;
     features(3, p) = 1.0;
+    colors(0, p) = cloud_in.points[p].r;
+    colors(1, p) = cloud_in.points[p].g;
+    colors(2, p) = cloud_in.points[p].b;
   }
   cloud_out.addFeature("x", features.row(0));
   cloud_out.addFeature("y", features.row(1));
   cloud_out.addFeature("z", features.row(2));
   cloud_out.addFeature("pad", features.row(3));
+  cloud_out.addDescriptor("red", colors.row(0));
+  cloud_out.addDescriptor("green", colors.row(1));
+  cloud_out.addDescriptor("blue", colors.row(2));
+}
+
+// TODO: These methods deal with rgb and normal fields (rgb and normals assignment MUST be debugged)
+void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGBNormal> &cloud_out)
+{
+  cloud_out.points.resize(cloud_in.getNbPoints());
+  for (int i = 0; i < cloud_in.getNbPoints(); i++) {
+    cloud_out.points[i].x = (cloud_in.features.col(i))[0];
+    cloud_out.points[i].y = (cloud_in.features.col(i))[1];
+    cloud_out.points[i].z = (cloud_in.features.col(i))[2];
+    int color_row = cloud_in.getDescriptorStartingRow("color"); // (see pointmatcher/IO.h)
+    if (cloud_in.descriptorExists("color"))
+    {
+      cloud_out.points[i].r = (cloud_in.descriptors.col(i))[color_row];
+      cloud_out.points[i].g = (cloud_in.descriptors.col(i))[color_row+1];
+      cloud_out.points[i].b = (cloud_in.descriptors.col(i))[color_row+2];
+    }
+    else
+      std::cerr << "[Cloud IO] Cloud conversion with color failed." << std::endl;
+    int normals_row = cloud_in.getDescriptorStartingRow("normals"); // (see pointmatcher/IO.h)
+    if (cloud_in.descriptorExists("normals"))
+    {
+      cloud_out.points[i].normal_x = (cloud_in.descriptors.col(i))[normals_row];
+      cloud_out.points[i].normal_y = (cloud_in.descriptors.col(i))[normals_row+1];
+      cloud_out.points[i].normal_z = (cloud_in.descriptors.col(i))[normals_row+2];
+    }
+    else
+      std::cerr << "[Cloud IO] Cloud conversion with normals failed." << std::endl;
+  }
+  cloud_out.width = cloud_out.points.size();
+  cloud_out.height = 1;
+}
+
+void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGBNormal> &cloud_in)
+{
+  int pointCount = cloud_in.width;
+
+  PM::Matrix features(4, pointCount);
+  PM::Matrix colors(3, pointCount);
+  PM::Matrix normals(3, pointCount);
+
+  for (int p = 0; p < pointCount; ++p)
+  {
+    features(0, p) = cloud_in.points[p].x;
+    features(1, p) = cloud_in.points[p].y;
+    features(2, p) = cloud_in.points[p].z;
+    features(3, p) = 1.0;
+    colors(0, p) = cloud_in.points[p].r;
+    colors(1, p) = cloud_in.points[p].g;
+    colors(2, p) = cloud_in.points[p].b;
+    normals(0, p) = cloud_in.points[p].normal_x;
+    normals(1, p) = cloud_in.points[p].normal_y;
+    normals(2, p) = cloud_in.points[p].normal_z;
+  }
+  cloud_out.addFeature("x", features.row(0));
+  cloud_out.addFeature("y", features.row(1));
+  cloud_out.addFeature("z", features.row(2));
+  cloud_out.addFeature("pad", features.row(3));
+  cloud_out.addDescriptor("red", colors.row(0));
+  cloud_out.addDescriptor("green", colors.row(1));
+  cloud_out.addDescriptor("blue", colors.row(2));
+  cloud_out.addDescriptor("nx", normals.row(0));
+  cloud_out.addDescriptor("ny", normals.row(1));
+  cloud_out.addDescriptor("nz", normals.row(2));
 }

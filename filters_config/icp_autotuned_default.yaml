@@ -35,7 +35,8 @@ outlierFilters:
       ratio: 0.70
 
 errorMinimizer:
-  PointToPlaneWithCovErrorMinimizer
+  PointToPlaneWithCovErrorMinimizer:
+    failPredStrategy: 0
 
 transformationCheckers:
   - CounterTransformationChecker:

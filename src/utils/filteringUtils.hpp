@@ -39,5 +39,5 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
                    Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
                    float range, float angularView);
 
-float degeneracyFilter(Eigen::MatrixXf system_covariance);
+float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance);
 #endif

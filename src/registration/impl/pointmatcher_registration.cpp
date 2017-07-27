@@ -99,9 +99,9 @@ namespace aicp{
 
     // DEBUG pointmatcher added functions:
     Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
-    cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
-    float degenaracy_factor = degeneracyFilter(system_covariance);
-    cout << "[Pointmatcher] Degeneracy Factor: " << endl << degenaracy_factor << endl;
+    //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
+    float failure_prediction_factor = registrationFailurePredictionFilter(system_covariance);
+    //cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
 
     // Transform reading with T
     DP tmp_out_read_cloud_(reading_cloud_);

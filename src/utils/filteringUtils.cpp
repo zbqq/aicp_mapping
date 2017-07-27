@@ -365,8 +365,9 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
   return overlap*100.0;
 }
 
-// from "On Degeneracy of Optimization-based State Estimation Problems", Zhang, Kaess, Singh, ICRA 2016
-float degeneracyFilter(Eigen::MatrixXf system_covariance)
+// from "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
+// from "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
+float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
 {
   Eigen::EigenSolver<Eigen::MatrixXf> es(system_covariance);
   float sum_lambda = es.eigenvalues()(0,0).real()+es.eigenvalues()(1,0).real()+es.eigenvalues()(2,0).real()+
@@ -375,14 +376,34 @@ float degeneracyFilter(Eigen::MatrixXf system_covariance)
   system_lambdas << (es.eigenvalues()(0,0).real()/sum_lambda), //x
                     (es.eigenvalues()(1,0).real()/sum_lambda), //y
                     (es.eigenvalues()(2,0).real()/sum_lambda), //z
-                    (es.eigenvalues()(3,0).real()/sum_lambda),
-                    (es.eigenvalues()(4,0).real()/sum_lambda),
-                    (es.eigenvalues()(5,0).real()/sum_lambda);
-  cout << "[Filtering Utils] Degeneracy Eigenvectors:" << endl << es.eigenvectors() << endl;
-  cout << "[Filtering Utils] Degeneracy Eigenvalues:" << endl << es.eigenvalues() << endl;
-  cout << "[Filtering Utils] Normalized Degeneracy Eigenvalues:" << endl << system_lambdas << endl;
+                    (es.eigenvalues()(3,0).real()/sum_lambda), //yaw (probably?)
+                    (es.eigenvalues()(4,0).real()/sum_lambda), //pitch (probably?)
+                    (es.eigenvalues()(5,0).real()/sum_lambda); //roll (probably?)
+  //cout << "[Filtering Utils] Prediction Eigenvectors:" << endl << es.eigenvectors() << endl;
+  //cout << "[Filtering Utils] Prediction Eigenvalues:" << endl << es.eigenvalues() << endl;
+  cout << "[Filtering Utils] Normalized Prediction Eigenvalues:" << endl << system_lambdas << endl;
 
-  int pos;
-  system_lambdas.head(3).minCoeff(&pos); // minimum eigenvalue between x, y, z only
-  return system_lambdas[pos]*100.0;
+  int pos_min, pos_max;
+  float prediction;
+
+  // Degeneracy
+  // used in "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
+  system_lambdas.head(3).minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
+  prediction = system_lambdas[pos_min]*100.0;
+  cout << "[Filtering Utils] Degeneracy (degenerate if ~ 0): " << prediction << endl;
+
+  // Condition Number
+  // used in "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
+  system_lambdas.head(3).minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
+  system_lambdas.head(3).maxCoeff(&pos_max); // maximum eigenvalue between x, y, z only
+  prediction = system_lambdas[pos_max]/system_lambdas[pos_min];
+  cout << "[Filtering Utils] Condition Number (degenerate if big, want 1): " << prediction << endl;
+
+  // Inverse Condition Number
+  // compared against in
+  // "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
+  prediction = system_lambdas[pos_min]/system_lambdas[pos_max];
+  cout << "[Filtering Utils] Inverse Condition Number (degenerate if ~ 0, want 1): " << prediction << endl;
+
+  return prediction;
 }
