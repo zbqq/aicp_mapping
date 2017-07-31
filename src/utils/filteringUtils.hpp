@@ -21,23 +21,15 @@
 #include <pcl/common/transforms.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-//Project lib
-#include <commonUtils/cloudIO.h>
-
-void planeModelSegmentationFilter(DP &dp_cloud_blob);
 void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob);
 
-void regionGrowingPlaneSegmentationFilter(DP &dp_cloud_blob);
 void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob);
 
-double compute2DPolygonalArea (pcl::PointCloud<pcl::PointXYZRGB> cloud, Eigen::Vector4f normal);
-
-float overlapFilter(DP& cloudA, DP& cloudB,
+float overlapFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud<pcl::PointXYZ>& cloudB,
                    Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
-                   float range, float angularView);
-float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
-                   float range, float angularView);
+                   float range, float angularView,
+                   pcl::PointCloud<pcl::PointXYZ>& accepted_pointsA,
+                   pcl::PointCloud<pcl::PointXYZ>& accepted_pointsB);
 
 float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance);
 #endif

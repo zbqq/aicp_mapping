@@ -6,6 +6,8 @@
 //            transformation between them (-a reference, -b reading)
 
 #include <sstream>  // stringstream
+#include <map>
+#include <random>
 
 // Project lib
 #include "aicpRegistration/registration.hpp"
@@ -20,6 +22,7 @@
 
 // pcl
 #include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
@@ -64,12 +67,12 @@ int main(int argc, char **argv)
 
   pcl::PointCloud<pcl::PointXYZ>& point_cloud_A = *point_cloud_A_ptr;
   if (cl_cfg.pointCloudA.compare("") != 0) {
-    cout << "[Registration] Loading point cloud A..." << endl;
+    cout << "[Main] Loading point cloud A..." << endl;
     if (pcl::io::loadPCDFile (cl_cfg.pointCloudA, point_cloud_A) == -1) {
       cerr << "Was not able to open file \""<<cl_cfg.pointCloudA<<"\"." << endl;
       return EXIT_SUCCESS;
     }
-    cout << "[Registration] Point cloud A loaded." << endl;
+    cout << "[Main] Point cloud A loaded." << endl;
   }
   else {
     cout << "Please specify point cloud file." << endl;
@@ -78,12 +81,12 @@ int main(int argc, char **argv)
 
   pcl::PointCloud<pcl::PointXYZ>& point_cloud_B = *point_cloud_B_ptr;
   if (cl_cfg.pointCloudB.compare("") != 0) {
-    cout << "[Registration] Loading point cloud B..." << endl;
+    cout << "[Main] Loading point cloud B..." << endl;
     if (pcl::io::loadPCDFile (cl_cfg.pointCloudB, point_cloud_B) == -1) {
       cerr << "Was not able to open file \""<<cl_cfg.pointCloudB<<"\"." << endl;
       return EXIT_SUCCESS;
     }
-    cout << "[Registration] Point cloud B loaded." << endl;
+    cout << "[Main] Point cloud B loaded." << endl;
   }
   else {
     cout << "Please specify point cloud file." << endl;
@@ -107,8 +110,17 @@ int main(int argc, char **argv)
     if(key.compare("type") == 0) {
       params.type = it->second.as<string>();
     }
+    else if(key.compare("sensorRange") == 0) {
+      params.sensorRange =  it->second.as<float>();
+    }
+    else if(key.compare("sensorAngularView") == 0) {
+      params.sensorAngularView =  it->second.as<float>();
+    }
     else if(key.compare("loadPosesFromFile") == 0) {
       params.loadPosesFromFile = it->second.as<string>();
+    }
+    else if(key.compare("initialTransform") == 0) {
+      params.initialTransform = it->second.as<string>();
     }
     else if(key.compare("saveCorrectedPose") == 0) {
       params.saveCorrectedPose =  it->second.as<bool>();
@@ -135,9 +147,6 @@ int main(int argc, char **argv)
         params.pointmatcher.configFileName.append(PATH_SEPARATOR);
         params.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
       }
-      else if(key.compare("initialTransform") == 0) {
-        params.pointmatcher.initialTransform = it->second.as<string>();
-      }
       else if(key.compare("printOutputStatistics") == 0) {
         params.pointmatcher.printOutputStatistics =  it->second.as<bool>();
       }
@@ -157,40 +166,109 @@ int main(int argc, char **argv)
        << "Parsed YAML Config" << endl
        << "============================" << endl;
 
-  cout << "Registration Type: "                 << params.type                          << endl;
-  cout << "Load Poses from File: "              << params.loadPosesFromFile             << endl;
-  cout << "Save Corrected Pose: "               << params.saveCorrectedPose             << endl;
-  cout << "Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
-  cout << "Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
-  cout << "Enable Lcm Visualization: "          << params.enableLcmVisualization        << endl;
+  cout << "[Main] Registration Type: "                 << params.type                          << endl;
+  cout << "[Main] Sensor Range: "                      << params.sensorRange                   << endl;
+  cout << "[Main] Sensor Angular View: "               << params.sensorAngularView             << endl;
+  cout << "[Main] Load Poses from File: "              << params.loadPosesFromFile             << endl;
+  cout << "[Main] Initial Transform: "                 << params.initialTransform              << endl;
+  cout << "[Main] Save Corrected Pose: "               << params.saveCorrectedPose             << endl;
+  cout << "[Main] Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
+  cout << "[Main] Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
+  cout << "[Main] Enable Lcm Visualization: "          << params.enableLcmVisualization        << endl;
 
   if(params.type.compare("Pointmatcher") == 0) {
-    cout << "Config File Name: "                << params.pointmatcher.configFileName   << endl;
-    cout << "Initial Transform: "               << params.pointmatcher.initialTransform << endl;
-    cout << "Print Registration Statistics: "   << params.pointmatcher.printOutputStatistics << endl;
+    cout << "[Pointmatcher] Config File Name: "                << params.pointmatcher.configFileName        << endl;
+    cout << "[Pointmatcher] Print Registration Statistics: "   << params.pointmatcher.printOutputStatistics << endl;
   }
   else if(params.type.compare("GICP") == 0) {
   }
   cout << "============================" << endl;
 
   /*===================================
-  =          Load Input Pose          =
+  =          Load Input Poses         =
   ===================================*/
 
-  Eigen::Matrix4f ground_truth_sensor_pose = Eigen::Matrix4f::Identity(4,4);
+  Eigen::Matrix4f ground_truth_reference_pose = Eigen::Matrix4f::Identity(4,4);
+  Eigen::Matrix4f ground_truth_reading_pose = Eigen::Matrix4f::Identity(4,4);
+  int point_cloud_A_number = -1;
+  int point_cloud_B_number = -1;
   if (!params.loadPosesFromFile.empty())
   {
-     std::stringstream ss(extract_ints(cl_cfg.pointCloudB));
-     std::istringstream iss(ss.str());
-     int point_cloud_B_number;
-     iss >> point_cloud_B_number;
-     string line_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_B_number);
-     ground_truth_sensor_pose = parseTransformationQuaternions(line_from_file);
+     std::stringstream ssA(extract_ints(cl_cfg.pointCloudA));
+     std::istringstream issA(ssA.str());
+     issA >> point_cloud_A_number;
+     string lineA_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_A_number);
+     ground_truth_reference_pose = parseTransformationQuaternions(lineA_from_file);
+
+     std::stringstream ssB(extract_ints(cl_cfg.pointCloudB));
+     std::istringstream issB(ssB.str());
+     issB >> point_cloud_B_number;
+     string lineB_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_B_number);
+     ground_truth_reading_pose = parseTransformationQuaternions(lineB_from_file);
      cout << "============================" << endl
-          << "Ground Truth Sensor Pose:" << endl
+          << "Ground Truth Reading Pose:" << endl
           << "============================" << endl
-          << ground_truth_sensor_pose << endl;
+          << ground_truth_reading_pose << endl;
   }
+
+  /*===================================
+  =      Initialize Reading Pose       =
+  ===================================*/
+
+  if (params.initialTransform == "random")
+  {
+    // random samples from Gaussian distribution with 0 mean and 10 cm variance
+    Eigen::VectorXf vars = get_random_gaussian_variable(0, 0.10, 3);
+
+    std::stringstream perturbation;
+    perturbation << vars(0);      //x[m]
+    perturbation << ',';
+    perturbation << vars(1);      //y[m]
+    perturbation << ',';
+    perturbation << vars(2)*10.0; //yaw[deg]
+    params.initialTransform = perturbation.str();
+  }
+
+  cout << "[Main] Initialization: " << params.initialTransform << endl;
+  Eigen::Matrix4f perturbation = parseTransformationDeg(params.initialTransform);
+  Eigen::Matrix4f estimated_reading_pose = perturbation * ground_truth_reading_pose;
+
+  /*===================================
+  =     Initialize Reading Cloud      =
+  ===================================*/
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr initialized_reading_cloud_ptr (new pcl::PointCloud<pcl::PointXYZ> ());
+  pcl::transformPointCloud (*point_cloud_B_ptr, *initialized_reading_cloud_ptr, perturbation);
+
+  /*===================================
+  =        Filter Input Clouds        =
+  ===================================*/
+
+  pcl::PointCloud<pcl::PointXYZ> overlap_points_A;
+  pcl::PointCloud<pcl::PointXYZ> overlap_points_B;
+//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudA_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudB_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+
+//  Eigen::Matrix3f pca_vector;
+
+  Eigen::Isometry3d ground_truth_reference_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reference_pose);
+  Eigen::Isometry3d estimated_reading_pose_iso = fromMatrix4fToIsometry3d(estimated_reading_pose);
+  float overlap = overlapFilter(point_cloud_A, *initialized_reading_cloud_ptr,
+                                 ground_truth_reference_pose_iso, estimated_reading_pose_iso,
+                                 params.sensorRange , params.sensorAngularView,
+                                 overlap_points_A, overlap_points_B);
+  cout << "============================" << endl
+       << "Overlap: " << overlap << " %" << endl
+       << "============================" << endl;
+
+  pcl::PCDWriter writer_debug;
+  stringstream ss_ovA;
+  ss_ovA << "overlap_points_A.pcd";
+  writer_debug.write<pcl::PointXYZ> (ss_ovA.str (), overlap_points_A, false);
+  stringstream ss_ovB;
+  ss_ovB << "overlap_points_B.pcd";
+  writer_debug.write<pcl::PointXYZ> (ss_ovB.str (), overlap_points_B, false);
 
   /*===================================
   =          Register Clouds          =
@@ -199,30 +277,28 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
-  registration->registerClouds(point_cloud_A, point_cloud_B, T);
+  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
        << "============================" << endl
        << T << endl;
 
-  Eigen::Matrix4f corrected_sensor_pose;
-  corrected_sensor_pose = T * ground_truth_sensor_pose;
+  Eigen::Matrix4f corrected_reading_pose;
+  corrected_reading_pose = T * estimated_reading_pose;
   cout << "============================" << endl
-       << "Corrected Sensor Pose:" << endl
+       << "Corrected Reading Pose:" << endl
        << "============================" << endl
-       << corrected_sensor_pose << endl;
+       << corrected_reading_pose << endl;
 
   /*===================================
   =            Save Clouds            =
   ===================================*/
   pcl::PCDWriter writer;
   if (params.saveInitializedReadingCloud) {
-    pcl::PointCloud<pcl::PointXYZ> initialized_reading_cloud;
-    registration->getInitializedReading(initialized_reading_cloud);
     stringstream ss;
     ss << "initialized_reading_cloud.pcd";
-    writer.write<pcl::PointXYZ> (ss.str (), initialized_reading_cloud, false);
+    writer.write<pcl::PointXYZ> (ss.str (), *initialized_reading_cloud_ptr, false);
   }
   if (params.saveRegisteredReadingCloud) {
     pcl::PointCloud<pcl::PointXYZ> registered_reading_cloud;
@@ -232,24 +308,14 @@ int main(int argc, char **argv)
     writer.write<pcl::PointXYZ> (ss.str (), registered_reading_cloud, false);
   }
 
-  if (params.saveCorrectedPose) {
-    stringstream ssA(extract_ints(cl_cfg.pointCloudA));
-    istringstream issA(ssA.str());
-    int point_cloud_A_number;
-    issA >> point_cloud_A_number;
-
-    stringstream ssB(extract_ints(cl_cfg.pointCloudB));
-    istringstream issB(ssB.str());
-    int point_cloud_B_number;
-    issB >> point_cloud_B_number;
-
+  if ((point_cloud_A_number != -1) && params.saveCorrectedPose) {
     stringstream ss;
     ss << "corrected_poses/corrected_pose_";
     ss << point_cloud_A_number;
     ss << "_";
     ss << point_cloud_B_number;
     ss << ".txt";
-    write3DTransformToFile(corrected_sensor_pose, ss.str(), point_cloud_A_number, point_cloud_B_number);
+    write3DTransformToFile(corrected_reading_pose, ss.str(), point_cloud_A_number, point_cloud_B_number);
   }
 
   if (params.enableLcmVisualization) {
@@ -259,12 +325,39 @@ int main(int argc, char **argv)
 
     boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
     if(!lcm->good()) {
-      std::cerr << "[Registration] LCM is not good for visualization." << std::endl;
+      std::cerr << "[Main] LCM is not good for visualization." << std::endl;
     }
     Eigen::Isometry3d global_reference_frame = Eigen::Isometry3d::Identity();
 
+    pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_estimated_pose;
     pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_corrected_pose;
     pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_ground_truth_pose;
+
+    // Fill in the estimated pose
+    cloud_estimated_pose.width    = 4;
+    cloud_estimated_pose.height   = 1;
+    cloud_estimated_pose.is_dense = false;
+    cloud_estimated_pose.points.resize (cloud_estimated_pose.width * cloud_estimated_pose.height);
+
+    for (int i = 0; i < 3; i++)
+    {
+      cloud_estimated_pose.points[i].x = estimated_reading_pose(0,3);
+      cloud_estimated_pose.points[i].y = estimated_reading_pose(1,3);
+      cloud_estimated_pose.points[i].z = estimated_reading_pose(2,3);
+      cloud_estimated_pose.points[i].normal_x = estimated_reading_pose(0,i);
+      cloud_estimated_pose.points[i].normal_y = estimated_reading_pose(1,i);
+      cloud_estimated_pose.points[i].normal_z = estimated_reading_pose(2,i);
+      cloud_estimated_pose.points[i].r = 255.0;
+      cloud_estimated_pose.points[i].g = 255.0;
+      cloud_estimated_pose.points[i].b = 255.0;
+      if (i == 0)
+        cloud_estimated_pose.points[i].r = 0.0;
+      else if (i == 1)
+        cloud_estimated_pose.points[i].g = 0.0;
+      else if (i == 2)
+        cloud_estimated_pose.points[i].b = 0.0;
+    }
+    drawPointCloudNormalsCollections(lcm, 5, global_reference_frame, cloud_estimated_pose, 0, "Estimated Pose B");
 
     // Fill in the corrected pose
     cloud_corrected_pose.width    = 4;
@@ -274,12 +367,12 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < 3; i++)
     {
-      cloud_corrected_pose.points[i].x = corrected_sensor_pose(0,3);
-      cloud_corrected_pose.points[i].y = corrected_sensor_pose(1,3);
-      cloud_corrected_pose.points[i].z = corrected_sensor_pose(2,3);
-      cloud_corrected_pose.points[i].normal_x = corrected_sensor_pose(0,i);
-      cloud_corrected_pose.points[i].normal_y = corrected_sensor_pose(1,i);
-      cloud_corrected_pose.points[i].normal_z = corrected_sensor_pose(2,i);
+      cloud_corrected_pose.points[i].x = corrected_reading_pose(0,3);
+      cloud_corrected_pose.points[i].y = corrected_reading_pose(1,3);
+      cloud_corrected_pose.points[i].z = corrected_reading_pose(2,3);
+      cloud_corrected_pose.points[i].normal_x = corrected_reading_pose(0,i);
+      cloud_corrected_pose.points[i].normal_y = corrected_reading_pose(1,i);
+      cloud_corrected_pose.points[i].normal_z = corrected_reading_pose(2,i);
       cloud_corrected_pose.points[i].r = 255.0;
       cloud_corrected_pose.points[i].g = 255.0;
       cloud_corrected_pose.points[i].b = 255.0;
@@ -300,12 +393,12 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < 3; i++)
     {
-      cloud_ground_truth_pose.points[i].x = ground_truth_sensor_pose(0,3);
-      cloud_ground_truth_pose.points[i].y = ground_truth_sensor_pose(1,3);
-      cloud_ground_truth_pose.points[i].z = ground_truth_sensor_pose(2,3);
-      cloud_ground_truth_pose.points[i].normal_x = ground_truth_sensor_pose(0,i);
-      cloud_ground_truth_pose.points[i].normal_y = ground_truth_sensor_pose(1,i);
-      cloud_ground_truth_pose.points[i].normal_z = ground_truth_sensor_pose(2,i);
+      cloud_ground_truth_pose.points[i].x = ground_truth_reading_pose(0,3);
+      cloud_ground_truth_pose.points[i].y = ground_truth_reading_pose(1,3);
+      cloud_ground_truth_pose.points[i].z = ground_truth_reading_pose(2,3);
+      cloud_ground_truth_pose.points[i].normal_x = ground_truth_reading_pose(0,i);
+      cloud_ground_truth_pose.points[i].normal_y = ground_truth_reading_pose(1,i);
+      cloud_ground_truth_pose.points[i].normal_z = ground_truth_reading_pose(2,i);
       cloud_ground_truth_pose.points[i].r = 0.0;
       cloud_ground_truth_pose.points[i].g = 0.0;
       cloud_ground_truth_pose.points[i].b = 0.0;
@@ -317,8 +410,6 @@ int main(int argc, char **argv)
         cloud_ground_truth_pose.points[i].b = 255.0;
     }
     drawPointCloudNormalsCollections(lcm, 3, global_reference_frame, cloud_ground_truth_pose, 0, "Ground Truth Pose B");
-
-    //while(0 == lcm->handle());
   }
 
   return 0;

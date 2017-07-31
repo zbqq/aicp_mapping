@@ -6,6 +6,9 @@
 #include <stack> // tictoc
 #include <iostream> // cout
 
+//Eigen
+#include <Eigen/Dense>
+
 // windows or unix user, get the separator correctly
 #if defined(WIN32) || defined(_WIN32)
   const std::string PATH_SEPARATOR="\\";
@@ -53,6 +56,9 @@
  * Utility functions
  */
 
+//convert formats in Eigen
+Eigen::Isometry3d fromMatrix4fToIsometry3d(Eigen::Matrix4f matrix);
+
 //swapping two values.
 template<typename T>
 bool swap_if_gt(T& a, T& b) {
@@ -86,6 +92,23 @@ std::string extract_ints(std::string str)
 {
     return extract_ints(std::ctype_base::digit, str,
          std::use_facet<std::ctype<char>>(std::locale("")));
+}
+
+//sample from Gaussian distribution
+Eigen::VectorXf get_random_gaussian_variable(float mean, float std_deviation, int size)
+{
+  std::random_device rd;
+
+  std::mt19937 e2(rd());
+
+  std::normal_distribution<float> dist(mean, std_deviation);
+
+  Eigen::VectorXf rand_variables(size);
+  for (int n = 0; n < rand_variables.size(); n++) {
+    rand_variables(n) = dist(e2);
+  }
+
+  return rand_variables;
 }
 
 #endif

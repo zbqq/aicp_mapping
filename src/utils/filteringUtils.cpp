@@ -1,17 +1,5 @@
 #include "filteringUtils.hpp"
 
-void planeModelSegmentationFilter(DP &dp_cloud_blob)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
-  fromDataPointsToPCL(dp_cloud_blob, pcl_cloud);
-
-  planeModelSegmentationFilter(pcl_cloud);
-
-  DP dp_cloud;
-  fromPCLToDataPoints(dp_cloud, pcl_cloud);
-  dp_cloud_blob = dp_cloud;
-}
-
 void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_blob_ptr;
@@ -111,18 +99,6 @@ void planeModelSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
   cloud_blob = *cloud_planes;
 }
 
-void regionGrowingPlaneSegmentationFilter(DP &dp_cloud_blob)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
-  fromDataPointsToPCL(dp_cloud_blob, pcl_cloud);
-
-  regionGrowingPlaneSegmentationFilter(pcl_cloud);
-
-  DP dp_cloud;
-  fromPCLToDataPoints(dp_cloud, pcl_cloud);
-  dp_cloud_blob = dp_cloud;
-}
-
 void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloud_blob)
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_blob_ptr;
@@ -202,63 +178,23 @@ void regionGrowingPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZRGB>& clo
   cloud_blob = *cloud_planes;
 }
 
-
-double compute2DPolygonalArea (pcl::PointCloud<pcl::PointXYZRGB> cloud, Eigen::Vector4f normal)
-{
-  int k0, k1, k2;
-
-  // Find axis with largest normal component and project onto perpendicular plane
-  k0 = (fabs (normal[0]) > fabs (normal[1])) ? 0  : 1;
-  k0 = (fabs (normal[k0]) > fabs (normal[2])) ? k0 : 2;
-  k1 = (k0 + 1) % 3;
-  k2 = (k0 + 2) % 3;
-
-  // cos(theta), where theta is the angle between the polygon and the projected plane
-  double ct = fabs (normal[k0]);
-
-  double area = 0;
-  float p_i[3], p_j[3];
-
-  for (unsigned int i = 0; i < cloud.points.size (); i++)
-  {
-    p_i[0] = cloud.points[i].x; p_i[1] = cloud.points[i].y; p_i[2] = cloud.points[i].z;
-    int j = (i + 1) % cloud.points.size ();
-    p_j[0] = cloud.points[j].x; p_j[1] = cloud.points[j].y; p_j[2] = cloud.points[j].z;
-
-    area += p_i[k1] * p_j[k2] - p_i[k2] * p_j[k1];
-  }
-  area = fabs (area) / (2 * ct);
-
-  return (area);
-}
-
 // The overlapFilter does not reduce the number of points in the clouds. However it computes
 // a parameter describing the overlap between the two clouds.
 // Input: two clouds cloudA and cloudB in local reference frame,
 //        the transformations poseA and poseB (robot pose at capturing time wrt local),
 //        sensor range [meters] and angular field of view [degrees].
 // Output: overlapParam.
-float overlapFilter(DP& cloudA, DP& cloudB,
+float overlapFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud<pcl::PointXYZ>& cloudB,
                    Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
-                   float range, float angularView)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloudA, pcl_cloudB;
-  fromDataPointsToPCL(cloudA, pcl_cloudA);
-  fromDataPointsToPCL(cloudB, pcl_cloudB);
-
-  float overlap = overlapFilter(pcl_cloudA, pcl_cloudB, poseA, poseB, range, angularView);
-  return overlap;
-}
-
-float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<pcl::PointXYZRGB>& cloudB,
-                   Eigen::Isometry3d poseA, Eigen::Isometry3d poseB,
-                   float range, float angularView)
+                   float range, float angularView,
+                   pcl::PointCloud<pcl::PointXYZ>& accepted_pointsA,
+                   pcl::PointCloud<pcl::PointXYZ>& accepted_pointsB)
 {
   float thresh = (180.0-((360.0-angularView)/2));
   Eigen::Isometry3d poseBinverse;
   poseBinverse = poseB.inverse();
   // Filter 1: first cloud wrt second pose
-  std::vector<pcl::PointXYZ> accepted_pointsA;
+  //pcl::PointCloud<pcl::PointXYZ> accepted_pointsA;
   for (int i=0; i < cloudA.size(); i++)
   {
     pcl::PointXYZ pointA_B;
@@ -275,18 +211,20 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
     //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
     if ((theta < thresh && theta > -thresh) && r < range)
     {
-      pcl::PointXYZ point;
-      point.x = r * cos( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
-      point.y = r * sin( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
-      point.z = r * cos( phi * M_PI / 180.0 );
-      accepted_pointsA.push_back(point);
+      // Store treimmed cloud, transformed back to local reference frame
+      pcl::PointXYZ pointA_local;
+      Eigen::Affine3d poseB_affine;
+      poseB_affine.translation() = poseB.translation();
+      poseB_affine.linear() = poseB.rotation();
+      pointA_local = pcl::transformPoint(pointA_B, poseB_affine);
+      accepted_pointsA.push_back(pointA_local);
     }
   }
 
   Eigen::Isometry3d poseAinverse;
   poseAinverse = poseA.inverse();
   // Filter 2: second cloud wrt first pose
-  std::vector<pcl::PointXYZ> accepted_pointsB;
+  //pcl::PointCloud<pcl::PointXYZ> accepted_pointsB;
   for (int i=0; i < cloudB.size(); i++)
   {
     pcl::PointXYZ pointB_A;
@@ -303,11 +241,13 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
     //cout << "r: " << r << ", theta: " << theta << ", phi: " << phi << endl;
     if ((theta < thresh && theta > -thresh) && r < range)
     {
-      pcl::PointXYZ point;
-      point.x = r * cos( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
-      point.y = r * sin( theta * M_PI / 180.0 ) * sin( phi * M_PI / 180.0 );
-      point.z = r * cos( phi * M_PI / 180.0 );
-      accepted_pointsB.push_back(point);
+      // Store trimmed cloud, transformed back to local reference frame
+      pcl::PointXYZ pointB_local;
+      Eigen::Affine3d poseA_affine;
+      poseA_affine.translation() = poseA.translation();
+      poseA_affine.linear() = poseA.rotation();
+      pointB_local = pcl::transformPoint(pointB_A, poseA_affine);
+      accepted_pointsB.push_back(pointB_local);
     }
   }
 
@@ -315,52 +255,15 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZRGB>& cloudA, pcl::PointCloud<p
   float perc_accepted_A, perc_accepted_B;
   perc_accepted_A = (float)(accepted_pointsA.size()) / (float)(cloudA.size());
   perc_accepted_B = (float)(accepted_pointsB.size()) / (float)(cloudB.size());
-  cout << "Points left in cloudA: " << perc_accepted_A*100.0 << "%" << endl;
-  cout << "Points left in cloudB: " << perc_accepted_B*100.0 << "%" << endl;
+  //cout << "Points left in cloudA: " << perc_accepted_A*100.0 << "%" << endl;
+  //cout << "Points left in cloudB: " << perc_accepted_B*100.0 << "%" << endl;
 
   float overlap = perc_accepted_A * perc_accepted_B;
   //cout << "Overlap: " << overlap*100.0 << "%" << endl;
 
-  /*
-  // Create point clouds for visualization
-  pcl::PointCloud<pcl::PointXYZ>::Ptr accepted_cloudA (new pcl::PointCloud<pcl::PointXYZ> ());
-  accepted_cloudA->width = accepted_pointsA.size();
-  accepted_cloudA->height = 1;
-  for (int i=0; i < accepted_pointsA.size(); i++)
-  {
-    accepted_cloudA->points.push_back(accepted_pointsA.at(i));
-  }
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr accepted_cloudB (new pcl::PointCloud<pcl::PointXYZ> ());
-  accepted_cloudB->width = accepted_pointsB.size();
-  accepted_cloudB->height = 1;
-  for (int i=0; i < accepted_pointsB.size(); i++)
-  {
-    accepted_cloudB->points.push_back(accepted_pointsB.at(i));
-  }
-
-  // Visualization
-  printf(  "\nPoint cloud colors :  white = cloudA\n"
-           "                      red   = cloudB\n");
-  pcl::visualization::PCLVisualizer viewer ("Matrix transformation example");
-
-   // Define R,G,B colors for the point cloud
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler (accepted_cloudA, 255, 255, 255);
-  // We add the point cloud to the viewer and pass the color handler
-  viewer.addPointCloud (accepted_cloudA, source_cloud_color_handler, "cloudA");
-
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> transformed_cloud_color_handler (accepted_cloudB, 230, 20, 20); // Red
-  viewer.addPointCloud (accepted_cloudB, transformed_cloud_color_handler, "cloudB");
-
-  viewer.addCoordinateSystem (1.0, 0);
-  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloudA");
-  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloudB");
-  //viewer.setPosition(800, 400); // Setting visualiser window position
-
-  while (!viewer.wasStopped ()) { // Display the visualiser until 'q' key is pressed
-    viewer.spinOnce ();
-  }*/
+  pcl::PCDWriter writer;
+  //writer.write<pcl::PointXYZ> ("accepted_pointsA.pcd", accepted_pointsA, false);
+  //writer.write<pcl::PointXYZ> ("accepted_pointsB.pcd", accepted_pointsB, false);
 
   return overlap*100.0;
 }
@@ -373,13 +276,13 @@ float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
   float sum_lambda = es.eigenvalues()(0,0).real()+es.eigenvalues()(1,0).real()+es.eigenvalues()(2,0).real()+
                      es.eigenvalues()(3,0).real()+es.eigenvalues()(4,0).real()+es.eigenvalues()(5,0).real();
   Eigen::VectorXf system_lambdas(6);
-  system_lambdas << (es.eigenvalues()(0,0).real()/sum_lambda), //x
-                    (es.eigenvalues()(1,0).real()/sum_lambda), //y
-                    (es.eigenvalues()(2,0).real()/sum_lambda), //z
-                    (es.eigenvalues()(3,0).real()/sum_lambda), //yaw (probably?)
-                    (es.eigenvalues()(4,0).real()/sum_lambda), //pitch (probably?)
-                    (es.eigenvalues()(5,0).real()/sum_lambda); //roll (probably?)
-  //cout << "[Filtering Utils] Prediction Eigenvectors:" << endl << es.eigenvectors() << endl;
+  system_lambdas << (es.eigenvalues()(0,0).real()/sum_lambda), //roll
+                    (es.eigenvalues()(1,0).real()/sum_lambda), //pitch
+                    (es.eigenvalues()(2,0).real()/sum_lambda), //yaw
+                    (es.eigenvalues()(3,0).real()/sum_lambda), //x
+                    (es.eigenvalues()(4,0).real()/sum_lambda), //y
+                    (es.eigenvalues()(5,0).real()/sum_lambda); //z
+  cout << "[Filtering Utils] Prediction Eigenvectors:" << endl << es.eigenvectors().real().transpose() << endl;
   //cout << "[Filtering Utils] Prediction Eigenvalues:" << endl << es.eigenvalues() << endl;
   cout << "[Filtering Utils] Normalized Prediction Eigenvalues:" << endl << system_lambdas << endl;
 
@@ -388,21 +291,20 @@ float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
 
   // Degeneracy
   // used in "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
-  system_lambdas.head(3).minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
-  prediction = system_lambdas[pos_min]*100.0;
+  system_lambdas.tail<3>().minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
+  prediction = system_lambdas.tail<3>()[pos_min]*100.0;
   cout << "[Filtering Utils] Degeneracy (degenerate if ~ 0): " << prediction << endl;
 
   // Condition Number
   // used in "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
-  system_lambdas.head(3).minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
-  system_lambdas.head(3).maxCoeff(&pos_max); // maximum eigenvalue between x, y, z only
-  prediction = system_lambdas[pos_max]/system_lambdas[pos_min];
+  system_lambdas.tail<3>().maxCoeff(&pos_max); // maximum eigenvalue between x, y, z only
+  prediction = system_lambdas.tail<3>()[pos_max]/system_lambdas.tail<3>()[pos_min];
   cout << "[Filtering Utils] Condition Number (degenerate if big, want 1): " << prediction << endl;
 
   // Inverse Condition Number
   // compared against in
   // "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
-  prediction = system_lambdas[pos_min]/system_lambdas[pos_max];
+  prediction = system_lambdas.tail<3>()[pos_min]/system_lambdas.tail<3>()[pos_max];
   cout << "[Filtering Utils] Inverse Condition Number (degenerate if ~ 0, want 1): " << prediction << endl;
 
   return prediction;

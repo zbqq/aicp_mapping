@@ -26,7 +26,6 @@ string readLineFromFile(string& filename, int line_number)
 
 /* Get a transformation Eigen::Matrix4f
 given a string containing index, translation, quaternions: id x y z w x y z */
-
 Eigen::Matrix4f parseTransformationQuaternions(string transform)
 {
   Eigen::Matrix4f parsedTrans = Eigen::Matrix4f::Identity(4,4);
@@ -62,7 +61,6 @@ Eigen::Matrix4f parseTransformationQuaternions(string transform)
 /* Get a transformation matrix (of the type defined in the libpointmatcher library)
 given a string containing info about a translation on the plane x-y and a rotation
 about the vertical axis z, i.e. [x,y,theta] (meters,meters,radians). */
-
 PM::TransformationParameters parseTransformation(string& transform, const int cloudDimension)
 {
   PM::TransformationParameters parsedTrans;
@@ -109,7 +107,6 @@ PM::TransformationParameters parseTransformation(string& transform, const int cl
 /* Get a transformation matrix (of the type defined in the libpointmatcher library)
 given a string containing info about a translation on the plane x-y and a rotation
 about the vertical axis z, i.e. [x,y,theta] (meters,meters,degrees). */
-
 PM::TransformationParameters parseTransformationDeg(string& transform, const int cloudDimension)
 {
   PM::TransformationParameters parsedTrans;
@@ -145,6 +142,48 @@ PM::TransformationParameters parseTransformationDeg(string& transform, const int
     else
     {
       parsedTrans(i,cloudDimension) = transValues[i];
+    }
+  }
+
+  //cout << "Parsed initial transformation:" << endl << parsedTrans << endl;
+
+  return parsedTrans;
+}
+
+/* Get a transformation matrix (Eigen)
+given a string containing info about a translation on the plane x-y and a rotation
+about the vertical axis z, i.e. [x,y,theta] (meters,meters,degrees). */
+Eigen::Matrix4f parseTransformationDeg(string& transform)
+{
+  Eigen::Matrix4f parsedTrans = Eigen::Matrix4f::Identity(4,4);
+
+  transform.erase(std::remove(transform.begin(), transform.end(), '['),
+            transform.end());
+  transform.erase(std::remove(transform.begin(), transform.end(), ']'),
+            transform.end());
+  std::replace( transform.begin(), transform.end(), ',', ' ');
+  std::replace( transform.begin(), transform.end(), ';', ' ');
+
+  float transValues[3] = {0};
+  stringstream transStringStream(transform);
+  for( int i = 0; i < 3; i++) {
+    if(!(transStringStream >> transValues[i])) {
+      cerr << "[File IO] No transformation to be parsed." << endl;
+      return parsedTrans;
+    }
+  }
+
+  for( int i = 0; i < 3; i++) {
+    if (i == 2)
+    {
+      parsedTrans(i-2,i-2) = cos ( transValues[i] * M_PI / 180.0 );
+      parsedTrans(i-2,i-1) = - sin ( transValues[i] * M_PI / 180.0 );
+      parsedTrans(i-1,i-2) = sin ( transValues[i] * M_PI / 180.0 );
+      parsedTrans(i-1,i-1) = cos ( transValues[i] * M_PI / 180.0 );
+    }
+    else
+    {
+      parsedTrans(i,3) = transValues[i];
     }
   }
 
@@ -264,21 +303,5 @@ void replaceRatioConfigFile(string in_file, string out_file, float ratio)
   }
   in.close();
   out.close();
-}
-
-Eigen::VectorXf getRandomGaussianVariable(float mean, float std_deviation, int size)
-{
-  std::random_device rd;
-
-  std::mt19937 e2(rd());
-
-  std::normal_distribution<float> dist(mean, std_deviation);
-
-  Eigen::VectorXf rand_variables(size);
-  for (int n = 0; n < rand_variables.size(); n++) {
-    rand_variables(n) = dist(e2);
-  }
-
-  return rand_variables;
 }
 

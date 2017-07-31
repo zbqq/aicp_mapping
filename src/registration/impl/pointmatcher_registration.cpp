@@ -59,22 +59,24 @@ namespace aicp{
   }
 
   //Load initialization
-  void PointmatcherRegistration::applyInitialization()
+  PM::TransformationParameters PointmatcherRegistration::applyInitialization()
   {
-    init_transform_ = parseTransformationDeg(params_.pointmatcher.initialTransform, 3);
+    PM::TransformationParameters init_transform = parseTransformationDeg(params_.pointmatcher.initialTransform, 3);
 
     PM::Transformation* rigid_transform = PM::get().REG(Transformation).create("RigidTransformation");
 
-    if (!rigid_transform->checkParameters(init_transform_)) {
+    if (!rigid_transform->checkParameters(init_transform)) {
       cerr << endl
         << "[Pointmatcher] Initial transformation is not rigid, identity will be used." << endl;
-      init_transform_ = PM::TransformationParameters::Identity(4, 4);
+      init_transform = PM::TransformationParameters::Identity(4, 4);
     }
     else
       cout << "[Pointmatcher] Initialization: " << params_.pointmatcher.initialTransform << endl;
 
     // Manually transform reading to init position for visualization
-    initialized_reading_ = rigid_transform->compute(reading_cloud_, init_transform_);
+    initialized_reading_ = rigid_transform->compute(reading_cloud_, init_transform);
+
+    return init_transform;
   }
 
   //Registration: Compute transform which aligns reading cloud onto the reference cloud.
@@ -88,16 +90,21 @@ namespace aicp{
       exit(1);
     }
 
-    //Params
+    // Params
     applyConfig();
-    applyInitialization();
 
     // Compute the transformation
-    PM::TransformationParameters T = icp_(reading_cloud_, reference_cloud_, init_transform_);
+    PM::TransformationParameters T;
+    PM::TransformationParameters init_transform = PM::TransformationParameters::Identity(4, 4);
+    if (!params_.pointmatcher.initialTransform.empty())
+      init_transform = applyInitialization();
+
+    T = icp_(reading_cloud_, reference_cloud_, init_transform);
+
     //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
     cout << "[Pointmatcher] Accepted matches (inliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
-    // DEBUG pointmatcher added functions:
+    // Get System Covariance:
     Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
     //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
     float failure_prediction_factor = registrationFailurePredictionFilter(system_covariance);

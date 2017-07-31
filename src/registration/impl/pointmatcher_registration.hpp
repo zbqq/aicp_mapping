@@ -33,13 +33,19 @@ class PointmatcherRegistration : public AbstractRegistrator {
     virtual void registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform);
 
     void applyConfig();
-    void applyInitialization();
+    PM::TransformationParameters applyInitialization();
 
     //PM::ICP getIcp(){ return icp_; }
 
     void getInitializedReading(pcl::PointCloud<pcl::PointXYZ>& initialized_reading)
     {
-      fromDataPointsToPCL(initialized_reading_, initialized_reading);
+      if (initialized_reading_.getNbPoints() > 0)
+        fromDataPointsToPCL(initialized_reading_, initialized_reading);
+      else
+      {
+        std::cout << "[Pointmatcher] Reading cloud not initialized here." << std::endl;
+        fromDataPointsToPCL(reading_cloud_, initialized_reading);
+      }
     }
 
     void getOutputReading(pcl::PointCloud<pcl::PointXYZ>& out_read_cloud){
@@ -61,7 +67,6 @@ class PointmatcherRegistration : public AbstractRegistrator {
     DP reading_cloud_;
     DP initialized_reading_;
     DP out_read_cloud_;
-    PM::TransformationParameters init_transform_;
 };
 
 }
