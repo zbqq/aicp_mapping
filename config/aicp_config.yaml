@@ -1,15 +1,21 @@
 AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
+    sensorRange: 30.0,         # in meters
+    sensorAngularView: 270.0,  # in degrees
     loadPosesFromFile: "pose_scanner_leica_affine.txt", # Ground truth poses
-    saveCorrectedPose: true, # Valid if loadPosesFromFile, otherwise saves init + transform
+    initialTransform: "random", # x[m], y[m], yaw[deg]
+                                     # - if "random" initialTransform will be
+                                     # sampled from Gaussian distributed perturbations
+                                     # with 0.1 m and 10 deg variance magnitude
+                                     # - if "" no initial tranform will be applied
+    saveCorrectedPose: true, # valid if loadPosesFromFile
     saveInitializedReadingCloud: true,
     saveRegisteredReadingCloud: true,
     enableLcmVisualization: true,
 
     Pointmatcher: {
       configFileName: "icp_autotuned_default.yaml", # points
-      initialTransform: "0.1,0.1,0.1", # x[m], y[m], yaw[deg]
       printOutputStatistics: false,
     }
   }

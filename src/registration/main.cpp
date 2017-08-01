@@ -246,29 +246,61 @@ int main(int argc, char **argv)
 
   pcl::PointCloud<pcl::PointXYZ> overlap_points_A;
   pcl::PointCloud<pcl::PointXYZ> overlap_points_B;
-//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudA_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudB_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-//  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudA_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudB_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
 
-//  Eigen::Matrix3f pca_vector;
-
+  // ------------------
+  // FOV-based Overlap
+  // ------------------
   Eigen::Isometry3d ground_truth_reference_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reference_pose);
   Eigen::Isometry3d estimated_reading_pose_iso = fromMatrix4fToIsometry3d(estimated_reading_pose);
-  float overlap = overlapFilter(point_cloud_A, *initialized_reading_cloud_ptr,
-                                 ground_truth_reference_pose_iso, estimated_reading_pose_iso,
-                                 params.sensorRange , params.sensorAngularView,
-                                 overlap_points_A, overlap_points_B);
-  cout << "============================" << endl
-       << "Overlap: " << overlap << " %" << endl
-       << "============================" << endl;
+  float fov_overlap = overlapFilter(point_cloud_A, *initialized_reading_cloud_ptr,
+                                    ground_truth_reference_pose_iso, estimated_reading_pose_iso,
+                                    params.sensorRange , params.sensorAngularView,
+                                    overlap_points_A, overlap_points_B);
+  cout << "==============================" << endl
+       << "FOV-based Overlap: " << fov_overlap << " %" << endl
+       << "==============================" << endl;
 
-  pcl::PCDWriter writer_debug;
-  stringstream ss_ovA;
-  ss_ovA << "overlap_points_A.pcd";
-  writer_debug.write<pcl::PointXYZ> (ss_ovA.str (), overlap_points_A, false);
-  stringstream ss_ovB;
-  ss_ovB << "overlap_points_B.pcd";
-  writer_debug.write<pcl::PointXYZ> (ss_ovB.str (), overlap_points_B, false);
+  // ------------------------------------
+  // Pre-filtering: 1) down-sampling
+  //                2) planes extraction
+  // ------------------------------------
+  pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_A_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+  regionGrowingUniformPlaneSegmentationFilter(point_cloud_A_ptr, point_cloud_A_prefiltered);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_B_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+  regionGrowingUniformPlaneSegmentationFilter(initialized_reading_cloud_ptr, point_cloud_B_prefiltered);
+
+  // ---------------------
+  // Octree-based Overlap
+  // ---------------------
+
+  // -------------
+  // Alignability
+  // -------------
+  // Alignability computed on points belonging to the region of overlap (overlap_points_A, overlap_points_B)
+  float alignability = alignabilityFilter(overlap_points_A, overlap_points_B,
+                                          ground_truth_reference_pose_iso, estimated_reading_pose_iso,
+                                          cloudA_matched_planes, cloudB_matched_planes, eigenvectors);
+  cout << "[Main] Alignability (degenerate if ~ 0): " << alignability << endl;
+
+  /*===================================
+  =              AICP Core            =
+  ===================================*/
+  string configNameAICP;
+  configNameAICP.append(FILTERS_CONFIG_LOC);
+  configNameAICP.append("/icp_autotuned.yaml");
+
+  // Auto-tune ICP chain (quantile for the outlier filter)
+  float current_ratio = fov_overlap/100.0;
+  if (current_ratio < 0.25)
+    current_ratio = 0.25;
+  else if (current_ratio > 0.70)
+    current_ratio = 0.70;
+
+  replaceRatioConfigFile(params.pointmatcher.configFileName, configNameAICP, current_ratio);
+//  params.pointmatcher.configFileName = configNameAICP;
 
   /*===================================
   =          Register Clouds          =
@@ -277,6 +309,7 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
+//  registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
   registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
 
   cout << "============================" << endl
@@ -319,16 +352,15 @@ int main(int argc, char **argv)
   }
 
   if (params.enableLcmVisualization) {
-    /*===================================
-    =          Visualize Poses          =
-    ===================================*/
-
     boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
     if(!lcm->good()) {
       std::cerr << "[Main] LCM is not good for visualization." << std::endl;
     }
     Eigen::Isometry3d global_reference_frame = Eigen::Isometry3d::Identity();
 
+    /*===================================
+    =          Visualize Poses          =
+    ===================================*/
     pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_estimated_pose;
     pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_corrected_pose;
     pcl::PointCloud<pcl::PointXYZRGBNormal> cloud_ground_truth_pose;
@@ -357,7 +389,7 @@ int main(int argc, char **argv)
       else if (i == 2)
         cloud_estimated_pose.points[i].b = 0.0;
     }
-    drawPointCloudNormalsCollections(lcm, 5, global_reference_frame, cloud_estimated_pose, 0, "Estimated Pose B");
+    drawPointCloudNormalsCollections(lcm, 1, global_reference_frame, cloud_estimated_pose, 0, "Estimated Pose B");
 
     // Fill in the corrected pose
     cloud_corrected_pose.width    = 4;
@@ -383,7 +415,7 @@ int main(int argc, char **argv)
       else if (i == 2)
         cloud_corrected_pose.points[i].b = 150.0;
     }
-    drawPointCloudNormalsCollections(lcm, 1, global_reference_frame, cloud_corrected_pose, 0, "Corrected Pose B");
+    drawPointCloudNormalsCollections(lcm, 3, global_reference_frame, cloud_corrected_pose, 0, "Corrected Pose B");
 
     // Fill in the ground truth pose
     cloud_ground_truth_pose.width    = 4;
@@ -409,7 +441,15 @@ int main(int argc, char **argv)
       else if (i == 2)
         cloud_ground_truth_pose.points[i].b = 255.0;
     }
-    drawPointCloudNormalsCollections(lcm, 3, global_reference_frame, cloud_ground_truth_pose, 0, "Ground Truth Pose B");
+    drawPointCloudNormalsCollections(lcm, 5, global_reference_frame, cloud_ground_truth_pose, 0, "Ground Truth Pose B");
+
+    /*===================================
+    =      Visualize Alignability       =
+    ===================================*/
+    drawPointCloudNormalsCollections(lcm, 9, global_reference_frame, *cloudA_matched_planes, 0, "Matches A");
+    drawPointCloudNormalsCollections(lcm, 11, global_reference_frame, *cloudB_matched_planes, 0, "Matches B");
+    eigenvectors->points.resize(4);
+    drawPointCloudNormalsCollections(lcm, 13, global_reference_frame, *eigenvectors, 0, "Alignability Eigenvectors");
   }
 
   return 0;

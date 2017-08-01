@@ -35,7 +35,7 @@ class PointmatcherRegistration : public AbstractRegistrator {
     void applyConfig();
     PM::TransformationParameters applyInitialization();
 
-    //PM::ICP getIcp(){ return icp_; }
+//    PM::ICP getIcp(){ return icp_; }
 
     void getInitializedReading(pcl::PointCloud<pcl::PointXYZ>& initialized_reading)
     {
