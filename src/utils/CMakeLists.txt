@@ -42,7 +42,7 @@ pods_install_pkg_config_file(pointmatcherUtils
 ###############
 add_library(drawingUtils SHARED drawingUtils.cpp)
 set_target_properties(drawingUtils PROPERTIES SOVERSION 1)
-target_link_libraries(pointmatcherUtils ${VTK_LIBRARIES})
+target_link_libraries(drawingUtils ${VTK_LIBRARIES})
 pods_install_libraries(drawingUtils)
 pods_install_headers(drawingUtils.hpp DESTINATION drawingUtils)
 pods_use_pkg_config_packages(drawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
@@ -54,7 +54,7 @@ pods_install_pkg_config_file(drawingUtils
 ##############
 add_library(filteringUtils SHARED filteringUtils.cpp)
 set_target_properties(filteringUtils PROPERTIES SOVERSION 1)
-target_link_libraries(pointmatcherUtils ${VTK_LIBRARIES})
+target_link_libraries(filteringUtils ${VTK_LIBRARIES} pcl_aicp)
 pods_install_libraries(filteringUtils)
 pods_install_headers(filteringUtils.hpp DESTINATION filteringUtils)
 pods_use_pkg_config_packages(filteringUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
@@ -66,7 +66,7 @@ pods_install_pkg_config_file(filteringUtils
 ###############
 add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
 set_target_properties(commonUtils PROPERTIES SOVERSION 1)
-target_link_libraries(pointmatcherUtils ${VTK_LIBRARIES})
+target_link_libraries(commonUtils ${VTK_LIBRARIES})
 pods_install_libraries(commonUtils)
 pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION commonUtils)
 pods_use_pkg_config_packages(commonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})

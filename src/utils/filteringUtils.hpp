@@ -15,6 +15,7 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/crop_box.h>
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/features/normal_3d.h>
@@ -22,6 +23,10 @@
 #include <pcl/common/transforms.h>
 #include <pcl/common/pca.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/visualization/cloud_viewer.h>
+
+//from PCL 1.7.2
+#include <pcl_aicp/moment_of_inertia_estimation.hpp>
 
 void regionGrowingUniformPlaneSegmentationFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in,
                                                  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out);

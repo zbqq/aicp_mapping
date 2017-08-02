@@ -10,6 +10,7 @@ add_definitions(-DPROJECTDIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
 # create an executable, and make it public
 add_subdirectory(src/registration)
 add_subdirectory(src/utils)
+add_subdirectory(src/pcl)
 #add_subdirectory(src/sequential_registration)
 #add_subdirectory(src/analysis)
 #add_subdirectory(src/test)

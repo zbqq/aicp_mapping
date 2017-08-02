@@ -300,7 +300,7 @@ int main(int argc, char **argv)
     current_ratio = 0.70;
 
   replaceRatioConfigFile(params.pointmatcher.configFileName, configNameAICP, current_ratio);
-//  params.pointmatcher.configFileName = configNameAICP;
+  //params.pointmatcher.configFileName = configNameAICP;
 
   /*===================================
   =          Register Clouds          =
@@ -309,7 +309,7 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
-//  registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
+  //registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
   registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
 
   cout << "============================" << endl
