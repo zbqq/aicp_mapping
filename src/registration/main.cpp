@@ -210,6 +210,8 @@ int main(int argc, char **argv)
           << "============================" << endl
           << ground_truth_reading_pose << endl;
   }
+  else
+    cout << "[Main] Input poses cannot be loaded. Identity will be used." << endl;
 
   /*===================================
   =      Initialize Reading Pose       =
@@ -283,7 +285,7 @@ int main(int argc, char **argv)
   float alignability = alignabilityFilter(overlap_points_A, overlap_points_B,
                                           ground_truth_reference_pose_iso, estimated_reading_pose_iso,
                                           cloudA_matched_planes, cloudB_matched_planes, eigenvectors);
-  cout << "[Main] Alignability (degenerate if ~ 0): " << alignability << endl;
+  cout << "[Main] Alignability (degenerate if ~ 0): " << alignability << " %" << endl;
 
   /*===================================
   =              AICP Core            =
@@ -299,8 +301,8 @@ int main(int argc, char **argv)
   else if (current_ratio > 0.70)
     current_ratio = 0.70;
 
-  replaceRatioConfigFile(params.pointmatcher.configFileName, configNameAICP, current_ratio);
-  //params.pointmatcher.configFileName = configNameAICP;
+  replaceRatioConfigFile(params.pointmatcher.configFileName, configNameAICP, 0.40);
+  params.pointmatcher.configFileName = configNameAICP;
 
   /*===================================
   =          Register Clouds          =
@@ -309,8 +311,8 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
-  //registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
-  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
+  registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
+  //registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl

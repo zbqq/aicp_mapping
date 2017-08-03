@@ -215,9 +215,9 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
   std::vector <pcl::PointIndices> clustersB;
   regionGrowingUniformPlaneSegmentationFilter(cloudB_ptr, cloudB_sampled, poseB, clustersB);
 
-  pcl::PCDWriter writer;
-  writer.write<pcl::PointXYZRGBNormal> ("cloudA_sampled.pcd", *cloudA_sampled, false);
-  writer.write<pcl::PointXYZRGBNormal> ("cloudB_sampled.pcd", *cloudB_sampled, false);
+//  pcl::PCDWriter writer;
+//  writer.write<pcl::PointXYZRGBNormal> ("cloudA_sampled.pcd", *cloudA_sampled, false);
+//  writer.write<pcl::PointXYZRGBNormal> ("cloudB_sampled.pcd", *cloudB_sampled, false);
 
   // 2. Planes matching: keep matching planes between clouds.
   // Vector with matching indeces and corresponding overlap value
@@ -254,7 +254,7 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
 
       // Planes Overlap Filter
       float current_overlap = overlapBoxFilter(cloudA_cluster, cloudB_cluster);
-      if (current_overlap > max_overlap)
+      if (current_overlap > max_overlap && (dist < 20 || dist > 160)) // Threshold for maximum angular distance between centroids (deg)
       {
         matching_cluster_idx = j;
         max_overlap = current_overlap;
@@ -262,8 +262,9 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
       }
     }
 
-    if (max_overlap > 40 && current_distance < 30) // Threshold for minimum matching overlap
-                                                   // and maximum angular distance between centroid normals (deg)
+    if (max_overlap > 0) // Threshold for minimum overlap set to zero
+                         // to account for cases where 2 clusters of SAME plane
+                         // have very different sizes between different observations (e.g. due to occlusions)
     {
       if (matching_indeces.at(matching_cluster_idx) == -1)
       {
@@ -343,15 +344,15 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
     return 0;
 
   // Debug
-  std::cout << "matching_indeces:";
-  for (unsigned i=0; i<matching_indeces.size(); i++)
-    std::cout << '\t' << matching_indeces[i];
-  std::cout << '\n';
-  std::cout << "matching_overlap:";
+//  std::cout << "matching_indeces:" << '\n';
+//  for (unsigned i=0; i<matching_indeces.size(); i++)
+//    std::cout << '\t' << matching_indeces[i];
+//  std::cout << '\n';
+  std::cout << "matching_overlap:" << '\n';
   for (unsigned i=0; i<matching_overlap.size(); i++)
     std::cout << '\t' << matching_overlap[i];
   std::cout << '\n';
-  std::cout << "matching_distance:";
+  std::cout << "matching_distance:" << '\n';
   for (unsigned i=0; i<matching_distance.size(); i++)
     std::cout << '\t' << matching_distance[i];
   std::cout << '\n';
@@ -453,7 +454,7 @@ void getOrientedBoundingBox(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud,
 //  viewer->setBackgroundColor (0, 0, 0);
 //  viewer->addCoordinateSystem (1.0);
 //  viewer->initCameraParameters ();
-//  viewer->addPointCloud<pcl::PointXYZRGBNormal>(cloud_ptr, "sample cloud");
+//  viewer->addPointCloud<pcl::PointXYZRGBNormal>(cloud, "sample cloud");
 
 //  // Enlarge box boundaries (before orienting it) mainly along direction perpendicular to plane
 //  float x_edge = (max_point_OBB.x - min_point_OBB.x)*2.0;
@@ -484,12 +485,12 @@ float getPointsInOrientedBox(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud,
   min_point_vector << min_point_OBB.x, min_point_OBB.y, min_point_OBB.z, 1.0;
   max_point_vector << max_point_OBB.x, max_point_OBB.y, max_point_OBB.z, 1.0;
   position_vector << position_OBB.x, position_OBB.y, position_OBB.z;
-  rotational_vector = rotational_matrix_OBB.eulerAngles(0, 1, 2); //(rx,ry,rz)
+  rotational_vector = rotational_matrix_OBB.eulerAngles(0, 1, 2); //(rx,ry,rz) in radians
 
   box_filter.setMin(min_point_vector);
   box_filter.setMax(max_point_vector);
-  box_filter.setTranslation(position_vector);
   box_filter.setRotation(rotational_vector);
+  box_filter.setTranslation(position_vector);
   std::vector<int> ind_points_in_box;
   box_filter.filter(ind_points_in_box);
 
@@ -504,27 +505,6 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr planeA_ptr, planeB_ptr;
   planeA_ptr = planeA.makeShared();
   planeB_ptr = planeB.makeShared();
-
-  // Build bounding box around plane B
-  pcl::PointXYZRGBNormal min_point_B;
-  pcl::PointXYZRGBNormal max_point_B;
-  pcl::PointXYZRGBNormal position_B;
-  Eigen::Matrix3f rotational_matrix_B;
-  getOrientedBoundingBox(planeB_ptr, min_point_B, max_point_B, position_B, rotational_matrix_B);
-
-  // Enlarge boundaries along each direction
-  max_point_B.x = 2.0 * max_point_B.x; // enlarged 2 times
-  min_point_B.x = 2.0 * min_point_B.x;
-
-  max_point_B.y = 2.0 * max_point_B.y; // enlarged 2 times
-  min_point_B.y = 2.0 * min_point_B.y;
-
-  max_point_B.z = 20.0 * max_point_B.z; // direction perpendicular to plane
-  min_point_B.z = 20.0 * min_point_B.z; // enlarged 20 times
-
-  // Count points from A which belong to box
-  float nb_pointsA_in_boxB = getPointsInOrientedBox(planeA_ptr, min_point_B, max_point_B,
-                                                    position_B, rotational_matrix_B);
 
   // Build bounding box around plane A
   pcl::PointXYZRGBNormal min_point_A;
@@ -546,6 +526,27 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   // Count points from B which belong to box
   float nb_pointsB_in_boxA = getPointsInOrientedBox(planeB_ptr, min_point_A, max_point_A,
                                                     position_A, rotational_matrix_A);
+
+  // Build bounding box around plane B
+  pcl::PointXYZRGBNormal min_point_B;
+  pcl::PointXYZRGBNormal max_point_B;
+  pcl::PointXYZRGBNormal position_B;
+  Eigen::Matrix3f rotational_matrix_B;
+  getOrientedBoundingBox(planeB_ptr , min_point_B, max_point_B, position_B, rotational_matrix_B);
+
+  // Enlarge boundaries along each direction
+  max_point_B.x = 2.0 * max_point_B.x; // enlarged 2 times
+  min_point_B.x = 2.0 * min_point_B.x;
+
+  max_point_B.y = 2.0 * max_point_B.y; // enlarged 2 times
+  min_point_B.y = 2.0 * min_point_B.y;
+
+  max_point_B.z = 20.0 * max_point_B.z; // direction perpendicular to plane
+  min_point_B.z = 20.0 * min_point_B.z; // enlarged 20 times
+
+  // Count points from A which belong to box
+  float nb_pointsA_in_boxB = getPointsInOrientedBox(planeA_ptr , min_point_B, max_point_B,
+                                                    position_B, rotational_matrix_B);
 
   //Compute overlap parameter dependent on percentage of accepted points per cloud
   float perc_accepted_A, perc_accepted_B;
@@ -585,7 +586,7 @@ float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
   // used in "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
   system_lambdas.tail<3>().minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
   prediction = system_lambdas.tail<3>()[pos_min]*100.0;
-  cout << "[Filtering Utils] Degeneracy (degenerate if ~ 0): " << prediction << endl;
+  cout << "[Filtering Utils] Degeneracy (degenerate if ~ 0): " << prediction << " %" << endl;
 
   // Condition Number
   // used in "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
