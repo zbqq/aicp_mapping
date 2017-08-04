@@ -32,14 +32,15 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.621813
+      ratio: 0.41804
 
 errorMinimizer:
-  PointToPlaneErrorMinimizer
+  PointToPlaneWithCovErrorMinimizer:
+    failPredStrategy: 0
 
 transformationCheckers:
   - CounterTransformationChecker:
-      maxIterationCount: 3000
+      maxIterationCount: 50
   - DifferentialTransformationChecker:
       minDiffRotErr: 0.001
       minDiffTransErr: 0.01
