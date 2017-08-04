@@ -2,7 +2,7 @@ AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
     sensorRange: 30.0,         # in meters
-    sensorAngularView: 270.0,  # in degrees
+    sensorAngularView: 360.0,  # in degrees
     loadPosesFromFile: "pose_scanner_leica_affine.txt", # Ground truth poses
     initialTransform: "random", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be
@@ -15,8 +15,16 @@ AICP: {
     enableLcmVisualization: true,
 
     Pointmatcher: {
-      configFileName: "icp_autotuned_default.yaml", # points
+      configFileName: "icp_autotuned_default.yaml",
       printOutputStatistics: false,
+    }
+  },
+  Overlap: {
+    type: "OctreeBased",
+    loadPosesFromFile: "pose_scanner_leica_affine.txt", # Ground truth poses
+
+    OctreeBased: {
+      octomapResolution: 0.2,
     }
   }
 }

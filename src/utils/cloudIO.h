@@ -27,4 +27,9 @@ void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGB> &cloud
 void fromDataPointsToPCL(DP &cloud_in, pcl::PointCloud<pcl::PointXYZRGBNormal> &cloud_out);
 void fromPCLToDataPoints(DP &cloud_out, pcl::PointCloud<pcl::PointXYZRGBNormal> &cloud_in);
 
+PM::TransformationParameters parseTransformationDeg(std::string& transform,
+                        const int cloudDimension);
+PM::TransformationParameters parseTransformation(std::string& transform,
+                        const int cloudDimension);
+
 #endif

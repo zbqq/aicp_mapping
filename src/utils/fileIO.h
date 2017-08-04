@@ -5,11 +5,13 @@
 #include <iostream>
 
 //libpointmatcher
-#include "pointmatcher/PointMatcher.h"
+//#include "pointmatcher/PointMatcher.h"
 
-typedef PointMatcher<float> PM;
-typedef PM::DataPoints DP;
-typedef PM::Parameters Parameters;
+//typedef PointMatcher<float> PM;
+//typedef PM::DataPoints DP;
+//typedef PM::Parameters Parameters;
+
+#include <Eigen/Dense>
 
 using namespace std;
 
@@ -19,10 +21,6 @@ string readLineFromFile(string& filename, int line_number);
 
 Eigen::Matrix4f parseTransformationQuaternions(string transform);
 Eigen::Matrix4f parseTransformationDeg(string& transform);
-PM::TransformationParameters parseTransformationDeg(string& transform,
-                        const int cloudDimension);
-PM::TransformationParameters parseTransformation(string& transform,
-                        const int cloudDimension);
 
 void write3DTransformToFile(Eigen::Matrix4f &transform, string out_file, int id_cloud_A, int id_cloud_B);
 void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int num_clouds);

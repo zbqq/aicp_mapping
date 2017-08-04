@@ -42,7 +42,7 @@ pods_install_pkg_config_file(pointmatcherUtils
 ###############
 add_library(drawingUtils SHARED drawingUtils.cpp)
 set_target_properties(drawingUtils PROPERTIES SOVERSION 1)
-target_link_libraries(drawingUtils ${VTK_LIBRARIES})
+target_link_libraries(drawingUtils ${VTK_LIBRARIES} octomap lcmtypes_octomap-utils bot2-core)
 pods_install_libraries(drawingUtils)
 pods_install_headers(drawingUtils.hpp DESTINATION drawingUtils)
 pods_use_pkg_config_packages(drawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
@@ -66,7 +66,7 @@ pods_install_pkg_config_file(filteringUtils
 ###############
 add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
 set_target_properties(commonUtils PROPERTIES SOVERSION 1)
-target_link_libraries(commonUtils ${VTK_LIBRARIES})
+target_link_libraries(commonUtils ${VTK_LIBRARIES} ${pointmatcher_LIBRARIES})
 pods_install_libraries(commonUtils)
 pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION commonUtils)
 pods_use_pkg_config_packages(commonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})

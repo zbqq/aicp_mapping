@@ -13,6 +13,9 @@
 #include "aicpRegistration/registration.hpp"
 #include "aicpRegistration/common.hpp"
 
+#include "aicpOverlap/overlap.hpp"
+#include "aicpOverlap/common.hpp"
+
 #include "commonUtils/cloudIO.h"
 #include "commonUtils/common.hpp"
 #include "drawingUtils/drawingUtils.hpp"
@@ -33,6 +36,7 @@
 // lcm
 #include <lcm/lcm-cpp.hpp>
 #include <boost/shared_ptr.hpp>
+#include <lcmtypes/octomap_utils.h>
 
 using namespace std;
 using namespace aicp;
@@ -93,7 +97,8 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
   }
 
-  RegistrationParams params;
+  RegistrationParams registration_params;
+  OverlapParams overlap_params;
   /*===================================
   =            YAML Config            =
   ===================================*/
@@ -108,34 +113,34 @@ int main(int argc, char **argv)
     const string key = it->first.as<string>();
 
     if(key.compare("type") == 0) {
-      params.type = it->second.as<string>();
+      registration_params.type = it->second.as<string>();
     }
     else if(key.compare("sensorRange") == 0) {
-      params.sensorRange =  it->second.as<float>();
+      registration_params.sensorRange =  it->second.as<float>();
     }
     else if(key.compare("sensorAngularView") == 0) {
-      params.sensorAngularView =  it->second.as<float>();
+      registration_params.sensorAngularView =  it->second.as<float>();
     }
     else if(key.compare("loadPosesFromFile") == 0) {
-      params.loadPosesFromFile = it->second.as<string>();
+      registration_params.loadPosesFromFile = it->second.as<string>();
     }
     else if(key.compare("initialTransform") == 0) {
-      params.initialTransform = it->second.as<string>();
+      registration_params.initialTransform = it->second.as<string>();
     }
     else if(key.compare("saveCorrectedPose") == 0) {
-      params.saveCorrectedPose =  it->second.as<bool>();
+      registration_params.saveCorrectedPose =  it->second.as<bool>();
     }
     else if(key.compare("saveInitializedReadingCloud") == 0) {
-      params.saveInitializedReadingCloud =  it->second.as<bool>();
+      registration_params.saveInitializedReadingCloud =  it->second.as<bool>();
     }
     else if(key.compare("saveRegisteredReadingCloud") == 0) {
-      params.saveRegisteredReadingCloud =  it->second.as<bool>();
+      registration_params.saveRegisteredReadingCloud =  it->second.as<bool>();
     }
     else if(key.compare("enableLcmVisualization") == 0) {
-      params.enableLcmVisualization =  it->second.as<bool>();
+      registration_params.enableLcmVisualization =  it->second.as<bool>();
     }
   }
-  if(params.type.compare("Pointmatcher") == 0) {
+  if(registration_params.type.compare("Pointmatcher") == 0) {
 
     YAML::Node pointmatcherNode = registrationNode["Pointmatcher"];
 
@@ -143,16 +148,16 @@ int main(int argc, char **argv)
       const string key = it->first.as<string>();
 
       if(key.compare("configFileName") == 0) {
-        params.pointmatcher.configFileName.append(FILTERS_CONFIG_LOC);
-        params.pointmatcher.configFileName.append(PATH_SEPARATOR);
-        params.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
+        registration_params.pointmatcher.configFileName.append(FILTERS_CONFIG_LOC);
+        registration_params.pointmatcher.configFileName.append(PATH_SEPARATOR);
+        registration_params.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
       }
       else if(key.compare("printOutputStatistics") == 0) {
-        params.pointmatcher.printOutputStatistics =  it->second.as<bool>();
+        registration_params.pointmatcher.printOutputStatistics =  it->second.as<bool>();
       }
     }
   }
-  else if(params.type.compare("GICP") == 0) {
+  else if(registration_params.type.compare("GICP") == 0) {
 
     YAML::Node gicpNode = registrationNode["GICP"];
 
@@ -161,26 +166,53 @@ int main(int argc, char **argv)
       const float val = it->second.as<float>();
     }
   }
+  YAML::Node overlapNode = yn_["AICP"]["Overlap"];
+  for(YAML::const_iterator it=overlapNode.begin();it != overlapNode.end();++it) {
+
+    const string key = it->first.as<string>();
+
+    if(key.compare("type") == 0) {
+      overlap_params.type = it->second.as<string>();
+    }
+  }
+  if(overlap_params.type.compare("OctreeBased") == 0) {
+
+    YAML::Node octreeBasedNode = overlapNode["OctreeBased"];
+
+    for(YAML::const_iterator it=octreeBasedNode.begin();it != octreeBasedNode.end();++it) {
+      const string key = it->first.as<string>();
+
+      if(key.compare("octomapResolution") == 0) {
+        overlap_params.octree_based.octomapResolution = it->second.as<float>();
+      }
+    }
+  }
 
   cout << "============================" << endl
        << "Parsed YAML Config" << endl
        << "============================" << endl;
 
-  cout << "[Main] Registration Type: "                 << params.type                          << endl;
-  cout << "[Main] Sensor Range: "                      << params.sensorRange                   << endl;
-  cout << "[Main] Sensor Angular View: "               << params.sensorAngularView             << endl;
-  cout << "[Main] Load Poses from File: "              << params.loadPosesFromFile             << endl;
-  cout << "[Main] Initial Transform: "                 << params.initialTransform              << endl;
-  cout << "[Main] Save Corrected Pose: "               << params.saveCorrectedPose             << endl;
-  cout << "[Main] Save Initialized Reading Cloud: "    << params.saveInitializedReadingCloud   << endl;
-  cout << "[Main] Save Registered Reading Cloud: "     << params.saveRegisteredReadingCloud    << endl;
-  cout << "[Main] Enable Lcm Visualization: "          << params.enableLcmVisualization        << endl;
+  cout << "[Main] Registration Type: "                 << registration_params.type                          << endl;
+  cout << "[Main] Sensor Range: "                      << registration_params.sensorRange                   << endl;
+  cout << "[Main] Sensor Angular View: "               << registration_params.sensorAngularView             << endl;
+  cout << "[Main] Load Poses from File: "              << registration_params.loadPosesFromFile             << endl;
+  cout << "[Main] Initial Transform: "                 << registration_params.initialTransform              << endl;
+  cout << "[Main] Save Corrected Pose: "               << registration_params.saveCorrectedPose             << endl;
+  cout << "[Main] Save Initialized Reading Cloud: "    << registration_params.saveInitializedReadingCloud   << endl;
+  cout << "[Main] Save Registered Reading Cloud: "     << registration_params.saveRegisteredReadingCloud    << endl;
+  cout << "[Main] Enable Lcm Visualization: "          << registration_params.enableLcmVisualization        << endl;
 
-  if(params.type.compare("Pointmatcher") == 0) {
-    cout << "[Pointmatcher] Config File Name: "                << params.pointmatcher.configFileName        << endl;
-    cout << "[Pointmatcher] Print Registration Statistics: "   << params.pointmatcher.printOutputStatistics << endl;
+  if(registration_params.type.compare("Pointmatcher") == 0) {
+    cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;
+    cout << "[Pointmatcher] Print Registration Statistics: "   << registration_params.pointmatcher.printOutputStatistics << endl;
   }
-  else if(params.type.compare("GICP") == 0) {
+  else if(registration_params.type.compare("GICP") == 0) {
+  }
+
+  cout << "[Main] Overlap Type: "                   << overlap_params.type                             << endl;
+
+  if(overlap_params.type.compare("OctreeBased") == 0) {
+    cout << "[OctreeBased] Octomap Resolution: "    << overlap_params.octree_based.octomapResolution   << endl;
   }
   cout << "============================" << endl;
 
@@ -192,18 +224,18 @@ int main(int argc, char **argv)
   Eigen::Matrix4f ground_truth_reading_pose = Eigen::Matrix4f::Identity(4,4);
   int point_cloud_A_number = -1;
   int point_cloud_B_number = -1;
-  if (!params.loadPosesFromFile.empty())
+  if (!registration_params.loadPosesFromFile.empty())
   {
      std::stringstream ssA(extract_ints(cl_cfg.pointCloudA));
      std::istringstream issA(ssA.str());
      issA >> point_cloud_A_number;
-     string lineA_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_A_number);
+     string lineA_from_file = readLineFromFile(registration_params.loadPosesFromFile, point_cloud_A_number);
      ground_truth_reference_pose = parseTransformationQuaternions(lineA_from_file);
 
      std::stringstream ssB(extract_ints(cl_cfg.pointCloudB));
      std::istringstream issB(ssB.str());
      issB >> point_cloud_B_number;
-     string lineB_from_file = readLineFromFile(params.loadPosesFromFile, point_cloud_B_number);
+     string lineB_from_file = readLineFromFile(registration_params.loadPosesFromFile, point_cloud_B_number);
      ground_truth_reading_pose = parseTransformationQuaternions(lineB_from_file);
      cout << "============================" << endl
           << "Ground Truth Reading Pose:" << endl
@@ -217,7 +249,7 @@ int main(int argc, char **argv)
   =      Initialize Reading Pose       =
   ===================================*/
 
-  if (params.initialTransform == "random")
+  if (registration_params.initialTransform == "random")
   {
     // random samples from Gaussian distribution with 0 mean and 10 cm variance
     Eigen::VectorXf vars = get_random_gaussian_variable(0, 0.10, 3);
@@ -228,11 +260,11 @@ int main(int argc, char **argv)
     perturbation << vars(1);      //y[m]
     perturbation << ',';
     perturbation << vars(2)*10.0; //yaw[deg]
-    params.initialTransform = perturbation.str();
+    registration_params.initialTransform = perturbation.str();
   }
 
-  cout << "[Main] Initialization: " << params.initialTransform << endl;
-  Eigen::Matrix4f perturbation = parseTransformationDeg(params.initialTransform);
+  cout << "[Main] Initialization: " << registration_params.initialTransform << endl;
+  Eigen::Matrix4f perturbation = parseTransformationDeg(registration_params.initialTransform);
   Eigen::Matrix4f estimated_reading_pose = perturbation * ground_truth_reading_pose;
 
   /*===================================
@@ -259,11 +291,11 @@ int main(int argc, char **argv)
   Eigen::Isometry3d estimated_reading_pose_iso = fromMatrix4fToIsometry3d(estimated_reading_pose);
   float fov_overlap = overlapFilter(point_cloud_A, *initialized_reading_cloud_ptr,
                                     ground_truth_reference_pose_iso, estimated_reading_pose_iso,
-                                    params.sensorRange , params.sensorAngularView,
+                                    registration_params.sensorRange , registration_params.sensorAngularView,
                                     overlap_points_A, overlap_points_B);
-  cout << "==============================" << endl
-       << "FOV-based Overlap: " << fov_overlap << " %" << endl
-       << "==============================" << endl;
+  cout << "====================================" << endl
+       << "[Main] FOV-based Overlap: " << fov_overlap << " %" << endl
+       << "====================================" << endl;
 
   // ------------------------------------
   // Pre-filtering: 1) down-sampling
@@ -277,6 +309,22 @@ int main(int argc, char **argv)
   // ---------------------
   // Octree-based Overlap
   // ---------------------
+  std::unique_ptr<AbstractOverlapper> overlapper_ = create_overlapper(overlap_params);
+
+  ColorOcTree* ref_tree;
+  ColorOcTree* read_tree = new ColorOcTree(overlap_params.octree_based.octomapResolution);
+
+  // Create octree from reference cloud (wrt robot point of view),
+  // add the reading cloud and compute overlap
+  Eigen::Isometry3d ground_truth_reading_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reading_pose);
+  ref_tree = overlapper_->computeOverlap(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered,
+                                         ground_truth_reference_pose_iso, ground_truth_reading_pose_iso,
+                                         read_tree);
+  float octree_overlap = overlapper_->getOverlap();
+
+  cout << "====================================" << endl
+       << "[Main] Octree-based Overlap: " << octree_overlap << " %" << endl
+       << "====================================" << endl;
 
   // -------------
   // Alignability
@@ -295,14 +343,14 @@ int main(int argc, char **argv)
   configNameAICP.append("/icp_autotuned.yaml");
 
   // Auto-tune ICP chain (quantile for the outlier filter)
-  float current_ratio = fov_overlap/100.0;
+  float current_ratio = octree_overlap/100.0;
   if (current_ratio < 0.25)
     current_ratio = 0.25;
   else if (current_ratio > 0.70)
     current_ratio = 0.70;
 
-  replaceRatioConfigFile(params.pointmatcher.configFileName, configNameAICP, 0.40);
-  params.pointmatcher.configFileName = configNameAICP;
+  replaceRatioConfigFile(registration_params.pointmatcher.configFileName, configNameAICP, current_ratio);
+  registration_params.pointmatcher.configFileName = configNameAICP;
 
   /*===================================
   =          Register Clouds          =
@@ -310,9 +358,9 @@ int main(int argc, char **argv)
 
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
-  std::unique_ptr<AbstractRegistrator> registration = create_registrator(params);
-  registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
-  //registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
+  std::unique_ptr<AbstractRegistrator> registration = create_registrator(registration_params);
+  //registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
+  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
@@ -330,12 +378,12 @@ int main(int argc, char **argv)
   =            Save Clouds            =
   ===================================*/
   pcl::PCDWriter writer;
-  if (params.saveInitializedReadingCloud) {
+  if (registration_params.saveInitializedReadingCloud) {
     stringstream ss;
     ss << "initialized_reading_cloud.pcd";
     writer.write<pcl::PointXYZ> (ss.str (), *initialized_reading_cloud_ptr, false);
   }
-  if (params.saveRegisteredReadingCloud) {
+  if (registration_params.saveRegisteredReadingCloud) {
     pcl::PointCloud<pcl::PointXYZ> registered_reading_cloud;
     registration->getOutputReading(registered_reading_cloud);
     stringstream ss;
@@ -343,7 +391,7 @@ int main(int argc, char **argv)
     writer.write<pcl::PointXYZ> (ss.str (), registered_reading_cloud, false);
   }
 
-  if ((point_cloud_A_number != -1) && params.saveCorrectedPose) {
+  if ((point_cloud_A_number != -1) && registration_params.saveCorrectedPose) {
     stringstream ss;
     ss << "corrected_poses/corrected_pose_";
     ss << point_cloud_A_number;
@@ -353,7 +401,7 @@ int main(int argc, char **argv)
     write3DTransformToFile(corrected_reading_pose, ss.str(), point_cloud_A_number, point_cloud_B_number);
   }
 
-  if (params.enableLcmVisualization) {
+  if (registration_params.enableLcmVisualization) {
     boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
     if(!lcm->good()) {
       std::cerr << "[Main] LCM is not good for visualization." << std::endl;
@@ -452,6 +500,12 @@ int main(int argc, char **argv)
     drawPointCloudNormalsCollections(lcm, 11, global_reference_frame, *cloudB_matched_planes, 0, "Matches B");
     eigenvectors->points.resize(4);
     drawPointCloudNormalsCollections(lcm, 13, global_reference_frame, *eigenvectors, 0, "Alignability Eigenvectors");
+
+    /*===================================
+    =     Visualize Octree Overlap      =
+    ===================================*/
+    publishOctreeToLCM(lcm, ref_tree, "OCTOMAP_REF");
+    publishOctreeToLCM(lcm, read_tree, "OCTOMAP");
   }
 
   return 0;

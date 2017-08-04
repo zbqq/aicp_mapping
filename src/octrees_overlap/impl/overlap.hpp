@@ -6,11 +6,11 @@
 
 namespace aicp {
 
-  static std::unique_ptr<AbstractOverlapper> create_overlapper(const OctreesParams& parameters) {
+  static std::unique_ptr<AbstractOverlapper> create_overlapper(const OverlapParams& parameters) {
     std::unique_ptr<AbstractOverlapper> overlapper;
-    //if (parameters.type == "Octrees") {
-      registrator = std::unique_ptr<AbstractOverlapper>(new OctreesOverlap(parameters));
-    //} else if (parameters.type == "") {
+    if (parameters.type == "OctreeBased") {
+      overlapper = std::unique_ptr<AbstractOverlapper>(new OctreesOverlap(parameters));
+    }// else if (parameters.type == "") {
     //  registrator = std::unique_ptr<AbstractOverlapper>(new OtherOverlap(parameters));
     //} else {
     //  std::cerr << "Invalid registration type " << parameters.type << "." << std::endl;

@@ -4,9 +4,13 @@
 #include <iostream>
 #include <string>
 
-struct OctreesParams {
-  double octomapResolution;
-  double blurSigma;
+struct OverlapParams {
+  std::string type;
+  std::string loadPosesFromFile;
+
+  struct OctreeOverlapParams {
+    double octomapResolution;
+  } octree_based;
 };
 
 #endif
