@@ -29,3 +29,15 @@ add_executable(pcl_aicp_inertia_estimation main.cpp)
 target_link_libraries(pcl_aicp_inertia_estimation boost_system boost_thread ${VTK_LIBRARIES} pcl_aicp)
 pods_use_pkg_config_packages(pcl_aicp_inertia_estimation ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
 pods_install_executables(pcl_aicp_inertia_estimation)
+
+############### concatenate executable
+add_executable (aicp-concatenate-clouds concatenate.cpp)
+pods_use_pkg_config_packages(aicp-concatenate-clouds ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+target_link_libraries (aicp-concatenate-clouds boost_system ${VTK_LIBRARIES})
+pods_install_executables(aicp-concatenate-clouds)
+
+############### create cube cloud executable
+add_executable (aicp-create-cube-cloud create_cube_cloud.cpp)
+pods_use_pkg_config_packages(aicp-create-cube-cloud ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+target_link_libraries (aicp-create-cube-cloud boost_system ${VTK_LIBRARIES})
+pods_install_executables(aicp-create-cube-cloud)
