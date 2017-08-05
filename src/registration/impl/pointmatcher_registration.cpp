@@ -11,28 +11,28 @@ namespace aicp{
   PointmatcherRegistration::~PointmatcherRegistration() {}
 
   //Templates
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform)
+  float PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform)
   {
     fromPCLToDataPoints(reference_cloud_, cloud_ref);
     fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    registerClouds(final_transform);
+    return registerClouds(final_transform);
   }
 
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform)
+  float PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform)
   {
     //fromPCLToDataPoints(reference_cloud_, cloud_ref);
     //fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    //registerCsudo make installlouds(final_transform);
+    //return registerClouds(final_transform);
   }
 
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform)
+  float PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform)
   {
     //fromPCLToDataPoints(reference_cloud_, cloud_ref);
     //fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    //registerClouds(final_transform);
+    //return registerClouds(final_transform);
   }
 
   //Load and apply configuration
@@ -80,7 +80,7 @@ namespace aicp{
   }
 
   //Registration: Compute transform which aligns reading cloud onto the reference cloud.
-  void PointmatcherRegistration::registerClouds(Eigen::Matrix4f &final_transform)
+  float PointmatcherRegistration::registerClouds(Eigen::Matrix4f &final_transform)
   {
     int cloud_dimension = reference_cloud_.getEuclideanDim();
 
@@ -134,5 +134,7 @@ namespace aicp{
 
       cout << "Paired points mean distance: " << meanDist << " m" << endl;*/
     }
+
+    return failure_prediction_factor;
   }
 }

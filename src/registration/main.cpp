@@ -99,6 +99,7 @@ int main(int argc, char **argv)
 
   RegistrationParams registration_params;
   OverlapParams overlap_params;
+  string experiments_param;
   /*===================================
   =            YAML Config            =
   ===================================*/
@@ -187,6 +188,15 @@ int main(int argc, char **argv)
       }
     }
   }
+  YAML::Node experimentsNode = yn_["AICP"]["Experiments"];
+  for(YAML::const_iterator it=experimentsNode.begin();it != experimentsNode.end();++it) {
+
+    const string key = it->first.as<string>();
+
+    if(key.compare("type") == 0) {
+      experiments_param = it->second.as<string>();
+    }
+  }
 
   cout << "============================" << endl
        << "Parsed YAML Config" << endl
@@ -214,6 +224,8 @@ int main(int argc, char **argv)
   if(overlap_params.type.compare("OctreeBased") == 0) {
     cout << "[OctreeBased] Octomap Resolution: "    << overlap_params.octree_based.octomapResolution   << endl;
   }
+
+  cout << "[Main] Experiments Type: "               << experiments_param                               << endl;
   cout << "============================" << endl;
 
   /*===================================
@@ -359,8 +371,9 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(registration_params);
-  //registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
-  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
+  //float degeneracy = registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
+  float degeneracy = registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
+  cout << "[Main] Degeneracy (degenerate if ~ 0): " << degeneracy << " %" << endl;
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
@@ -373,6 +386,22 @@ int main(int argc, char **argv)
        << "Corrected Reading Pose:" << endl
        << "============================" << endl
        << corrected_reading_pose << endl;
+
+  /*===================================
+  =            Experiments            =
+  ===================================*/
+
+  if (experiments_param == "Validation") {
+    stringstream ss;
+    ss << "validation/validation_";
+    ss << point_cloud_A_number;
+    ss << "_";
+    ss << point_cloud_B_number;
+    ss << ".txt";
+    Eigen::MatrixXf params(1,2);
+    params << alignability, degeneracy;
+    writeLineToFile(params, ss.str(), 0);
+  }
 
   /*===================================
   =            Save Clouds            =

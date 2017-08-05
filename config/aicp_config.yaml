@@ -26,5 +26,8 @@ AICP: {
     OctreeBased: {
       octomapResolution: 0.2,
     }
+  },
+  Experiments: {
+    type: "Validation", # "", "Validation"
   }
 }

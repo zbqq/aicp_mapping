@@ -13,9 +13,9 @@
 int main()
 {
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  float min_corner = 0.00;
-  float max_corner = 10.00;
-  float step = 0.1;
+  float min_corner = -2.00;
+  float max_corner = 2.00;
+  float step = 0.05;
 
   // bottom
   for (float i = min_corner; i < max_corner; i += step) {

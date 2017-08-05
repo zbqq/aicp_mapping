@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run: bash run_registration.sh <path_to_clouds>
-# You must be in the folder of the clouds
-# You must be in the folder of the ground truth poses
+# You must be in the folder of the bash
+# The clouds and the ground truth poses must be at <path_to_clouds>
 # The clouds must be enumerated by order of appearance
 cwd=$(pwd)
 mkdir -p $1/corrected_poses;
