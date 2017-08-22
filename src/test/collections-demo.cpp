@@ -5,7 +5,7 @@
 
 
 #include <pronto_utils/pronto_vis.hpp> // visualize pt clds
-
+#include <pcl/io/pcd_io.h>
 
 float packColor(unsigned char* color) {
     return color[0] + color[1] * 256.0 + color[2] * 256.0 * 256.0;

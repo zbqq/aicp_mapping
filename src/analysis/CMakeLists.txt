@@ -8,7 +8,7 @@ include(${VTK_USE_FILE})
 ##############################################
 
 add_executable (doMatching2D doMatching2D.cpp)
-target_link_libraries(doMatching2D boost_system)
+target_link_libraries(doMatching2D boost_system ${VTK_LIBRARIES} )
 pods_use_pkg_config_packages(doMatching2D eigen3
   lcm    bot2-frames
   lcmtypes_bot2-core  
@@ -17,7 +17,7 @@ pods_use_pkg_config_packages(doMatching2D eigen3
 pods_install_executables(doMatching2D)
 
 add_executable (icp-error-compute icp_error_compute.cpp)
-target_link_libraries(icp-error-compute boost_system)
+target_link_libraries(icp-error-compute boost_system ${VTK_LIBRARIES} )
 pods_use_pkg_config_packages(icp-error-compute eigen3
   lcm    bot2-frames
   lcmtypes_bot2-core  

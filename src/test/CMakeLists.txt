@@ -41,7 +41,7 @@ pods_install_executables(publish-vtk)
 ###############
 add_executable(collections-demo collections-demo.cpp)
 pods_use_pkg_config_packages(collections-demo path-util   eigen3  pronto_vis)
-target_link_libraries(collections-demo lcm boost_system boost_thread )
+target_link_libraries(collections-demo lcm boost_system boost_thread)
 pods_install_executables(collections-demo)
 
 

@@ -28,7 +28,7 @@ pods_install_pkg_config_file(octrees-difference
     VERSION 0.0.1)
 
 add_executable (octrees-diff octrees_diff_app.cpp)
-target_link_libraries(octrees-diff pointmatcher lcm boost_system
+target_link_libraries(octrees-diff pointmatcher lcm boost_system ${VTK_LIBRARIES}
                        boost_thread octrees-difference)
 pods_use_pkg_config_packages(octrees-diff eigen3
   lcm    bot2-frames
