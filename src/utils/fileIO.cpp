@@ -173,7 +173,7 @@ void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number)
     file.close();
   }
   else cout << "[File IO] Unable to open file.\n";
-  cout << "[File IO] Written file: " << out_file << endl;
+//  cout << "[File IO] Written file: " << out_file << endl;
 }
 
 void replaceRatioConfigFile(string in_file, string out_file, float ratio)

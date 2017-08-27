@@ -81,17 +81,14 @@ int main(int argc, char **argv) {
       else if(key.compare("trainingFile") == 0) {
         params.svm.trainingFile = it->second.as<std::string>();
       }
-      else if(key.compare("trainingLabelsFile") == 0) {
-        params.svm.trainingLabelsFile = it->second.as<std::string>();
-      }
       else if(key.compare("testingFile") == 0) {
           params.svm.testingFile = it->second.as<std::string>();
-        }
-        else if(key.compare("testingLabelsFile") == 0) {
-          params.svm.testingLabelsFile = it->second.as<std::string>();
-        }
+      }
       else if(key.compare("saveFile") == 0) {
         params.svm.saveFile = it->second.as<std::string>();
+      }
+      else if(key.compare("saveProbs") == 0) {
+        params.svm.saveProbs = it->second.as<std::string>();
       }
       else if(key.compare("modelLocation") == 0) {
         params.svm.modelLocation = it->second.as<std::string>();
@@ -108,10 +105,9 @@ int main(int argc, char **argv) {
   if(params.type.compare("SVM") == 0) {
     std::cout << "[Main] Acceptance Threshold: "    << params.svm.threshold           << std::endl;
     std::cout << "[Main] Training File: "           << params.svm.trainingFile        << std::endl;
-    std::cout << "[Main] Training Labels File: "    << params.svm.trainingLabelsFile  << std::endl;
     std::cout << "[Main] Testing File: "            << params.svm.testingFile         << std::endl;
-    std::cout << "[Main] Testing Labels File: "     << params.svm.testingLabelsFile   << std::endl;
     std::cout << "[Main] Saving Model To: "         << params.svm.saveFile            << std::endl;
+    std::cout << "[Main] Saving Probs To: "         << params.svm.saveProbs           << std::endl;
     std::cout << "[Main] Loading Model From: "      << params.svm.modelLocation       << std::endl;
   }
 
@@ -152,6 +148,12 @@ int main(int argc, char **argv) {
 //  std::cout << "Probabilities: " << std::endl;
 //  std::cout << probabilities << std::endl;
 
+  for(int i = 0; i < probabilities.rows(); i++)
+  {
+    Eigen::MatrixXf probability = probabilities.row(i).cast <float> ();
+    writeLineToFile(probability, params.svm.saveProbs, i);
+  }
+
   /*===================================
   =     Testing and Visualization     =
   ===================================*/
@@ -172,9 +174,9 @@ int main(int argc, char **argv) {
 //            classifier->test(testing_data, testing_data_labels, &probabilities);
 
 //            std::cout << "[Example] Probability: " << probabilities(0,0) << std::endl;
-//            if (probabilities(0,0) > params.svm.threshold)
+//            if (probabilities(0,0) <= params.svm.threshold)
 //                image.at<cv::Vec3b>(i,j) = green;
-//            else if (probabilities(0,0) <= params.svm.threshold)
+//            else if (probabilities(0,0) > params.svm.threshold)
 //                image.at<cv::Vec3b>(i,j) = red;
 ////            float color = 255.0 * probabilities(0,0);
 ////            std::cout << "[Example] Color: " << color << std::endl;

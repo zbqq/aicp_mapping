@@ -34,6 +34,7 @@ namespace aicp {
     svm_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
 
     // Train the SVM
+//    svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
     svm_.train(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
 
     if (params_.svm.saveFile.compare("") != 0) {
@@ -70,11 +71,11 @@ namespace aicp {
           sample.at<float>(j) = testing_data(i, j);
         }
 
-        double decision = svm_.predict(sample, true); // true to enable probabilities
-        double probability = 1.0 / (1.0 + exp(-decision));
+        double decision = svm_.predict(sample, true); // true: enable probabilities
+        double probability = 1.0 - 1.0 / (1.0 + exp(-decision));
 //        double probability = svm_.predict(sample);
-        if (probability <= params_.svm.threshold) { // high alignment risk
-                                                    // --> expected failure
+        if (probability >= params_.svm.threshold) { // high alignment risk
+                                                    // --> expected failure (positive label = 1)
           if (labels(i, 0) == 1.0) {
             ++tp;
           } else {

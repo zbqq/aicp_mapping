@@ -27,7 +27,8 @@ static void confusionMatrix(unsigned int tp, unsigned int tn, unsigned int fp, u
   std::cout << "Accuracy (ACC): " << double(tp + tn) /
       double(tp + fp + tn + fn) << std::endl;
   std::cout << "Sensitivity (TPR): " << true_positive_rate << std::endl;
-  std::cout << "Specificity (TNR): " << true_negative_rate << std::endl;
+  std::cout << "Sensitivity (TPR): " << true_positive_rate << std::endl;
+  std::cout << "(FPR): " << false_positive_rate << std::endl;
   std::cout << "Precision: " << double(tp) / double(tp + fp) << std::endl;
   std::cout << "Positive likelyhood ratio: " << true_positive_rate / false_positive_rate << std::endl;
 }
@@ -39,10 +40,9 @@ struct ClassificationParams {
   struct SVMParams {
     double threshold; // on prediction probability
     std::string trainingFile;
-    std::string trainingLabelsFile;
     std::string testingFile;
-    std::string testingLabelsFile;
     std::string saveFile;
+    std::string saveProbs;
     std::string modelLocation;
   } svm;
 
