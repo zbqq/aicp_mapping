@@ -70,9 +70,11 @@ namespace aicp {
           sample.at<float>(j) = testing_data(i, j);
         }
 
-        double decision = svm_.predict(sample, true);
+        double decision = svm_.predict(sample, true); // true to enable probabilities
         double probability = 1.0 / (1.0 + exp(-decision));
-        if (probability >= params_.svm.threshold) {
+//        double probability = svm_.predict(sample);
+        if (probability <= params_.svm.threshold) { // high alignment risk
+                                                    // --> expected failure
           if (labels(i, 0) == 1.0) {
             ++tp;
           } else {
@@ -90,7 +92,7 @@ namespace aicp {
           (*probabilities)(i, 0) = probability;
         }
       }
-//      confusionMatrix(tp, tn, fp, fn);
+      confusionMatrix(tp, tn, fp, fn);
     }
   }
 

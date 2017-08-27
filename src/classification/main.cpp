@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
   classifier = create_classifier(params);
 
   MatrixXd training_data = training_data_all.block(0,1,training_data_size,2);
+  training_data.col(1) = 100.0 * training_data.col(1);
   MatrixXd training_data_labels = training_data_all.block(0,3,training_data_size,1);
 //  std::cout << "Training: " << std::endl;
 //  std::cout << training_data << std::endl;
@@ -136,59 +137,64 @@ int main(int argc, char **argv) {
 //  =              Testing              =
 //  ===================================*/
 
-//  MatrixXd testing_data_all = load_txt<MatrixXd>(params.svm.testingFile);
-////  MatrixXd testing_features_labels = load_txt<MatrixXd>(params.svm.testingLabelsFile);
-//  int testing_data_size = testing_data_all.rows();
+  MatrixXd testing_data_all = load_txt<MatrixXd>(params.svm.testingFile);
+//  MatrixXd testing_features_labels = load_txt<MatrixXd>(params.svm.testingLabelsFile);
+  int testing_data_size = testing_data_all.rows();
 
-//  MatrixXd testing_data = testing_data_all.block(0,1,testing_data_size ,2);
-//  MatrixXd testing_data_labels = testing_data_all.block(0,3,testing_data_size,1);
-////  std::cout << "Training: " << std::endl;
-////  std::cout << training_data << std::endl;
+  MatrixXd testing_data = testing_data_all.block(0,1,testing_data_size ,2);
+  testing_data.col(1) = 100.0 * testing_data.col(1);
+  MatrixXd testing_data_labels = testing_data_all.block(0,3,testing_data_size,1);
+//  std::cout << "Testing: " << std::endl;
+//  std::cout << testing_data << std::endl;
 
-//  Eigen::MatrixXd probabilities;
-//  classifier->test(testing_data, testing_data_labels, &probabilities);
-////  std::cout << "Probabilities: " << std::endl;
-////  std::cout << probabilities << std::endl;
+  Eigen::MatrixXd probabilities;
+  classifier->test(testing_data, testing_data_labels, &probabilities);
+//  std::cout << "Probabilities: " << std::endl;
+//  std::cout << probabilities << std::endl;
 
   /*===================================
   =     Testing and Visualization     =
   ===================================*/
 
-    int width = 100, height = 100;
-    cv::Mat image = cv::Mat::zeros(height, width, CV_8UC3);
+//    int width = 100, height = 100;
+//    cv::Mat image = cv::Mat::zeros(height, width, CV_8UC3);
 
-    cv::Vec3b green(0,255,0), blue (255,0,0);
-    // Show the decision regions given by the SVM
-    for (int i = 0; i < image.rows; ++i)
-        for (int j = 0; j < image.cols; ++j)
-        {
-            MatrixXd testing_data(1,2);
-            testing_data << j, i;
-            MatrixXd testing_data_labels(1,1);
-            testing_data_labels << 1.0;
-            Eigen::MatrixXd probabilities;
-            classifier->test(testing_data, testing_data_labels, &probabilities);
+//    cv::Vec3b green(0,255,0), red(0,0,255);
+//    // Show the decision regions given by the SVM
+//    for (int i = 0; i < image.rows; ++i)
+//        for (int j = 0; j < image.cols; ++j)
+//        {
+//            MatrixXd testing_data(1,2);
+//            testing_data << j, i;
+//            MatrixXd testing_data_labels(1,1);
+//            testing_data_labels << 1.0;
+//            Eigen::MatrixXd probabilities;
+//            classifier->test(testing_data, testing_data_labels, &probabilities);
 
-            std::cout << "[Example] Probability: " << probabilities(0,0) << std::endl;
-            if (probabilities(0,0) > params.svm.threshold)
-                image.at<cv::Vec3b>(i,j)  = green;
-            else if (probabilities(0,0) <= params.svm.threshold)
-                image.at<cv::Vec3b>(i,j)  = blue;
-        }
+//            std::cout << "[Example] Probability: " << probabilities(0,0) << std::endl;
+//            if (probabilities(0,0) > params.svm.threshold)
+//                image.at<cv::Vec3b>(i,j) = green;
+//            else if (probabilities(0,0) <= params.svm.threshold)
+//                image.at<cv::Vec3b>(i,j) = red;
+////            float color = 255.0 * probabilities(0,0);
+////            std::cout << "[Example] Color: " << color << std::endl;
+////            cv::Vec3b scaled_color(255,color,color);
+////            image.at<cv::Vec3b>(i,j) = scaled_color;
+//        }
 
-    // Show the training data
-    int thickness = -1;
-    int lineType = 8;
-    for (int i = 0; i < training_data_size; ++i)
-    {
-      if(training_data_labels(i,0) == 1)
-        cv::circle(image, cv::Point((int)training_data(i,0),(int)training_data(i,1)), 5, cv::Scalar(0, 0, 0), thickness, lineType);
-      else if(training_data_labels(i,0) == 0)
-        cv::circle(image, cv::Point((int)training_data(i,0),(int)training_data(i,1)), 5, cv::Scalar(255, 255, 255), thickness, lineType);
-    }
+//    // Show the training data
+//    int thickness = -1;
+//    int lineType = 8;
+//    for (int i = 0; i < training_data_size; ++i)
+//    {
+//      if(training_data_labels(i,0) == 1)
+//        cv::circle(image, cv::Point((int)training_data(i,0),(int)training_data(i,1)), 0.1, cv::Scalar(0, 0, 0), thickness, lineType);
+//      else if(training_data_labels(i,0) == 0)
+//        cv::circle(image, cv::Point((int)training_data(i,0),(int)training_data(i,1)), 0.11, cv::Scalar(255, 255, 255), thickness, lineType);
+//    }
 
-    cv::imwrite("result.png", image);        // save the image
+//    cv::imwrite("result.png", image);        // save the image
 
-    cv::imshow("SVM Simple Example", image); // show it to the user
-    cv::waitKey(0);
+//    cv::imshow("SVM Simple Example", image); // show it to the user
+//    cv::waitKey(0);
 }
