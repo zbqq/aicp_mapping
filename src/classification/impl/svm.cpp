@@ -43,6 +43,12 @@ namespace aicp {
     }
   }
 
+  void SVM::test(const Eigen::MatrixXd &testing_data, Eigen::MatrixXd *probabilities) {
+    int testing_data_size = testing_data.rows();
+    Eigen::MatrixXd empty_labels = Eigen::MatrixXd::Zero(testing_data_size,1);
+
+    test(testing_data, empty_labels, probabilities);
+  }
 
   void SVM::test(const Eigen::MatrixXd &testing_data, const Eigen::MatrixXd &labels, Eigen::MatrixXd *probabilities) {
 
@@ -74,7 +80,7 @@ namespace aicp {
         double decision = svm_.predict(sample, true); // true: enable probabilities
         double probability = 1.0 - 1.0 / (1.0 + exp(-decision));
 //        double probability = svm_.predict(sample);
-        if (probability >= params_.svm.threshold) { // high alignment risk
+        if (!labels.isZero() && probability >= params_.svm.threshold) { // high alignment risk
                                                     // --> expected failure (positive label = 1)
           if (labels(i, 0) == 1.0) {
             ++tp;
@@ -93,7 +99,8 @@ namespace aicp {
           (*probabilities)(i, 0) = probability;
         }
       }
-      confusionMatrix(tp, tn, fp, fn);
+      if (!labels.isZero())
+        confusionMatrix(tp, tn, fp, fn);
     }
   }
 

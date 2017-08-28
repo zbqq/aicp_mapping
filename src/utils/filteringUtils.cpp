@@ -255,7 +255,7 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
       // Planes Overlap Filter
       float current_overlap = overlapBoxFilter(cloudA_cluster, cloudB_cluster);
 //      std::cout << "[Filtering Utils] Current Box Overlap: " << current_overlap << std::endl;
-      if (current_overlap > max_overlap && (dist < 20 || dist > 160)) // Threshold for maximum angular distance between centroids (deg)
+      if (current_overlap > max_overlap && (dist < 20))// || dist > 160)) // Threshold for maximum angular distance between centroids (deg)
       {
         matching_cluster_idx = j;
         max_overlap = current_overlap;
@@ -539,14 +539,14 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   getOrientedBoundingBox(planeA_ptr, min_point_A, max_point_A, position_A, rotational_matrix_A);
 
   // Enlarge boundaries along each direction
-  max_point_A.x = 2.0 * max_point_A.x; // enlarged 2 times
-  min_point_A.x = 2.0 * min_point_A.x;
+  max_point_A.x = 1.0 * max_point_A.x; // enlarged 2 times
+  min_point_A.x = 1.0 * min_point_A.x;
 
-  max_point_A.y = 2.0 * max_point_A.y; // enlarged 2 times
-  min_point_A.y = 2.0 * min_point_A.y;
+  max_point_A.y = 1.0 * max_point_A.y; // enlarged 2 times
+  min_point_A.y = 1.0 * min_point_A.y;
 
-  max_point_A.z = 20.0 * max_point_A.z; // direction perpendicular to plane
-  min_point_A.z = 20.0 * min_point_A.z; // enlarged 20 times
+  max_point_A.z = 2.0 * max_point_A.z; // direction perpendicular to plane
+  min_point_A.z = 2.0 * min_point_A.z; // enlarged 20 times
 //  max_point_A.z = 1.0; // set direction perpendicular to plane
 //  min_point_A.z = -1.0; // to custom value
 //  cout << "[Filtering Utils] Edege x:" << max_point_A.x - min_point_A.x << endl;
@@ -565,14 +565,14 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   getOrientedBoundingBox(planeB_ptr , min_point_B, max_point_B, position_B, rotational_matrix_B);
 
   // Enlarge boundaries along each direction
-  max_point_B.x = 2.0 * max_point_B.x; // enlarged 2 times
-  min_point_B.x = 2.0 * min_point_B.x;
+  max_point_B.x = 1.0 * max_point_B.x; // enlarged 2 times
+  min_point_B.x = 1.0 * min_point_B.x;
 
-  max_point_B.y = 2.0 * max_point_B.y; // enlarged 2 times
-  min_point_B.y = 2.0 * min_point_B.y;
+  max_point_B.y = 1.0 * max_point_B.y; // enlarged 2 times
+  min_point_B.y = 1.0 * min_point_B.y;
 
-  max_point_B.z = 20.0 * max_point_B.z; // direction perpendicular to plane
-  min_point_B.z = 20.0 * min_point_B.z; // enlarged 20 times
+  max_point_B.z = 2.0 * max_point_B.z; // direction perpendicular to plane
+  min_point_B.z = 2.0 * min_point_B.z; // enlarged 20 times
 //  max_point_B.z = 1.0; // set direction perpendicular to plane
 //  min_point_B.z = -1.0; // to custom value
 //  cout << "[Filtering Utils] Edege x:" << max_point_B.x - min_point_B.x << endl;
@@ -598,7 +598,7 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
 
 // from "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
 // from "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
-float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
+void registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance, std::vector<float>& predictions)
 {
   Eigen::EigenSolver<Eigen::MatrixXf> es(system_covariance);
   float sum_lambda = es.eigenvalues()(0,0).real()+es.eigenvalues()(1,0).real()+es.eigenvalues()(2,0).real()+
@@ -615,25 +615,22 @@ float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance)
   cout << "[Filtering Utils] Normalized Prediction Eigenvalues [R,P,Y,X,Y,Z]:" << endl << system_lambdas << endl;
 
   int pos_min, pos_max;
-  float prediction;
 
   // Degeneracy
   // used in "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
   system_lambdas.tail<3>().minCoeff(&pos_min); // minimum eigenvalue between x, y, z only
-  prediction = system_lambdas.tail<3>()[pos_min]*100.0;
+  predictions.push_back(system_lambdas.tail<3>()[pos_min]*100.0);
 //  cout << "[Filtering Utils] Degeneracy (degenerate if ~ 0): " << prediction << " %" << endl;
 
   // Condition Number
   // used in "Geometrically Stable Sampling for the ICP Algorithm", J. Gelfand et al., 2003
-//  system_lambdas.tail<3>().maxCoeff(&pos_max); // maximum eigenvalue between x, y, z only
-//  prediction = system_lambdas.tail<3>()[pos_max]/system_lambdas.tail<3>()[pos_min];
+  system_lambdas.tail<3>().maxCoeff(&pos_max); // maximum eigenvalue between x, y, z only
+//  predictions.push_back(system_lambdas.tail<3>()[pos_max]/system_lambdas.tail<3>()[pos_min]);
 //  cout << "[Filtering Utils] Condition Number (degenerate if big, want 1): " << prediction << endl;
 
   // Inverse Condition Number
   // compared against in
   // "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
-//  prediction = system_lambdas.tail<3>()[pos_min]/system_lambdas.tail<3>()[pos_max];
+  predictions.push_back(system_lambdas.tail<3>()[pos_min]/system_lambdas.tail<3>()[pos_max]);
 //  cout << "[Filtering Utils] Inverse Condition Number (degenerate if ~ 0, want 1): " << prediction << endl;
-
-  return prediction;
 }

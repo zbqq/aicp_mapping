@@ -10,7 +10,7 @@ struct RegistrationParams {
   string type;
   float sensorRange;
   float sensorAngularView;
-  string loadPosesFromFile;
+  string loadPosesFrom;
   string initialTransform; //initial transformation for the reading cloud in the form [x,y,theta]
                            //Note: either this or PointmatcherRegistrationParams.initialTransform
                            //should be set (not both)

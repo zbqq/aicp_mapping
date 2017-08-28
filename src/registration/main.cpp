@@ -16,6 +16,9 @@
 #include "aicpOverlap/overlap.hpp"
 #include "aicpOverlap/common.hpp"
 
+#include "aicpClassification/classification.hpp"
+#include "aicpClassification/common.hpp"
+
 #include "commonUtils/cloudIO.h"
 #include "commonUtils/common.hpp"
 #include "drawingUtils/drawingUtils.hpp"
@@ -99,6 +102,7 @@ int main(int argc, char **argv)
 
   RegistrationParams registration_params;
   OverlapParams overlap_params;
+  ClassificationParams classification_params;
   string experiments_param;
   /*===================================
   =            YAML Config            =
@@ -122,8 +126,8 @@ int main(int argc, char **argv)
     else if(key.compare("sensorAngularView") == 0) {
       registration_params.sensorAngularView =  it->second.as<float>();
     }
-    else if(key.compare("loadPosesFromFile") == 0) {
-      registration_params.loadPosesFromFile = it->second.as<string>();
+    else if(key.compare("loadPosesFrom") == 0) {
+      registration_params.loadPosesFrom = it->second.as<string>();
     }
     else if(key.compare("initialTransform") == 0) {
       registration_params.initialTransform = it->second.as<string>();
@@ -188,6 +192,42 @@ int main(int argc, char **argv)
       }
     }
   }
+  YAML::Node classificationNode = yn_["AICP"]["Classifier"];
+  for (YAML::const_iterator it = classificationNode.begin(); it != classificationNode.end(); ++it) {
+    const std::string key = it->first.as<std::string>();
+
+    if (key.compare("type") == 0) {
+      classification_params.type = it->second.as<std::string>();
+    }
+  }
+
+  if (classification_params.type.compare("SVM") == 0) {
+
+    YAML::Node svmNode = classificationNode["SVM"];
+
+    for(YAML::const_iterator it=svmNode.begin();it != svmNode.end();++it) {
+      const std::string key = it->first.as<std::string>();
+
+      if(key.compare("threshold") == 0) {
+        classification_params.svm.threshold = it->second.as<double>();
+      }
+      else if(key.compare("trainingFile") == 0) {
+        classification_params.svm.trainingFile = it->second.as<std::string>();
+      }
+      else if(key.compare("testingFile") == 0) {
+          classification_params.svm.testingFile = it->second.as<std::string>();
+      }
+      else if(key.compare("saveFile") == 0) {
+        classification_params.svm.saveFile = it->second.as<std::string>();
+      }
+      else if(key.compare("saveProbs") == 0) {
+        classification_params.svm.saveProbs = it->second.as<std::string>();
+      }
+      else if(key.compare("modelLocation") == 0) {
+        classification_params.svm.modelLocation = it->second.as<std::string>();
+      }
+    }
+  }
   YAML::Node experimentsNode = yn_["AICP"]["Experiments"];
   for(YAML::const_iterator it=experimentsNode.begin();it != experimentsNode.end();++it) {
 
@@ -205,7 +245,7 @@ int main(int argc, char **argv)
   cout << "[Main] Registration Type: "                 << registration_params.type                          << endl;
   cout << "[Main] Sensor Range: "                      << registration_params.sensorRange                   << endl;
   cout << "[Main] Sensor Angular View: "               << registration_params.sensorAngularView             << endl;
-  cout << "[Main] Load Poses from File: "              << registration_params.loadPosesFromFile             << endl;
+  cout << "[Main] Load Poses from: "                   << registration_params.loadPosesFrom                 << endl;
   cout << "[Main] Initial Transform: "                 << registration_params.initialTransform              << endl;
   cout << "[Main] Save Corrected Pose: "               << registration_params.saveCorrectedPose             << endl;
   cout << "[Main] Save Initialized Reading Cloud: "    << registration_params.saveInitializedReadingCloud   << endl;
@@ -225,6 +265,17 @@ int main(int argc, char **argv)
     cout << "[OctreeBased] Octomap Resolution: "    << overlap_params.octree_based.octomapResolution   << endl;
   }
 
+  cout << "[Main] Classification Type: "       << classification_params.type                    << endl;
+
+  if(classification_params.type.compare("SVM") == 0) {
+    cout << "[SVM] Acceptance Threshold: "    << classification_params.svm.threshold           << endl;
+    cout << "[SVM] Training File: "           << classification_params.svm.trainingFile        << endl;
+    cout << "[SVM] Testing File: "            << classification_params.svm.testingFile         << endl;
+    cout << "[SVM] Saving Model To: "         << classification_params.svm.saveFile            << endl;
+    cout << "[SVM] Saving Probs To: "         << classification_params.svm.saveProbs           << endl;
+    cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
+  }
+
   cout << "[Main] Experiments Type: "               << experiments_param                               << endl;
   cout << "============================" << endl;
 
@@ -236,23 +287,40 @@ int main(int argc, char **argv)
   Eigen::Matrix4f ground_truth_reading_pose = Eigen::Matrix4f::Identity(4,4);
   int point_cloud_A_number = -1;
   int point_cloud_B_number = -1;
-  if (!registration_params.loadPosesFromFile.empty())
+  if (registration_params.loadPosesFrom == "file") // Ground truth from file
   {
+     string loadPosesFromFile = "pose_scanner_leica_affine.txt";
      std::stringstream ssA(extract_ints(cl_cfg.pointCloudA));
      std::istringstream issA(ssA.str());
      issA >> point_cloud_A_number;
-     string lineA_from_file = readLineFromFile(registration_params.loadPosesFromFile, point_cloud_A_number);
+     string lineA_from_file = readLineFromFile(loadPosesFromFile, point_cloud_A_number);
      ground_truth_reference_pose = parseTransformationQuaternions(lineA_from_file);
 
      std::stringstream ssB(extract_ints(cl_cfg.pointCloudB));
      std::istringstream issB(ssB.str());
      issB >> point_cloud_B_number;
-     string lineB_from_file = readLineFromFile(registration_params.loadPosesFromFile, point_cloud_B_number);
+     string lineB_from_file = readLineFromFile(loadPosesFromFile, point_cloud_B_number);
      ground_truth_reading_pose = parseTransformationQuaternions(lineB_from_file);
      cout << "============================" << endl
           << "Ground Truth Reading Pose:" << endl
           << "============================" << endl
           << ground_truth_reading_pose << endl;
+  }
+  else if (registration_params.loadPosesFrom == "pcd")
+  {
+    Eigen::Vector4f origin_A = point_cloud_A.sensor_origin_;
+    Eigen::Quaternionf orientation_A = point_cloud_A.sensor_orientation_;
+    ground_truth_reference_pose.block<3,3>(0,0) = orientation_A.toRotationMatrix();
+    ground_truth_reference_pose.block<3,1>(0,3) = origin_A.block<3,1>(0,0);
+
+    Eigen::Vector4f origin_B = point_cloud_B.sensor_origin_;
+    Eigen::Quaternionf orientation_B = point_cloud_B.sensor_orientation_;
+    ground_truth_reading_pose.block<3,3>(0,0) = orientation_B.toRotationMatrix();
+    ground_truth_reading_pose.block<3,1>(0,3) = origin_B.block<3,1>(0,0);
+    cout << "============================" << endl
+         << "Reading Pose:" << endl
+         << "============================" << endl
+         << ground_truth_reading_pose << endl;
   }
   else
     cout << "[Main] Input poses cannot be loaded. Identity will be used." << endl;
@@ -318,6 +386,14 @@ int main(int argc, char **argv)
   pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_B_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
   regionGrowingUniformPlaneSegmentationFilter(initialized_reading_cloud_ptr, point_cloud_B_prefiltered);
 
+  pcl::PCDWriter writer_tmp;
+  stringstream ss_tmp1;
+  ss_tmp1 << "point_cloud_A_prefiltered.pcd";
+  writer_tmp.write<pcl::PointXYZ> (ss_tmp1.str (), *point_cloud_A_prefiltered, false);
+  stringstream ss_tmp2;
+  ss_tmp2 << "point_cloud_B_prefiltered.pcd";
+  writer_tmp.write<pcl::PointXYZ> (ss_tmp2.str (), *point_cloud_B_prefiltered, false);
+
   // ---------------------
   // Octree-based Overlap
   // ---------------------
@@ -328,9 +404,9 @@ int main(int argc, char **argv)
 
   // Create octree from reference cloud (wrt robot point of view),
   // add the reading cloud and compute overlap
-  Eigen::Isometry3d ground_truth_reading_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reading_pose);
+  //Eigen::Isometry3d ground_truth_reading_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reading_pose);
   ref_tree = overlapper_->computeOverlap(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered,
-                                         ground_truth_reference_pose_iso, ground_truth_reading_pose_iso,
+                                         ground_truth_reference_pose_iso, estimated_reading_pose_iso,
                                          read_tree);
   float octree_overlap = overlapper_->getOverlap();
 
@@ -346,6 +422,23 @@ int main(int argc, char **argv)
                                           ground_truth_reference_pose_iso, estimated_reading_pose_iso,
                                           cloudA_matched_planes, cloudB_matched_planes, eigenvectors);
   cout << "[Main] Alignability (degenerate if ~ 0): " << alignability << " %" << endl;
+
+  /*===================================
+  =           Classification          =
+  ===================================*/
+  // ---------------
+  // Alignment Risk
+  // ---------------
+
+  std::unique_ptr<AbstractClassification> classifier = create_classifier(classification_params);
+
+  MatrixXd testing_data(1, 2);
+  testing_data << (float)octree_overlap, (float)alignability;
+
+  Eigen::MatrixXd our_prediction;
+  classifier->test(testing_data, &our_prediction);
+  std::cout << "[Main] Alignment Risk Prediction (0-1): " << std::endl;
+  std::cout << our_prediction << std::endl;
 
   /*===================================
   =              AICP Core            =
@@ -371,9 +464,11 @@ int main(int argc, char **argv)
   Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
 
   std::unique_ptr<AbstractRegistrator> registration = create_registrator(registration_params);
-  //float degeneracy = registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T);
-  float degeneracy = registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T);
-  cout << "[Main] Degeneracy (degenerate if ~ 0): " << degeneracy << " %" << endl;
+  vector<float> soa_predictions;
+  registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T, soa_predictions);
+//  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T, soa_predictions);
+  cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
+  cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
@@ -399,12 +494,26 @@ int main(int argc, char **argv)
     ss << point_cloud_B_number;
     ss << ".txt";
     Eigen::MatrixXf params(1,2);
-    params << alignability, degeneracy;
+    params << alignability, soa_predictions.at(0);
     writeLineToFile(params, ss.str(), 0);
   }
 
+  if (experiments_param == "Compare") {
+    stringstream ss;
+    ss << "compare_results.txt";
+//    ss << point_cloud_A_number;
+//    ss << "_";
+//    ss << point_cloud_B_number;
+//    ss << ".txt";
+    Eigen::MatrixXf line_elements(1,7);
+    line_elements << point_cloud_B_number, fov_overlap, octree_overlap,
+                     alignability, our_prediction.cast<float>(),
+                     soa_predictions.at(0), soa_predictions.at(1); // degeneracy and ICN respectively
+    writeLineToFile(line_elements, ss.str(), point_cloud_A_number);
+  }
+
   /*===================================
-  =            Save Clouds            =
+  =          Save Registration        =
   ===================================*/
   pcl::PCDWriter writer;
   if (registration_params.saveInitializedReadingCloud) {

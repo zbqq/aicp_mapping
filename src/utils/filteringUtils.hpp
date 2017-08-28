@@ -54,5 +54,5 @@ float getPointsInOrientedBox(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud,
                              pcl::PointXYZRGBNormal& min_point_OBB, pcl::PointXYZRGBNormal& max_point_OBB,
                              pcl::PointXYZRGBNormal& position_OBB, Eigen::Matrix3f& rotational_matrix_OBB);
 
-float registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance);
+void registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance, std::vector<float>& predictions);
 #endif

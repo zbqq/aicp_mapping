@@ -2,14 +2,15 @@ AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
     sensorRange: 30.0,         # in meters
-    sensorAngularView: 360.0,  # in degrees
-    loadPosesFrom: "pcd", # file (ground truth poses), pcd
-    initialTransform: "0,0,0", # x[m], y[m], yaw[deg]
+    sensorAngularView: 270.0,  # in degrees
+    loadPosesFrom: "file", # file (ground truth poses), pcd
+    initialTransform: "random", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be
                                      # sampled from Gaussian distributed perturbations
                                      # with 0.1 m and 10 deg variance magnitude
                                      # - if "" no initial tranform will be applied
-    saveCorrectedPose: true, # valid if loadPosesFromFile
+    saveCorrectedPose: true, # idA, idB, x, y, z, w, x, y, z
+                             # (valid if loadPosesFrom)
     saveInitializedReadingCloud: true,
     saveRegisteredReadingCloud: true,
     enableLcmVisualization: true,
@@ -34,12 +35,15 @@ AICP: {
       threshold: 0.60,
       trainingFile: "/home/edbot/rpg-navigation/software/aicp/data/labels/training_labelled_27Aug.txt",
       testingFile: "/home/edbot/rpg-navigation/software/aicp/data/labels/testing_labelled_27Aug.txt",
-      saveFile: "/home/edbot/rpg-navigation/software/aicp/data/classification/svm.xml",
+      saveFile: "/home/edbot/rpg-navigation/software/aicp/data/classification/svm_1000training_thresh60.xml",
       saveProbs: "/home/edbot/rpg-navigation/software/aicp/data/classification/probs.txt",
       modelLocation: "/home/edbot/rpg-navigation/software/aicp/data/models/svm.xml",
     },
   },
   Experiments: {
-    type: "Validation", # "", "Validation"
+    type: "Compare", # "",
+                     # "Validation" saves: idA, idB, alignability, degeneracy,
+                     # "Compare" saves: idA, idB, fov_overlap, octree_overlap,
+                     #                  alignability, align_risk, degeneracy, ICN
   }
 }

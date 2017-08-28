@@ -24,6 +24,7 @@ namespace aicp {
     ~SVM();
 
     virtual void train(const Eigen::MatrixXd &training_data, const Eigen::MatrixXd &labels);
+    virtual void test(const Eigen::MatrixXd &testing_data, Eigen::MatrixXd *probabilities);
     virtual void test(const Eigen::MatrixXd &testing_data, const Eigen::MatrixXd &labels, Eigen::MatrixXd *probabilities = NULL);
     virtual void save(const std::string &filename);
     virtual void load(const std::string &filename);
