@@ -6,7 +6,7 @@
 cwd=$(pwd)
 mkdir -p $1/corrected_poses;
 COUNTERA=0
-TOTCLOUDS=31
+TOTCLOUDS=45
 for cloudA in $( ls $1/PointCloud*.pcd | sort -n );
 do
   if (($COUNTERA<$TOTCLOUDS));
@@ -32,4 +32,5 @@ do
     done
   fi
 done
+cd $1/corrected_poses
 rm -f corrected_poses.txt; cat $(ls -tr *.txt) > corrected_poses.txt
