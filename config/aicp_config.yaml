@@ -1,8 +1,8 @@
 AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
-    sensorRange: 30.0,         # in meters
-    sensorAngularView: 270.0,  # in degrees
+    sensorRange: 10.0,         # in meters
+    sensorAngularView: 360.0,  # in degrees
     loadPosesFrom: "file", # file (ground truth poses), pcd
     initialTransform: "random", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be
@@ -22,7 +22,7 @@ AICP: {
   },
   Overlap: {
     type: "OctreeBased",
-    loadPosesFromFile: "pose_scanner_leica_affine.txt", # Ground truth poses
+ #   loadPosesFromFile: "pose_scanner_leica_affine_apartment.txt", # Ground truth poses
 
     OctreeBased: {
       octomapResolution: 0.2,
@@ -32,10 +32,10 @@ AICP: {
     type: "SVM",
 
     SVM: {
-      threshold: 0.60,
-      trainingFile: "/home/edbot/rpg-navigation/software/aicp/data/labels/training_labelled_27Aug.txt",
+      threshold: 0.50,
+      trainingFile: "/home/edbot/rpg-navigation/software/aicp/data/labels/training_all_labelled_1Sep.txt",
       testingFile: "/home/edbot/rpg-navigation/software/aicp/data/labels/testing_labelled_27Aug.txt",
-      saveFile: "/home/edbot/rpg-navigation/software/aicp/data/classification/svm_1000training_thresh60.xml",
+      saveFile: "/home/edbot/rpg-navigation/software/aicp/data/classification/svm_1000training_thresh50_cross_validation.xml",
       saveProbs: "/home/edbot/rpg-navigation/software/aicp/data/classification/probs.txt",
       modelLocation: "/home/edbot/rpg-navigation/software/aicp/data/models/svm.xml",
     },
