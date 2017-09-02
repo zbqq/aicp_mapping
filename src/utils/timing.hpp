@@ -1,5 +1,5 @@
-#ifndef TIMING_UTILS_HPP_
-#define TIMING_UTILS_HPP_
+#ifndef AICP_TIMING_UTILS_HPP_
+#define AICP_TIMING_UTILS_HPP_
 
 #include <iostream>
 #include <stack>

@@ -21,10 +21,10 @@ namespace aicp{
 
   void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)
   {
-    //fromPCLToDataPoints(reference_cloud_, cloud_ref);
-    //fromPCLToDataPoints(reading_cloud_, cloud_read);
+    fromPCLToDataPoints(reference_cloud_, cloud_ref);
+    fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    //return registerClouds(final_transform, failure_prediction_factors);
+    return registerClouds(final_transform, failure_prediction_factors);
   }
 
   void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)

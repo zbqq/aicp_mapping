@@ -31,11 +31,11 @@ message(${pointmatcher_INCLUDE_DIRS})
 message(${pointmatcher_LIBRARIES})
 
 ############## registration library
-add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp)
+add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/mixed_test_routine.cpp impl/aligned_sweeps_collection.cpp impl/sweep_scan.cpp impl/lidar_scan.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
 target_link_libraries(aicpRegistration pointmatcherUtils commonUtils filteringUtils ${pointmatcher_LIBRARIES})
 pods_install_libraries(aicpRegistration)
-pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp DESTINATION aicpRegistration)
+pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/mixed_test_routine.hpp impl/aligned_sweeps_collection.hpp impl/sweep_scan.hpp impl/lidar_scan.hpp DESTINATION aicpRegistration)
 pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)
 
 ############### registration executable
@@ -44,29 +44,11 @@ target_link_libraries(aicp-registration boost_system pointmatcherUtils commonUti
 pods_use_pkg_config_packages(aicp-registration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
 pods_install_executables(aicp-registration)
 
-###############
-#add_executable(drc-lidar-accumulate lidar_accumulate.cpp clouds_io_utils.cpp)
-#pods_use_pkg_config_packages(drc-lidar-accumulate icp-registration  bot2-frames laser-util
-#    path-util ${REQUIRED_PACKAGES} pcl_io-1.7
-#    pronto_vis   eigen3)
-#target_link_libraries (drc-lidar-accumulate lcm pronto_math cloud_accumulate 
-#                        boost_system boost_thread)
-#pods_install_executables(drc-lidar-accumulate)
+############### online registration executable
+add_executable(aicp-registration-online online_app.cpp)
+target_link_libraries(aicp-registration-online boost_system boost_filesystem cloud_accumulate pointmatcherUtils commonUtils drawingUtils aicpRegistration aicpOverlap aicpClassification)
+pods_use_pkg_config_packages(aicp-registration-online ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
+pods_install_executables(aicp-registration-online)
 
-###############
-#add_executable(drc-icp-plot icp_registration_app.cpp icp_3Dreg_and_plot.cpp)
-#pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} pcl_io-1.7
-#    pronto_vis eigen3 bot2-frames)
-#target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRARIES}
-#                        boost_system boost_thread)
-#pods_install_executables(drc-icp-plot)
-
-###############
-#add_executable(drc-icp-plot-advanced icp_registration_advanced_app.cpp icp_3Dreg_and_plot.cpp)
-#pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} pcl_io-1.7
-#    pronto_vis eigen3 bot2-frames)
-#target_link_libraries(drc-icp-plot-advanced icp-registration lcm pronto_math ${VTK_LIBRARIES}
-#                        boost_system boost_thread)
-#pods_install_executables(drc-icp-plot-advanced)
 
 
