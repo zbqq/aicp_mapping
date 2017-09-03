@@ -1,4 +1,5 @@
 // Run: aicp-registration-online -h
+// Testing: aicp-registration-online -s debug -b 83 -a -v
 
 // Input: POSE_BODY
 // Output: POSE_BODY_CORRECTED
@@ -131,6 +132,8 @@ class App{
     vector<LidarScan> lidar_scans_list_;
     AlignedSweepsCollection* sweep_scans_list_;
 
+    Eigen::Matrix4f initialT_;
+
     // Transformation matrices
     Eigen::Isometry3d local_;
     Eigen::Isometry3d body_to_lidar_; // Variable tf from the lidar to the robot's base link
@@ -138,15 +141,11 @@ class App{
     Eigen::Isometry3d world_to_body_msg_; // Captures the position of the body frame in world from launch
                                           // without drift correction
     long long int world_to_body_msg_utime_;
-//    Eigen::Isometry3d world_to_body_now_; // running position estimate
     Eigen::Isometry3d world_to_head_now_; // running head position estimate
-//    Eigen::Isometry3d world_to_frame_vicon_first_; // Ground truth (initialization)
-//    Eigen::Isometry3d world_to_frame_vicon_; // Ground truth
     Eigen::Isometry3d world_to_body_corr_first_;
 
     bool pose_initialized_;
     bool updated_correction_;
-//    bool vicon_initialized_;
 
     // Avoid cloud distortion clearing buffer after pose update
     bool clear_clouds_buffer_;
@@ -180,11 +179,10 @@ class App{
     // Init handlers:
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
                             const std::string& channel, const  bot_core::planar_lidar_t* msg);
-    void doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose,
-                        Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T);
+    void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading,
+                        Eigen::Matrix4f &T, vector<float>& failure_prediction_factors);
 
     void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
-//    void viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg);
 
     // Tool functions
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
@@ -203,7 +201,6 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
 
   pose_initialized_ = FALSE;
   updated_correction_ = TRUE;
-//  vicon_initialized_ = FALSE;
 
   valid_correction_ = FALSE;
   force_reference_update_ = FALSE;
@@ -217,10 +214,11 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   octree_overlap_ = -1.0;
   alignability_ = -1.0;
 
+  // Initialize reading with previous correction when "debug" mode
+  initialT_ = Eigen::Matrix4f::Identity(4,4);
+
   local_ = Eigen::Isometry3d::Identity();
   world_to_body_msg_ = Eigen::Isometry3d::Identity();
-//  world_to_frame_vicon_ = Eigen::Isometry3d::Identity();
-//  world_to_frame_vicon_first_ = Eigen::Isometry3d::Identity();
   world_to_body_corr_first_ = Eigen::Isometry3d::Identity();
   corrected_pose_ = Eigen::Isometry3d::Identity();
   current_correction_ = Eigen::Isometry3d::Identity();
@@ -256,8 +254,6 @@ App::App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
   // Pose initialization
   lcm_->subscribe(cl_cfg_.pose_body_channel, &App::poseInitHandler, this);
   cout << "Initialization of robot pose...\n";
-//  lcm_->subscribe(cl_cfg_.vicon_channel, &App::viconInitHandler, this);
-//  cout << "Initialization of Vicon pose...\n";
 
   // Instantiate objects
   registr_ = create_registrator(reg_params_);
@@ -339,134 +335,44 @@ Eigen::Isometry3d App::getTransfParamAsIsometry3d(PM::TransformationParameters T
   return pose_iso;
 }
 
-void App::doRegistration(DP &reference, DP &reading, Eigen::Isometry3d &ref_pose,
-                        Eigen::Isometry3d &read_pose, DP &output, PM::TransformationParameters &T)
+void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading,
+                         Eigen::Matrix4f &T, vector<float>& failure_prediction_factors)
 {
-//  if (cl_cfg_.verbose)
-//  {
-//    // Publish clouds in Director
-//    drawPointCloudCollections(lcm_, 5000, local_, reading, 1, "Reading");
-//    drawPointCloudCollections(lcm_, 5010, local_, reference, 1, "Reference");
-//  }
-//  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /*===================================
+  =              AICP Core            =
+  ===================================*/
+  string configNameAICP;
+  configNameAICP.append(FILTERS_CONFIG_LOC);
+  configNameAICP.append("/icp_autotuned.yaml");
 
-//  // ............do registration.............
-//  // First ICP loop
-//  string configName1;
-//  configName1.append(REG_BASE);
-//  if (cl_cfg_.algorithm == "icp")
-//    configName1.append("/filters_config/Chen91_pt2plane.yaml");
-//  else if (cl_cfg_.algorithm == "aicp")
-//    configName1.append("/filters_config/icp_autotuned.yaml");
+  // Auto-tune ICP chain (quantile for the outlier filter)
+  float current_ratio = octree_overlap_/100.0;
+  if (current_ratio < 0.25)
+    current_ratio = 0.25;
+  else if (current_ratio > 0.70)
+    current_ratio = 0.70;
 
-//  DP initializedReading;
-//  // Initialization (if user rquires to apply the correction)
-//  if (cl_cfg_.apply_correction && cl_cfg_.working_mode != "robot")
-//  {
-//    PM::Transformation* rigidTrans;
-//    rigidTrans = PM::get().REG(Transformation).create("RigidTransformation");
+  replaceRatioConfigFile(reg_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
+  registr_->updateConfigParams(configNameAICP);
 
-//    if (!rigidTrans->checkParameters(initialT_)) {
-//      cerr << endl
-//         << "Initial transformation is not rigid. Initialization: identity."
-//         << endl;
-//      initialT_ = PM::TransformationParameters::Identity(4,4);
-//    }
-//    else
-//    {
-//      initialT_ = perturbsT * initialT_;
-//      initializedReading = rigidTrans->compute(reading, initialT_);
-//      cout << "Initialization:" << endl << initialT_ << endl;
-//    }
-//  }
-//  else
-//  {
-//    initializedReading = reading;
-//    initialT_ = PM::TransformationParameters::Identity(4,4);
-//    cout << "Initialization: not applied." << endl;
-//  }
+  /*===================================
+  =          Register Clouds          =
+  ===================================*/
+  registr_->registerClouds(reference, reading, T, failure_prediction_factors);
+  cout << "[Main] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
+  cout << "[Main] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
 
-//  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//  /*// To file: DEBUG
-//  std::stringstream vtk_fname2;
-//  vtk_fname2 << data_directory_path_.str();
-//  vtk_fname2 << "/initializedReading_";
-//  vtk_fname2 << to_string(sweep_scans_list_->getNbClouds());
-//  vtk_fname2 << ".vtk";
-//  savePointCloudVTK(vtk_fname2.str().c_str(), initializedReading);*/
-//  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  cout << "==============================" << endl
+       << "[Main] Computed 3D Transform:" << endl
+       << "==============================" << endl
+       << T << endl;
 
-//  // Auto-tune ICP chain (quantile for the Trimmed Outlier Filter)
-//  float current_ratio = overlap_/100.0;
-//  if (current_ratio < 0.25)
-//    current_ratio = 0.25;
-//  else if (current_ratio > 0.70)
-//    current_ratio = 0.70;
+//  T =  T * initialT_;
 
-//  if (cl_cfg_.algorithm == "aicp")
-//    replaceRatioConfigFile(tmpConfigName_, configName1, current_ratio);
-
-//  registr_->setConfigFile(configName1);
-//  registr_->getICPTransform(initializedReading, reference);
-//  PM::TransformationParameters T1 = registr_->getTransform();
-//  cout << "3D Transformation (Trimmed Outlier Filter):" << endl << T1 << endl;
-//  // Store output after first ICP
-//  // (if second ICP gives exception the output cloud remains this one)
-//  output = registr_->getDataOut();
-
-//  PM::ICP icp = registr_->getIcp();
-//  DP readFiltered = icp.getReadingFiltered();
-
-//  getResidualError(icp, current_ratio, residualMeanDist_, residualMedDist_, residualQuantDist_);
-
-//  if (cl_cfg_.verbose)
-//  {
-//    Eigen::Isometry3d T1_eigen = getTransfParamAsIsometry3d(T1);
-//    drawFrameCollections(lcm_, 7, T1_eigen, 0, "alignment");
-//  }
-
-//  // To file, registration advanced %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% EVALUATION
-//  /*
-//  // Distance dp_cloud points from KNN in ref
-//  int line_number = sweep_scans_list_->getNbClouds();
-//  PM::Matrix distsRead = distancesKNN(reference, initializedReading);
-//  writeLineToFile(distsRead, "distsBeforeRegistration.txt", line_number);
-//  // Distance out_trimmed_filter points from KNN in ref
-//  PM::Matrix distsOut1 = distancesKNN(reference, output);
-//  writeLineToFile(distsOut1, "distsAfterSimpleRegistration.txt", line_number);*/
-//  //pairedPointsMeanDistance(reference, output, icp);
-//  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-//  T = T1 * initialT_;
-//  // Variable to apply correction (initialize the alignment)
-//  float distT = sqrt(pow(T1(0,3),2) + pow(T1(1,3),2) + pow(T1(2,3),2));
-//  cout << "distT = " << distT << endl;
-//  cout << "dist_x = " << pow(T1(0,3),2) << endl;
-//  cout << "dist_y = " << pow(T1(1,3),2) << endl;
-//  cout << "dist_z = " << pow(T1(2,3),2) << endl;
-  
-//  if (residualMeanDist_ < forced_update_threshold_ ||
-//      residualMedDist_ < forced_update_threshold_ ||
-//      residualQuantDist_ < forced_update_threshold_)
-//  {
-//    initialT_ = T;
-//    valid_correction_ = TRUE;
-//  }
-//  else
-//  {
-//    valid_correction_ = FALSE;
-//    // To director
-//    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1);
-//    //drawPointCloudCollections(lcm_, sweep_scans_list_->getNbClouds(), local_, output, 1, "Misaligned");
-
-//    // To file: DEBUG
-//    /*std::stringstream vtk_fname_read;
-//    vtk_fname_read << data_directory_path_.str();
-//    vtk_fname_read << "/misaligned_";
-//    vtk_fname_read << to_string(sweep_scans_list_->getNbClouds());
-//    vtk_fname_read << ".vtk";
-//    savePointCloudVTK(vtk_fname_read.str().c_str(), output);*/
-//  }
+  cout << "==============================" << endl
+       << "[Main] Corrected Reading Pose:" << endl
+       << "==============================" << endl
+       << T << endl;
 }
 
 void App::operator()() {
@@ -510,27 +416,43 @@ void App::operator()() {
       {
         TimingUtils::tic();
 
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+        if (cl_cfg_.verbose)
+        {
+          // Publish clouds in Director
+          drawPointCloudCollections(lcm_, 5000, local_, *cloud, 1, "Reading Original");
+        }
 
+        /*===================================
+        =           Set Input Clouds        =
+        ===================================*/
         // Get current reference cloud
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref = sweep_scans_list_->getCurrentReference().getCloud();
 
-        // Overlap
         Eigen::Isometry3d ref_pose, read_pose;
-        if (sweep_scans_list_->getCurrentReference().getId() != 0)
+        ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
+        read_pose = first_sweep_scans_list.back().getBodyPose();
+
+        // Initialize clouds before sending to filters
+        // (simulates correction integration)
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+        if (cl_cfg_.apply_correction && cl_cfg_.working_mode != "robot")
         {
-          ref_pose = sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentReference().getId()).getBodyPose();
-          ref_ptr = sweep_scans_list_->getCloud(sweep_scans_list_->getCurrentReferenceId()).getCloud();
+          pcl::transformPointCloud (*cloud, *read_ptr, initialT_);
+          Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
+          read_pose = initialT_iso * read_pose;
         }
         else
-        {
-          ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
-          ref_ptr = ref;
-        }
+          *read_ptr = *cloud;
 
-        read_pose = first_sweep_scans_list.back().getBodyPose();
-        read_ptr = cloud;
+        ref_ptr = ref;
+
+        if (cl_cfg_.verbose)
+        {
+          // Publish clouds in Director
+          drawPointCloudCollections(lcm_, 5010, local_, *read_ptr, 1, "Reading Initialized");
+          drawPointCloudCollections(lcm_, 5020, local_, *ref_ptr, 1, "Reference");
+        }
 
         /*===================================
         =        Filter Input Clouds        =
@@ -540,6 +462,7 @@ void App::operator()() {
         pcl::PointCloud<pcl::PointXYZ>::Ptr read_xyz_ptr (new pcl::PointCloud<pcl::PointXYZ>);
         copyPointCloud(*ref_ptr, *ref_xyz_ptr);
         copyPointCloud(*read_ptr, *read_xyz_ptr);
+
         pcl::PointCloud<pcl::PointXYZ> overlap_points_A;
         pcl::PointCloud<pcl::PointXYZ> overlap_points_B;
         pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudA_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
@@ -583,7 +506,6 @@ void App::operator()() {
 
         // Create octree from reference cloud (wrt robot point of view),
         // add the reading cloud and compute overlap
-        //Eigen::Isometry3d ground_truth_reading_pose_iso = fromMatrix4fToIsometry3d(ground_truth_reading_pose);
         ref_tree = overlapper_->computeOverlap(*ref_xyz_prefiltered, *read_xyz_prefiltered,
                                                ref_pose, read_pose,
                                                read_tree);
@@ -619,16 +541,25 @@ void App::operator()() {
           /*===================================
           =     Visualize Octree Overlap      =
           ===================================*/
-          publishOctreeToLCM(lcm_, ref_tree, "OCTOMAP_REF");
-          publishOctreeToLCM(lcm_, read_tree, "OCTOMAP");
+//          publishOctreeToLCM(lcm_, ref_tree, "OCTOMAP_REF");
+//          publishOctreeToLCM(lcm_, read_tree, "OCTOMAP");
           /*===================================
           =      Visualize Alignability       =
           ===================================*/
-          drawPointCloudNormalsCollections(lcm_, 9, local_, *cloudA_matched_planes, 0, "Matches A");
-          drawPointCloudNormalsCollections(lcm_, 11, local_, *cloudB_matched_planes, 0, "Matches B");
-          eigenvectors->points.resize(4);
-          drawPointCloudNormalsCollections(lcm_, 13, local_, *eigenvectors, 0, "Alignability Eigenvectors");
+//          drawPointCloudNormalsCollections(lcm_, 9, local_, *cloudA_matched_planes, 0, "Matches A");
+//          drawPointCloudNormalsCollections(lcm_, 11, local_, *cloudB_matched_planes, 0, "Matches B");
+//          eigenvectors->points.resize(4);
+//          drawPointCloudNormalsCollections(lcm_, 13, local_, *eigenvectors, 0, "Alignability Eigenvectors");
         }
+
+        /*===================================
+        =          Register Clouds          =
+        ===================================*/
+        Eigen::Matrix4f Ttot = Eigen::Matrix4f::Identity(4,4);
+        vector<float> other_predictions;
+
+        this->doRegistration(*ref_xyz_prefiltered, *read_xyz_prefiltered,
+                             Ttot, other_predictions);
 
         if(risk_prediction_(0,0) > class_params_.svm.threshold)
         {
@@ -639,13 +570,12 @@ void App::operator()() {
           updates_counter_ ++;
 
           // Updating reference with current reading (non-aligned)
-          Eigen::Matrix4f Tid = Eigen::Matrix4f::Identity(4,4);
-          current_sweep->populateSweepScan(first_sweep_scans_list, *cloud, sweep_scans_list_->getNbClouds(), -1, 1);
-          sweep_scans_list_->addSweep(*current_sweep, Tid);
+          current_sweep->populateSweepScan(first_sweep_scans_list, *read_ptr, sweep_scans_list_->getNbClouds(), -1, 1);
+          sweep_scans_list_->addSweep(*current_sweep, initialT_);
 
           int current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
           bool referenceSet = sweep_scans_list_->getCloud(current_cloud_id).setReference();
-          cout << "NEW REFERENCE " << current_cloud_id << ", Set: " << referenceSet << endl;
+          cout << "NEW REFERENCE is " << current_cloud_id << ", Set: " << referenceSet << endl;
           if (referenceSet)
             sweep_scans_list_->updateReference(current_cloud_id);
 
@@ -657,104 +587,35 @@ void App::operator()() {
           ss_tmp3 << ".pcd";
           pcd_writer_.write<pcl::PointXYZRGB> (ss_tmp3.str (), *sweep_scans_list_->getCurrentReference().getCloud(), false);
         }
+        else
+        {
+          bool enableRef = TRUE;
+          pcl::PointCloud<pcl::PointXYZRGB>::Ptr output (new pcl::PointCloud<pcl::PointXYZRGB>);
+          pcl::transformPointCloud (*read_ptr, *output, Ttot);
+          current_sweep->populateSweepScan(first_sweep_scans_list, *output, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
+          sweep_scans_list_->addSweep(*current_sweep, Ttot);
 
-//        DP out;
-//        PM::TransformationParameters Ttot;
+          current_correction_ = getTransfParamAsIsometry3d(Ttot); // Ttot transforms initialized reading into reference
+          updated_correction_ = TRUE;
 
-//        this->doRegistration(ref, dp_cloud, ref_pose, read_pose, out, Ttot);
+          initialT_ = Ttot * initialT_;
+        }
 
-//        TimingUtils::toc();
+        TimingUtils::toc();
 
-//        // Compute correction to pose estimate:
-//        if(valid_correction_)
-//        {
-//          bool enableRef = FALSE;
-//          if (residualMeanDist_ < forced_update_threshold_ &&
-//              residualMedDist_ < forced_update_threshold_ &&
-//              residualQuantDist_ < forced_update_threshold_)
-//            enableRef = TRUE;
-//          current_sweep->populateSweepScan(first_sweep_scans_list, out, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
-
-//          current_correction_ = getTransfParamAsIsometry3d(Ttot);
-//          updated_correction_ = TRUE;
-
-//          // Publish corrected pose
-//          bot_core::pose_t msg_out;
-//          Eigen::Isometry3d world_to_body_last;
-//          long long int world_to_body_last_utime;
-//          std::unique_lock<std::mutex> lock(robot_state_mutex_);
-//          {
-//            // Get latest world to body transform available
-//            world_to_body_last = world_to_body_msg_;
-//            world_to_body_last_utime = world_to_body_msg_utime_;
-//          }
-
-//          if (cl_cfg_.working_mode == "robot")
-//          {
-//            // Apply correction if available (identity otherwise)
-//            if (updated_correction_)
-//            {
-//              Eigen::Isometry3d world_to_body_end_of_sweep = current_sweep->getBodyPose();
-//              long long int world_to_body_end_of_sweep_utime = current_sweep->getUtimeEnd();
-
-//              corrected_pose_ = current_correction_ * world_to_body_end_of_sweep;
-//              updated_correction_ = FALSE;
-
-//              if (cl_cfg_.verbose)
-//              {
-//                // Publish frames in Director
-//                drawFrameCollections(lcm_, 3, world_to_body_end_of_sweep, world_to_body_end_of_sweep_utime, "body (end sweep)");
-//                drawFrameCollections(lcm_, 4, world_to_body_last, world_to_body_last_utime, "body (tip)"); // world_to_body_last
-//                drawFrameCollections(lcm_, 5, current_correction_, world_to_body_end_of_sweep_utime, "current_correction");
-//                drawFrameCollections(lcm_, 6, corrected_pose_, world_to_body_end_of_sweep_utime, "body (corrected)");
-//              }
-
-//              // To correct robot drift publish CORRECTED POSE
-//              msg_out = getIsometry3dAsBotPose(corrected_pose_, current_sweep->getUtimeEnd());
-//              lcm_->publish(cl_cfg_.output_channel,&msg_out);
-
-//              {
-//                std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-//                clear_clouds_buffer_ = TRUE;
-//              }
-//            }
-//          }
-
-//          // Ttot is the full transform to move the input on the reference cloud
-//          // Store current sweep
-//          sweep_scans_list_->addSweep(*current_sweep, Ttot);
-//          valid_correction_ = FALSE;
-//          cout << "VALID CORRECTION" << endl;
-
-//          // DEBUG
-//          cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
-//          cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
-//          cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
-//          cout << "Overlap Updates: " << overlap_updates_counter_ << endl;
-//          cout << "Forced Updates: " << forced_updates_counter_ << endl;
-//        }
-//        else
-//        {
-
-//          force_reference_update_ = TRUE;
-//          cout << "NOT VALID CORRECTION" << endl;
-//        }
-//      }
-
-//      // To file
-//      if((sweep_scans_list_->getNbClouds() == 1))// || (sweep_scans_list_->getNbClouds() % 1 == 0))
-//      {
-//        std::stringstream vtk_fname;
-//        vtk_fname << data_directory_path_.str();
-//        vtk_fname << "/cloud_";
-//        vtk_fname << to_string(sweep_scans_list_->getNbClouds()-1);
-//        vtk_fname << ".vtk";
-//        savePointCloudVTK(vtk_fname.str().c_str(), sweep_scans_list_->getCurrentCloud().getCloud());
+        // DEBUG
+        cout << "============================" << endl
+             << "[Main] Statistics:" << endl
+             << "============================" << endl;
+        cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
+        cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
+        cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
+        cout << "Updates: " << updates_counter_ << endl;
       }
 
       if (cl_cfg_.verbose)
-        drawPointCloudCollections(lcm_, 6000, local_, *sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
-        
+        drawPointCloudCollections(lcm_, 5030, local_, *sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
+
       current_sweep->~SweepScan();
 
       cout << "--------------------------------------------------------------------------------------" << endl;
@@ -795,7 +656,7 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   // Pyhton script convert_robot_behavior_type.py must be running.
   {
     if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
-      cout << "[Main]" << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
+      cout << "[Main] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
     }
     accu_->processLidar(msg);
     lidar_scans_list_.push_back(*current_scan);
@@ -849,26 +710,6 @@ void App::planarLidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
   }
 }
 
-//void App::viconInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::rigid_transform_t* msg){
-
-//  Eigen::Isometry3d body_to_vicon_frame;
-//  get_trans_with_utime( botframes_, "body_vicon", "vicon_frame", msg->utime, body_to_vicon_frame);
-
-//  if (!vicon_initialized_)
-//  {
-//    // Get pose ground truth (vicon initialization)
-//    world_to_frame_vicon_first_ = getBodyAsIsometry3d(msg);
-//    world_to_frame_vicon_first_ = world_to_frame_vicon_first_ * body_to_vicon_frame;
-//    vicon_initialized_ = TRUE;
-//  }
-
-//  world_to_frame_vicon_ = getBodyAsIsometry3d(msg);
-//  world_to_frame_vicon_ = world_to_frame_vicon_ * body_to_vicon_frame;
-
-//  bot_core::pose_t msg_out_vic = getIsometry3dAsBotPose(world_to_frame_vicon_, msg->utime);
-//  lcm_->publish("POSE_VICON",&msg_out_vic);
-//}
-
 void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
 
   Eigen::Isometry3d world_to_body_last;
@@ -894,6 +735,15 @@ void App::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& cha
     // To correct robot drift publish CORRECTED POSE
     msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
     lcm_->publish(cl_cfg_.output_channel,&msg_out);
+
+    if (updated_correction_)
+    {
+      {
+        std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+        clear_clouds_buffer_ = TRUE;
+        updated_correction_ = FALSE;
+      }
+    }
   }
 
   // Publish current overlap
