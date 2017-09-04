@@ -545,8 +545,8 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   max_point_A.y = 1.0 * max_point_A.y; // enlarged 2 times
   min_point_A.y = 1.0 * min_point_A.y;
 
-  max_point_A.z = 2.0 * max_point_A.z; // direction perpendicular to plane
-  min_point_A.z = 2.0 * min_point_A.z; // enlarged 20 times
+  max_point_A.z = 3.0 * max_point_A.z; // direction perpendicular to plane
+  min_point_A.z = 3.0 * min_point_A.z; // enlarged 20 times
 //  max_point_A.z = 1.0; // set direction perpendicular to plane
 //  min_point_A.z = -1.0; // to custom value
 //  cout << "[Filtering Utils] Edege x:" << max_point_A.x - min_point_A.x << endl;
@@ -571,8 +571,8 @@ float overlapBoxFilter(pcl::PointCloud<pcl::PointXYZRGBNormal>& planeA, pcl::Poi
   max_point_B.y = 1.0 * max_point_B.y; // enlarged 2 times
   min_point_B.y = 1.0 * min_point_B.y;
 
-  max_point_B.z = 2.0 * max_point_B.z; // direction perpendicular to plane
-  min_point_B.z = 2.0 * min_point_B.z; // enlarged 20 times
+  max_point_B.z = 3.0 * max_point_B.z; // direction perpendicular to plane
+  min_point_B.z = 3.0 * min_point_B.z; // enlarged 20 times
 //  max_point_B.z = 1.0; // set direction perpendicular to plane
 //  min_point_B.z = -1.0; // to custom value
 //  cout << "[Filtering Utils] Edege x:" << max_point_B.x - min_point_B.x << endl;
@@ -615,6 +615,8 @@ void registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance, std:
   cout << "[Filtering Utils] Normalized Prediction Eigenvalues [R,P,Y,X,Y,Z]:" << endl << system_lambdas << endl;
 
   int pos_min, pos_max;
+  if (!predictions.empty())
+    predictions.clear();
 
   // Degeneracy
   // used in "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016

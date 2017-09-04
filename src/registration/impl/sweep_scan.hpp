@@ -43,6 +43,10 @@ class SweepScan
             is_reference_ = true;
         return enabled_reference_;
     };
+    void disableReference()
+    {
+      enabled_reference_ = false;
+    };
 
     void addPointsToSweepScan(pcl::PointCloud<pcl::PointXYZRGB>& other_cloud);
 

@@ -1,10 +1,10 @@
 AICP: {
   Registration: {
     type: "Pointmatcher", # GICP, Kaess
-    sensorRange: 10.0,         # in meters
-    sensorAngularView: 360.0,  # in degrees
-    loadPosesFrom: "file", # file (ground truth poses), pcd
-    initialTransform: "random", # x[m], y[m], yaw[deg]
+    sensorRange: 30.0,         # in meters
+    sensorAngularView: 270.0,  # in degrees
+    loadPosesFrom: "", # "file" (ground truth poses), "pcd", "" is from log if available
+    initialTransform: "", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be
                                      # sampled from Gaussian distributed perturbations
                                      # with 0.1 m and 10 deg variance magnitude
@@ -17,7 +17,7 @@ AICP: {
 
     Pointmatcher: {
       configFileName: "icp_autotuned_default.yaml",
-      printOutputStatistics: false,
+      printOutputStatistics: false, # TODO (not enabled yet)
     }
   },
   Overlap: {
@@ -41,9 +41,11 @@ AICP: {
     },
   },
   Experiments: {
-    type: "Compare", # "",
+    type: "Online", # "",
                      # "Validation" saves: idA, idB, alignability, degeneracy,
                      # "Compare" saves: idA, idB, fov_overlap, octree_overlap,
                      #                  alignability, align_risk, degeneracy, ICN
+                     # "Online" saves: line_id, time_stamp, octree_overlap,
+                     #                 alignability, align_risk, degeneracy, ICN
   }
 }
