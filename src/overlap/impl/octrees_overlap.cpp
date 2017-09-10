@@ -23,7 +23,7 @@ namespace aicp {
     tree_ = new ColorOcTree(params_.octree_based.octomapResolution);
 
     // Setting reference tree
-    createTree(ref_cloud, ref_pose, tree_, yellow);
+    createTree(ref_cloud, ref_pose, tree_, blue);
   }
 
   ColorOcTree* OctreesOverlap::computeOverlap(pcl::PointCloud<pcl::PointXYZ> &ref_cloud, pcl::PointCloud<pcl::PointXYZ> &read_cloud,
@@ -141,7 +141,7 @@ namespace aicp {
         {
           overlapping_nodes += 1;
 
-          node_read->setColor(*blue); // set color to blue
+          node_read->setColor(*red); // set color to red
         }
       }
     }
