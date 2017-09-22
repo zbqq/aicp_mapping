@@ -34,8 +34,8 @@ namespace aicp {
     svm_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
 
     // Train the SVM
-//    svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
-    svm_.train(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
+    svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
+//    svm_.train(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
 
     if (params_.svm.saveFile.compare("") != 0) {
       std::cout << "[Classifier] Saving the classifier to: " << params_.svm.saveFile << "." << std::endl;
