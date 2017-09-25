@@ -4,10 +4,32 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
+
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PCL_IO pcl_io-1.7)
+if(PCL_IO_FOUND)
+  message("---- PCL IO was found (in registration)\n")
+  set(PCL_IO_PKG_CONFIG "pcl_io-1.7")
+  set(USE_PRONTO_VIS_PCL TRUE)
+endif()
+
+pkg_check_modules(PCL_IO_1_8 pcl_io-1.8)
+if(PCL_IO_1_8_FOUND)
+  message("---- PCL IO_1_8 was found (in registration)\n")
+  set(PCL_IO_PKG_CONFIG "pcl_io-1.8")
+  set(USE_PRONTO_VIS_PCL TRUE)
+endif()
+
+if(NOT PCL_IO_FOUND AND NOT PCL_IO_1_8_FOUND)
+  message("---- PCL IO not found in registration\n")
+endif()
  
 ##############
 add_library(icp-registration SHARED icp_testing_routine.cpp icp_3Dreg_and_plot.cpp icp_utils.cpp clouds_io_utils.cpp)
-pods_use_pkg_config_packages(icp-registration path-util ${REQUIRED_PACKAGES} pcl_io-1.8
+pods_use_pkg_config_packages(icp-registration path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
     laser-util
     pronto_vis eigen3 bot2-frames)
 
@@ -24,7 +46,7 @@ pods_install_pkg_config_file(icp-registration
 ###############
 add_executable(drc-lidar-accumulate lidar_accumulate.cpp clouds_io_utils.cpp)
 pods_use_pkg_config_packages(drc-lidar-accumulate icp-registration  bot2-frames laser-util
-    path-util ${REQUIRED_PACKAGES} pcl_io-1.8
+    path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
     pronto_vis   eigen3)
 target_link_libraries (drc-lidar-accumulate lcm pronto_math cloud_accumulate 
                         boost_system boost_thread)
@@ -32,7 +54,7 @@ pods_install_executables(drc-lidar-accumulate)
 
 ###############
 add_executable(drc-icp-plot icp_registration_app.cpp icp_3Dreg_and_plot.cpp)
-pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} pcl_io-1.8
+pods_use_pkg_config_packages(drc-icp-plot path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
     pronto_vis eigen3 bot2-frames)
 target_link_libraries(drc-icp-plot icp-registration lcm pronto_math ${VTK_LIBRARIES}
                         boost_system boost_thread)
@@ -40,7 +62,7 @@ pods_install_executables(drc-icp-plot)
 
 ###############
 add_executable(drc-icp-plot-advanced icp_registration_advanced_app.cpp icp_3Dreg_and_plot.cpp)
-pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} pcl_io-1.8
+pods_use_pkg_config_packages(drc-icp-plot-advanced path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
     pronto_vis eigen3 bot2-frames)
 target_link_libraries(drc-icp-plot-advanced icp-registration lcm pronto_math ${VTK_LIBRARIES}
                         boost_system boost_thread)
