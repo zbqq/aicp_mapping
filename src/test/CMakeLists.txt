@@ -44,8 +44,7 @@ pods_use_pkg_config_packages(collections-demo path-util   eigen3  pronto_vis)
 target_link_libraries(collections-demo lcm boost_system boost_thread)
 pods_install_executables(collections-demo)
 
-
 add_executable(test-aicp test_aicp.cpp)
-target_link_libraries(test-aicp pointmatcher boost_system filteringUtils drawingUtils octrees-difference)
-pods_use_pkg_config_packages(test-aicp lcm bot2-lcmgl-client ${PCL_IO_PKG_CONFIG} icp-registration pronto_lcm pcl_features-1.7)
+target_link_libraries(test-aicp pointmatcher boost_system filteringUtils drawingUtils octrees-difference ${VTK_LIBRARIES})
+pods_use_pkg_config_packages(test-aicp lcm bot2-lcmgl-client ${PCL_IO_PKG_CONFIG} icp-registration pronto_lcm pcl_features-1.8)
 pods_install_executables(test-aicp)
