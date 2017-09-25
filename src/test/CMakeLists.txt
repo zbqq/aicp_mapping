@@ -17,7 +17,7 @@ pods_install_executables(color-octomap-server)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 add_executable(convert-vtk-to-octree-formats convert-vtk-to-octree-formats.cpp)
-pods_use_pkg_config_packages(convert-vtk-to-octree-formats path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+pods_use_pkg_config_packages(convert-vtk-to-octree-formats path-util ${REQUIRED_PACKAGES} ${PCL_IO_PKG_CONFIG}
     pronto_vis eigen3 bot2-frames octomap octomap-util)
 target_link_libraries(convert-vtk-to-octree-formats  ${VTK_LIBRARIES})
 target_link_libraries(convert-vtk-to-octree-formats lcm pronto_math  
@@ -41,11 +41,10 @@ pods_install_executables(publish-vtk)
 ###############
 add_executable(collections-demo collections-demo.cpp)
 pods_use_pkg_config_packages(collections-demo path-util   eigen3  pronto_vis)
-target_link_libraries(collections-demo lcm boost_system boost_thread )
+target_link_libraries(collections-demo lcm boost_system boost_thread)
 pods_install_executables(collections-demo)
 
-
 add_executable(test-aicp test_aicp.cpp)
-target_link_libraries(test-aicp pointmatcher boost_system filteringUtils drawingUtils octrees-difference)
-pods_use_pkg_config_packages(test-aicp lcm bot2-lcmgl-client ${PCL_IO_PKG_CONFIG} icp-registration pronto_lcm pcl_features-1.7)
+target_link_libraries(test-aicp pointmatcher boost_system filteringUtils drawingUtils octrees-difference ${VTK_LIBRARIES})
+pods_use_pkg_config_packages(test-aicp lcm bot2-lcmgl-client ${PCL_IO_PKG_CONFIG} icp-registration pronto_lcm)
 pods_install_executables(test-aicp)
