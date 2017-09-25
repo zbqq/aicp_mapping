@@ -6,11 +6,24 @@ project(aicp)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-find_package(PCL 1.7 REQUIRED)
+### pcl
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(PCL_LIBS pcl_io-1.7)
+if(PCL_LIBS_FOUND)
+  find_package(PCL 1.7 REQUIRED)
+  set(PCL_LIBRARIES "pcl_io-1.7 pcl_filters-1.7 pcl_segmentation-1.7 pcl_common-1.7 pcl_visualization-1.7")
+endif()
+
+pkg_check_modules(PCL_LIBS_1_8 pcl_io-1.8)
+if(PCL_LIBS_1_8_FOUND)
+  find_package(PCL 1.8 REQUIRED)
+  set(PCL_LIBRARIES "pcl_io-1.8 pcl_filters-1.8 pcl_segmentation-1.8 pcl_common-1.8 pcl_visualization-1.8")
+endif()
+
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-set(PCL_LIBRARIES pcl_io-1.7 pcl_common-1.7 pcl_filters-1.7 pcl_features-1.7 pcl_io-1.7 pcl_surface-1.7 pcl_segmentation-1.7 pcl_visualization-1.7 pcl_search-1.7 pcl_kdtree-1.7 pcl_keypoints-1.7)
 
 ############### clasification library
 add_library(aicpClassification SHARED impl/svm.cpp)
@@ -24,18 +37,6 @@ add_executable(aicp-classification main.cpp)
 target_link_libraries(aicp-classification aicpClassification commonUtils boost_system ${VTK_LIBRARIES})
 pods_use_pkg_config_packages(aicp-classification ${PCL_LIBRARIES} yaml-cpp)
 pods_install_executables(aicp-classification)
-
-############### classifier train executable
-#add_executable(dift-classifier-train train.cpp)
-#target_link_libraries(dift-classifier-train diftClassification boost_system ${VTK_LIBRARIES})
-#pods_use_pkg_config_packages(dift-classifier-train ${PCL_LIBRARIES} yaml-cpp)
-#pods_install_executables(dift-classifier-train )
-
-############### classifier test executable
-#add_executable(dift-classifier-test test.cpp impl/random_forest.cpp)
-#target_link_libraries(dift-classifier-test diftClassification boost_system ${VTK_LIBRARIES})
-#pods_use_pkg_config_packages(dift-classifier-test ${PCL_LIBRARIES} yaml-cpp)
-#pods_install_executables(dift-classifier-test )
 
 ############### classifier example executable
 add_executable(aicp-classification-example example.cpp)

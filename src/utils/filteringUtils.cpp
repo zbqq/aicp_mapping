@@ -140,7 +140,7 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud<pcl:
       Eigen::Affine3d poseB_affine;
       poseB_affine.translation() = poseB.translation();
       poseB_affine.linear() = poseB.rotation();
-      pointA_local = pcl::transformPoint(pointA_B, poseB_affine);
+      pointA_local = pcl::transformPoint(pointA_B, poseB_affine.cast<float>());
       accepted_pointsA.push_back(pointA_local);
     }
   }
@@ -170,7 +170,7 @@ float overlapFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud<pcl:
       Eigen::Affine3d poseA_affine;
       poseA_affine.translation() = poseA.translation();
       poseA_affine.linear() = poseA.rotation();
-      pointB_local = pcl::transformPoint(pointB_A, poseA_affine);
+      pointB_local = pcl::transformPoint(pointB_A, poseA_affine.cast<float>());
       accepted_pointsB.push_back(pointB_local);
     }
   }
@@ -448,7 +448,7 @@ void getOrientedBoundingBox(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud,
                             pcl::PointXYZRGBNormal& min_point_OBB, pcl::PointXYZRGBNormal& max_point_OBB,
                             pcl::PointXYZRGBNormal& position_OBB, Eigen::Matrix3f& rotational_matrix_OBB)
 {
-  pcl_aicp::MomentOfInertiaEstimation<pcl::PointXYZRGBNormal> feature_extractor;
+  pcl::MomentOfInertiaEstimation<pcl::PointXYZRGBNormal> feature_extractor;
   feature_extractor.setInputCloud(cloud);
   feature_extractor.compute();
 

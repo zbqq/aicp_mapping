@@ -113,11 +113,12 @@ namespace aicp{
     //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
     cout << "[Pointmatcher] Accepted matches (inliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
-    // Get System Covariance:
-    Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
-    //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
-    registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
-    //cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
+//    // simalpha: TO UPGRADE
+//    // Get System Covariance:
+//    Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
+//    //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
+//    registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
+//    //cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
 
     // Transform reading with T
     DP tmp_out_read_cloud_(reading_cloud_);
