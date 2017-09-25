@@ -17,7 +17,7 @@ pods_install_executables(color-octomap-server)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 add_executable(convert-vtk-to-octree-formats convert-vtk-to-octree-formats.cpp)
-pods_use_pkg_config_packages(convert-vtk-to-octree-formats path-util ${REQUIRED_PACKAGES} pcl_io-1.7
+pods_use_pkg_config_packages(convert-vtk-to-octree-formats path-util ${REQUIRED_PACKAGES} pcl_io-1.8
     pronto_vis eigen3 bot2-frames octomap octomap-util)
 target_link_libraries(convert-vtk-to-octree-formats  ${VTK_LIBRARIES})
 target_link_libraries(convert-vtk-to-octree-formats lcm pronto_math  

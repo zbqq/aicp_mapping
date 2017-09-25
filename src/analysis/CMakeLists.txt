@@ -21,7 +21,7 @@ target_link_libraries(icp-error-compute boost_system ${VTK_LIBRARIES} )
 pods_use_pkg_config_packages(icp-error-compute eigen3
   lcm    bot2-frames
   lcmtypes_bot2-core  
-  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.8
   pronto_vis icp-registration
   ${FK_PACKAGES})
 pods_install_executables(icp-error-compute)
@@ -31,7 +31,7 @@ target_link_libraries(perturbations_routine boost_system filteringUtils drawingU
 pods_use_pkg_config_packages(perturbations_routine eigen3
   lcm    bot2-frames
   lcmtypes_bot2-core  
-  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.8
   pronto_vis icp-registration pronto_vis
   bot2-lcmgl-client 
   lidar-odom laser-util

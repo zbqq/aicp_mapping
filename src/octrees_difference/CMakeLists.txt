@@ -11,7 +11,7 @@ pods_use_pkg_config_packages(octrees-difference eigen3
   lcm    bot2-frames
   path-util
   lcmtypes_bot2-core octomap
-  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.8
   octomap-util
   ${FK_PACKAGES})
 
@@ -34,7 +34,7 @@ pods_use_pkg_config_packages(octrees-diff eigen3
   lcm    bot2-frames
   path-util
   lcmtypes_bot2-core octomap
-  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.7
+  lidar-odom ${REQUIRED_PACKAGES} pcl_io-1.8
   pronto_vis icp-registration
   octomap-util
   ${FK_PACKAGES})
