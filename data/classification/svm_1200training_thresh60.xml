@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<my_svm type_id="opencv-ml-svm">
+  <svm_type>C_SVC</svm_type>
+  <kernel><type>POLY</type>
+    <degree>3.</degree>
+    <gamma>1.</gamma>
+    <coef0>0.</coef0></kernel>
+  <C>1.</C>
+  <term_criteria><epsilon>2.2204460492503131e-16</epsilon>
+    <iterations>100</iterations></term_criteria>
+  <var_all>2</var_all>
+  <var_count>2</var_count>
+  <class_count>2</class_count>
+  <class_labels type_id="opencv-matrix">
+    <rows>1</rows>
+    <cols>2</cols>
+    <dt>i</dt>
+    <data>
+      0 1</data></class_labels>
+  <sv_total>13</sv_total>
+  <support_vectors>
+    <_>
+      8.38470001e+01 1.24577999e+01</_>
+    <_>
+      8.64144974e+01 6.28458977e+00</_>
+    <_>
+      1.68286991e+01 9.01662979e+01</_>
+    <_>
+      1.44143000e+01 8.27731018e+01</_>
+    <_>
+      5.00896988e+01 2.93545008e+00</_>
+    <_>
+      1.44090996e+01 1.18993998e+00</_>
+    <_>
+      9.35723972e+00 4.05589981e+01</_>
+    <_>
+      7.71509981e+00 8.45709991e+01</_>
+    <_>
+      1.24039001e+01 3.40779991e+01</_>
+    <_>
+      1.27427998e+01 6.13138008e+01</_>
+    <_>
+      8.31013031e+01 2.10097003e+00</_>
+    <_>
+      1.23550997e+01 7.67526016e+01</_>
+    <_>
+      5.80629997e+01 4.56702995e+00</_></support_vectors>
+  <decision_functions>
+    <_>
+      <sv_count>13</sv_count>
+      <rho>5.4659259610090150e-01</rho>
+      <alpha>
+        5.3776586235625693e-12 2.0238037003617770e-10
+        1.6223948762212499e-10 7.1407688640119532e-11
+        1.4282889697733658e-10 1.2105303230439934e-10
+        -5.3776586235625693e-12 -4.1504918017046526e-11
+        -1.8754881210411661e-11 -7.6004188418277070e-11
+        -2.4957872074692679e-10 -2.5809958007722021e-10
+        -5.5967187110275952e-11</alpha>
+      <index>
+        0 1 2 3 4 5 6 7 8 9 10 11 12</index></_></decision_functions></my_svm>
+</opencv_storage>
