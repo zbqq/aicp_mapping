@@ -58,16 +58,12 @@
 // lcm
 #include <lcm/lcm-cpp.hpp>
 #include <boost/shared_ptr.hpp>
-//#include <boost/assign/std/vector.hpp>
-//#include <boost/filesystem.hpp>
 
 #include <lcmtypes/octomap_utils.h>
 #include <lcmtypes/bot_core/planar_lidar_t.hpp>
 #include <lcmtypes/bot_core/pose_t.hpp>
 #include <lcmtypes/bot_core/rigid_transform_t.hpp>
 #include <lcmtypes/bot_core/double_array_t.hpp>
-
-//#include <zlib.h>
 
 // thread
 #include <mutex>
@@ -87,7 +83,6 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
-//#include <pcl/io/vtk_io.h>
 
 using namespace std;
 using namespace aicp;
