@@ -16,9 +16,9 @@
 #include "aicpOverlap/overlap.hpp"
 #include "aicpOverlap/common.hpp"
 
-#include "commonUtils/fileIO.h"
-#include "commonUtils/common.hpp"
-#include "drawingUtils/drawingUtils.hpp"
+#include "aicpCommonUtils/fileIO.h"
+#include "aicpCommonUtils/common.hpp"
+#include "aicpDrawingUtils/drawingUtils.hpp"
 
 // pcl
 #include <pcl/point_types.h>

@@ -13,6 +13,6 @@ add_subdirectory(src/utils)
 add_subdirectory(src/pcl)
 add_subdirectory(src/overlap)
 add_subdirectory(src/classification)
-#add_subdirectory(src/test) # TO BE UPDATED
+add_subdirectory(src/test)
 
 pods_install_python_script(convert_robot_behavior python/convert_robot_behavior_type.py)

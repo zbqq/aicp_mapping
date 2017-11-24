@@ -34,12 +34,12 @@ pods_use_pkg_config_packages(aicpClassification ${PCL_LIBRARIES} ${REQUIRED_PACK
 
 ############### classifier main executable
 add_executable(aicp-classification main.cpp)
-target_link_libraries(aicp-classification aicpClassification commonUtils boost_system ${VTK_LIBRARIES})
+target_link_libraries(aicp-classification aicpClassification aicpCommonUtils boost_system ${VTK_LIBRARIES})
 pods_use_pkg_config_packages(aicp-classification ${PCL_LIBRARIES} yaml-cpp)
 pods_install_executables(aicp-classification)
 
 ############### classifier example executable
 add_executable(aicp-classification-example example.cpp)
-target_link_libraries(aicp-classification-example aicpClassification commonUtils boost_system ${VTK_LIBRARIES})
+target_link_libraries(aicp-classification-example aicpClassification aicpCommonUtils boost_system ${VTK_LIBRARIES})
 pods_use_pkg_config_packages(aicp-classification-example ${PCL_LIBRARIES} yaml-cpp)
 pods_install_executables(aicp-classification-example)

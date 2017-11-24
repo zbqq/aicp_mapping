@@ -6,8 +6,8 @@
 #include "yaml-cpp/yaml.h" // read the yaml config
 
 // project
-#include "commonUtils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
-#include "commonUtils/fileIO.h"
+#include "aicpCommonUtils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
+#include "aicpCommonUtils/fileIO.h"
 
 #include <memory> // unique_ptr
 

@@ -19,9 +19,9 @@
 #include "aicpClassification/classification.hpp"
 #include "aicpClassification/common.hpp"
 
-#include "commonUtils/cloudIO.h"
-#include "commonUtils/common.hpp"
-#include "drawingUtils/drawingUtils.hpp"
+#include "aicpCommonUtils/cloudIO.h"
+#include "aicpCommonUtils/common.hpp"
+#include "aicpDrawingUtils/drawingUtils.hpp"
 
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config

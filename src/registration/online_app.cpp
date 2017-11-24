@@ -44,10 +44,10 @@
 #include "aicpClassification/classification.hpp"
 #include "aicpClassification/common.hpp"
 
-#include "commonUtils/cloudIO.h"
-#include "commonUtils/timing.hpp"
-#include "commonUtils/common.hpp"
-#include "drawingUtils/drawingUtils.hpp"
+#include "aicpCommonUtils/cloudIO.h"
+#include "aicpCommonUtils/timing.hpp"
+#include "aicpCommonUtils/common.hpp"
+#include "aicpDrawingUtils/drawingUtils.hpp"
 
 // accumulator
 #include <cloud_accumulate/cloud_accumulate.hpp>

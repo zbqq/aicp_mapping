@@ -10,10 +10,10 @@
 #include "aicpRegistration/common.hpp"
 #include "aicpRegistration/abstract_registrator.hpp"
 
-#include "commonUtils/cloudIO.h"
-#include "commonUtils/fileIO.h"
-#include "pointmatcherUtils/icpMonitor.h"
-#include "filteringUtils/filteringUtils.hpp"
+#include "aicpCommonUtils/cloudIO.h"
+#include "aicpCommonUtils/fileIO.h"
+#include "aicpPointmatcherUtils/icpMonitor.h"
+#include "aicpFilteringUtils/filteringUtils.hpp"
 
 using namespace std;
 

@@ -348,19 +348,19 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
   }
 
   // Debug
-//  std::cout << "matching_indeces:" << '\n';
-//  for (unsigned i=0; i<matching_indeces.size(); i++)
-//    std::cout << '\t' << matching_indeces[i];
-//  std::cout << '\n';
-  std::cout << "matching_overlap:" << '\n';
-  for (unsigned i=0; i<matching_overlap.size(); i++)
-    std::cout << '\t' << matching_overlap[i];
-  std::cout << '\n';
-  std::cout << "matching_distance:" << '\n';
-  for (unsigned i=0; i<matching_distance.size(); i++)
-    std::cout << '\t' << matching_distance[i];
-  std::cout << '\n';
-  std::cout << "size: " << matching_distance.size() << endl;
+  // std::cout << "matching_indeces:" << '\n';
+  // for (unsigned i=0; i<matching_indeces.size(); i++)
+  //   std::cout << '\t' << matching_indeces[i];
+  // std::cout << '\n';
+  // std::cout << "matching_overlap:" << '\n';
+  // for (unsigned i=0; i<matching_overlap.size(); i++)
+  //   std::cout << '\t' << matching_overlap[i];
+  // std::cout << '\n';
+  // std::cout << "matching_distance:" << '\n';
+  // for (unsigned i=0; i<matching_distance.size(); i++)
+  //   std::cout << '\t' << matching_distance[i];
+  // std::cout << '\n';
+  // std::cout << "size: " << matching_distance.size() << endl;
 
   // 3. Constraints Analysis on Unit Sphere:
   // compute continuous value describing "alignability".
@@ -376,7 +376,7 @@ float alignabilityFilter(pcl::PointCloud<pcl::PointXYZ>& cloudA, pcl::PointCloud
   lambda1 = pca_values[1]/(pca_values[0]+pca_values[1]+pca_values[2]);
   lambda2 = pca_values[2]/(pca_values[0]+pca_values[1]+pca_values[2]);
   pca_vector = cpca.getEigenVectors(); // Normalized eigenvectors
-  cout << "[Filtering Utils] Normalized Alignability Eigenvalues [max,...,min]: " << "\n" << pca_values << endl;
+// cout << "[Filtering Utils] Normalized Alignability Eigenvalues [max,...,min]: " << "\n" << pca_values << endl;
 
   // Features computed from eigenvalues
 //  float linearity = (lambda0-lambda1)/lambda0;
@@ -610,9 +610,9 @@ void registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance, std:
                     (es.eigenvalues()(3,0).real()/sum_lambda), //x
                     (es.eigenvalues()(4,0).real()/sum_lambda), //y
                     (es.eigenvalues()(5,0).real()/sum_lambda); //z
-  cout << "[Filtering Utils] Prediction Eigenvectors:" << endl << es.eigenvectors().real().transpose() << endl;
-  //cout << "[Filtering Utils] Prediction Eigenvalues:" << endl << es.eigenvalues() << endl;
-  cout << "[Filtering Utils] Normalized Prediction Eigenvalues [R,P,Y,X,Y,Z]:" << endl << system_lambdas << endl;
+  // cout << "[Filtering Utils] Prediction Eigenvectors:" << endl << es.eigenvectors().real().transpose() << endl;
+  // cout << "[Filtering Utils] Prediction Eigenvalues:" << endl << es.eigenvalues() << endl;
+  // cout << "[Filtering Utils] Normalized Prediction Eigenvalues [R,P,Y,X,Y,Z]:" << endl << system_lambdas << endl;
 
   int pos_min, pos_max;
   if (!predictions.empty())

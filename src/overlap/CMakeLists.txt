@@ -39,7 +39,7 @@ pods_install_pkg_config_file(aicpOverlap
 
 ############## overlap from octrees executable
 add_executable (aicp-overlap main.cpp)
-target_link_libraries(aicp-overlap lcm boost_system aicpOverlap commonUtils drawingUtils)
+target_link_libraries(aicp-overlap lcm boost_system aicpOverlap aicpCommonUtils aicpDrawingUtils)
 pods_use_pkg_config_packages(aicp-overlap eigen3 yaml-cpp lcm lcmtypes_bot2-core octomap ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} octomap-util pronto_vis bot2-lcmgl-client)
 pods_install_executables(aicp-overlap)
 

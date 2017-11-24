@@ -42,49 +42,49 @@ add_definitions(${PCL_DEFINITIONS})
 #message(${pointmatcher_LIBRARIES})
 
 ##############
-add_library(pointmatcherUtils SHARED icpMonitor.cpp)
-set_target_properties(pointmatcherUtils PROPERTIES SOVERSION 1)
-target_link_libraries(pointmatcherUtils ${VTK_LIBRARIES})
-pods_install_libraries(pointmatcherUtils)
-pods_install_headers(icpMonitor.h DESTINATION pointmatcherUtils)
-pods_use_pkg_config_packages(pointmatcherUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(pointmatcherUtils
+add_library(aicpPointmatcherUtils SHARED icpMonitor.cpp)
+set_target_properties(aicpPointmatcherUtils PROPERTIES SOVERSION 1)
+target_link_libraries(aicpPointmatcherUtils ${VTK_LIBRARIES})
+pods_install_libraries(aicpPointmatcherUtils)
+pods_install_headers(icpMonitor.h DESTINATION aicpPointmatcherUtils)
+pods_use_pkg_config_packages(aicpPointmatcherUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(aicpPointmatcherUtils
   LIBS
   REQUIRES eigen3
   VERSION 0.0.1)
 
 ###############
-add_library(drawingUtils SHARED drawingUtils.cpp)
-set_target_properties(drawingUtils PROPERTIES SOVERSION 1)
-target_link_libraries(drawingUtils ${VTK_LIBRARIES} octomap lcmtypes_octomap-utils bot2-core)
-pods_install_libraries(drawingUtils)
-pods_install_headers(drawingUtils.hpp DESTINATION drawingUtils)
-pods_use_pkg_config_packages(drawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(drawingUtils
+add_library(aicpDrawingUtils SHARED drawingUtils.cpp)
+set_target_properties(aicpDrawingUtils PROPERTIES SOVERSION 1)
+target_link_libraries(aicpDrawingUtils ${VTK_LIBRARIES} octomap lcmtypes_octomap-utils bot2-core)
+pods_install_libraries(aicpDrawingUtils)
+pods_install_headers(drawingUtils.hpp DESTINATION aicpDrawingUtils)
+pods_use_pkg_config_packages(aicpDrawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(aicpDrawingUtils
   LIBS
   REQUIRES eigen3
   VERSION 0.0.1)
 
 ##############
-add_library(filteringUtils SHARED filteringUtils.cpp)
-set_target_properties(filteringUtils PROPERTIES SOVERSION 1)
-target_link_libraries(filteringUtils ${VTK_LIBRARIES})
-pods_install_libraries(filteringUtils)
-pods_install_headers(filteringUtils.hpp DESTINATION filteringUtils)
-pods_use_pkg_config_packages(filteringUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(filteringUtils
+add_library(aicpFilteringUtils SHARED filteringUtils.cpp)
+set_target_properties(aicpFilteringUtils PROPERTIES SOVERSION 1)
+target_link_libraries(aicpFilteringUtils ${VTK_LIBRARIES})
+pods_install_libraries(aicpFilteringUtils)
+pods_install_headers(filteringUtils.hpp DESTINATION aicpFilteringUtils)
+pods_use_pkg_config_packages(aicpFilteringUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(aicpFilteringUtils
   LIBS
   REQUIRES eigen3
   VERSION 0.0.1)
 
 ###############
-add_library(commonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
-set_target_properties(commonUtils PROPERTIES SOVERSION 1)
-target_link_libraries(commonUtils ${VTK_LIBRARIES} pointmatcher)
-pods_install_libraries(commonUtils)
-pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION commonUtils)
-pods_use_pkg_config_packages(commonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(commonUtils
+add_library(aicpCommonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
+set_target_properties(aicpCommonUtils PROPERTIES SOVERSION 1)
+target_link_libraries(aicpCommonUtils ${VTK_LIBRARIES} pointmatcher)
+pods_install_libraries(aicpCommonUtils)
+pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION aicpCommonUtils)
+pods_use_pkg_config_packages(aicpCommonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+pods_install_pkg_config_file(aicpCommonUtils
   LIBS
   REQUIRES eigen3
   VERSION 0.0.1)

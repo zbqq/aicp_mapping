@@ -47,20 +47,20 @@ add_definitions(${PCL_DEFINITIONS})
 ############## registration library
 add_library(aicpRegistration SHARED impl/pointmatcher_registration.cpp impl/aligned_sweeps_collection.cpp impl/sweep_scan.cpp impl/lidar_scan.cpp)
 set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
-target_link_libraries(aicpRegistration pointmatcherUtils commonUtils filteringUtils pointmatcher)
+target_link_libraries(aicpRegistration aicpPointmatcherUtils aicpCommonUtils aicpFilteringUtils pointmatcher)
 pods_install_libraries(aicpRegistration)
 pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/aligned_sweeps_collection.hpp impl/sweep_scan.hpp impl/lidar_scan.hpp DESTINATION aicpRegistration)
 pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)
 
 ############### registration executable
 add_executable(aicp-registration main.cpp)
-target_link_libraries(aicp-registration boost_system pointmatcherUtils commonUtils drawingUtils aicpRegistration aicpOverlap aicpClassification)
+target_link_libraries(aicp-registration boost_system aicpPointmatcherUtils aicpCommonUtils aicpDrawingUtils aicpRegistration aicpOverlap aicpClassification)
 pods_use_pkg_config_packages(aicp-registration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
 pods_install_executables(aicp-registration)
 
 ############### online registration executable
 add_executable(aicp-registration-online online_app.cpp)
-target_link_libraries(aicp-registration-online boost_system boost_filesystem cloud_accumulate pointmatcherUtils commonUtils drawingUtils aicpRegistration aicpOverlap aicpClassification)
+target_link_libraries(aicp-registration-online boost_system boost_filesystem cloud_accumulate aicpPointmatcherUtils aicpCommonUtils aicpDrawingUtils aicpRegistration aicpOverlap aicpClassification)
 pods_use_pkg_config_packages(aicp-registration-online ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
 pods_install_executables(aicp-registration-online)
 
