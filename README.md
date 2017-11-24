@@ -23,6 +23,8 @@ The main dependencies are:
 
 * [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.8.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
 
+* [Octomap](https://github.com/OctoMap/octomap.git), a probabilistic 3D mapping framework based on octrees.
+
 #### Running
 
 Help: `aicp-registration-online -h`
