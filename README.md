@@ -14,16 +14,16 @@ The main dependencies are:
 
 #### Running
 
-Command: `sequential-registration -h`
+Help: `aicp-registration-online -h`
 
 ```
 Usage:
-  sequential-registration [opts]
+  aicp-registration-online [opts]
 Options:
   -h,  --help                     = [false]                 : Display this help message
   -s,  --working_mode             = ["robot"]               : Robot or Debug? (i.e. robot or debug)
   -u,  --failure_prediction_mode  = [0]                     : Use: Alignment Risk (0), Degeneracy (1), ICN (2)
-  -c,  --apply_correction         = [false]                 : Initialize AICP with corrected pose? (during debug)
+  -v,  --verbose                  = [false]                 : Publish frames and clouds to LCM for debug
   -c,  --apply_correction         = [false]                 : Initialize AICP with corrected pose? (during debug)
   -pc, --pose_body_channel        = ["POSE_BODY"]           : Input kinematics-inertia pose estimate
   -oc, --output_channel           = ["POSE_BODY_CORRECTED"] : Output corrected pose message
@@ -32,6 +32,8 @@ Options:
   -m,  --min_range                = [0.500000]              : Closest accepted lidar range
   -M,  --max_range                = [15.0000]               : Furthest accepted lidar range
 ```
+
+Example Usage: `aicp-registration-online -s debug -b 83 -a -v`
 
 **Note:**
 
