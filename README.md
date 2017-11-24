@@ -42,7 +42,7 @@ Example Usage: `aicp-registration-online -s debug -b 83 -a -v`
 
 ### Credits
 
-The following paper has been accepted for publication in the Proceedings of 2017 IEEE International Conference on Robotics and Automation \(ICRA\):
+This work has been accepted for publication in the Proceedings of 2017 IEEE International Conference on Robotics and Automation \(ICRA\):
 
 ```
 @inproceedings{Nobili17icra,
@@ -52,8 +52,19 @@ The following paper has been accepted for publication in the Proceedings of 2017
   location = {Singapore},
   month = may,
   year   = {2017},
-  note =    {Accepted, to appear}
+}
+```
 
+The following paper has been submitted for review to 2018 IEEE International Conference on Robotics and Automation \(ICRA\):
+
+```
+@inproceedings{Nobili18icra,
+  title  = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
+  author = {S. Nobili and G. Tinchev and M. Fallon},
+  booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
+  month = may,
+  year   = {2018},
+  note =    {Submitted},
 }
 ```
 
