@@ -4,6 +4,17 @@ Auto-tuned Iterative Closest Point \(AICP\) is a module for non-incremental poin
 
 AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas humanoid robots, as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform. The framework supports Lightweight Communications and Marshalling \(LCM\) integration for real-time message transfering.
 
+### Details:
+
+The algorithm:
+
+1. accumulates planar laser scans on a thread and generates 3D point clouds with -b scans
+2. on a second thread, stores the first cloud as the reference cloud
+3. before alignment, overlap and alignability parameters --&gt; risk of alignment \(Nobili et al., ICRA 2018, submitted\) are computed
+4. the reference cloud gets updated with latest accumulated cloud if \(risk of alignment &gt; threshold\)
+5. aligns each new point cloud to the current reference cloud
+6. publishes a corrected body pose
+
 ### Quick Start
 
 The main dependencies are:
