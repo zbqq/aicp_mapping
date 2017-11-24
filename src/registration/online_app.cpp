@@ -2,7 +2,7 @@
   =                AICP               =
   ===================================*/
 // Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration
-// and failure prediction. The registration strategy is based on the libpointmatcher framework (Pomerleau et al., AR 2012).
+// and localization failure prediction. The registration strategy is based on the libpointmatcher framework (Pomerleau et al., AR 2012).
 
 // AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas humanoid robots,
 // as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform. The framework supports Lightweight Communications
