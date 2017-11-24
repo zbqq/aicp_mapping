@@ -59,7 +59,7 @@ The following paper has been submitted for review to 2018 IEEE International Con
 
 ```
 @inproceedings{Nobili18icra,
-  title  = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
+  title  = {Predicting Alignment Risk to Prevent Localization Failure},
   author = {S. Nobili and G. Tinchev and M. Fallon},
   booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
   month = may,
