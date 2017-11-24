@@ -9,8 +9,9 @@ Dynamics Atlas humanoid robots, as well as the IIT HyQ quadruped.
 
 The main dependencies are:
 
-* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds.
-* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.7.1, a standalone, large scale, open project for 2D/3D image and point cloud processing.
+* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds. The most recent revisions of this codebase \(from July 2017 onwards, with the introduction of the Failure Prediction module\), depend on our [own fork of libpointmatcher](https://github.com/oxfordrobotics/libpointmatcher/commit/3393c9327677c649d480799e76159ea223d95004) \(revision 3393c9327677c649d480799e76159ea223d95004 on branch sn-system-covariance\).
+
+* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.8.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
 
 #### Running
 
@@ -74,6 +75,6 @@ The following paper has been submitted for review to 2018 IEEE International Con
 
 The License information is available in the LICENSE file contained in this project repository.
 
-Simona Nobili, Nov 2016.  
-Email: simona.nobili@ed.ac.uk
+Simona Nobili, Nov 2017.  
+Email: simona.nobili@ed.ac.uk, snobili@robots.ox.uk
 
