@@ -1,14 +1,33 @@
-// Run: aicp-registration-online -h
-// Testing: aicp-registration-online -s debug -b 83 -a -v
+  /*===================================
+  =                AICP               =
+  ===================================*/
+// Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration
+// and failure prediction. The registration strategy is based on the libpointmatcher framework (Pomerleau et al., AR 2012).
 
-// Input: POSE_BODY
+// AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas humanoid robots,
+// as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform. The framework supports Lightweight Communications
+// and Marshalling (LCM) integration for real-time message transfering.
+
+// ===============
+// Example Usage:
+// ===============
+// Help: aicp-registration-online -h
+// Run: aicp-registration-online -s debug -b 83 -a -v
+
+// Input: MULTISENSE_SCAN, POSE_BODY
 // Output: POSE_BODY_CORRECTED
-// Computes T_AICP and corrects the state estimate in POSE_BODY message.
+// Computes T_AICP (Nobili et al., ICRA 2017) and corrects the state estimate in POSE_BODY message.
 
-// The algorithm accumulates scans on a thread and registers the accumulated scans (clouds) in parallel
-// on a second thread. The first cloud is selected as the first reference for registration. The reference
-// cloud is updated with last aligned cloud
-//     if (alignment_risk > threshold).
+// =========
+// Details:
+// =========
+// The algorithm:
+// 1. accumulates planar laser scans on a thread and generates 3D point clouds with -b scans
+// 2. stores the first cloud as the reference cloud
+// 3. before alignment, overlap and alignability parameters --> risk of alignment (Nobili et al., ICRA 2018, submitted) are computed
+// 4. the reference cloud gets updated with latest accumulated cloud if (risk of alignment > threshold)
+// 5. aligns each new point cloud to the current reference cloud
+// 6. publishes a corrected body pose
 
 #include <sstream>  // stringstream
 #include <map>
