@@ -1,0 +1,30 @@
+AICP: {
+  Registration: {
+    type: "Pointmatcher", # GICP, Kaess
+    sensorRange: 30.0,         # in meters
+    sensorAngularView: 270.0,  # in degrees
+
+    Pointmatcher: {
+      configFileName: "icp_autotuned_default.yaml",
+    }
+  },
+  Overlap: {
+    type: "OctreeBased",
+
+    OctreeBased: {
+      octomapResolution: 0.2,
+    }
+  },
+  Classifier: {
+    type: "SVM",
+
+    SVM: {
+      threshold: 0.50,
+      trainingFile: "/home/snobili/rpg-navigation/software/aicp/data/labels/training_all_labelled_1Sep.txt",
+      testingFile: "/home/snobili/rpg-navigation/software/aicp/data/labels/testing_labelled_27Aug.txt",
+      saveFile: "/home/snobili/rpg-navigation/software/aicp/data/classification/svm_1000training_thresh50_cross_validation.xml",
+      saveProbs: "/home/snobili/rpg-navigation/software/aicp/data/classification/probs.txt",
+      modelLocation: "/home/snobili/rpg-navigation/software/aicp/data/models/svm.xml",
+    },
+  },
+}

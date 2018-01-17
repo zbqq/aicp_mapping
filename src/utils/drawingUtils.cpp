@@ -1,15 +1,4 @@
-#include <iostream>
 #include "drawingUtils.hpp"
-
-using namespace Eigen;
-
-void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, DP &dp_cloud, long long int utime, std::string pc_name_root)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
-  fromDataPointsToPCL(dp_cloud, pcl_cloud);
-
-  drawPointCloudCollections(lcm, index, pose, pcl_cloud, utime, pc_name_root);
-}
 
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root)
 {
@@ -43,6 +32,42 @@ void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eige
   pc_vis->ptcld_to_lcm_from_list(pc_index, pcl_cloud, utime, utime);
 }
 
+void drawPointCloudNormalsCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGBNormal>& pcl_cloud, long long int utime, std::string pc_name_root)
+{
+  pronto_vis* pc_vis;
+  pc_vis = new pronto_vis( lcm->getUnderlyingLCM() );
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_tmp (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  int reset = 1;
+  // Names
+  std::stringstream pc_name;
+  pc_name << pc_name_root << " ";
+  pc_name << to_string(index);
+  std::stringstream frame_name;
+  frame_name << "PC Frame ";
+  frame_name << to_string(index);
+  // Indexes
+  int pc_index = index+1;
+  int frame_index = index;
+
+  Isometry3dTime poseT = Isometry3dTime(utime, pose);
+  pc_vis->pose_to_lcm_from_list(frame_index, poseT);
+
+  // Create normals list
+  std::vector<Eigen::Vector3d> normals_list;
+  for (size_t i = 0; i < pcl_cloud.points.size(); i++){
+    Eigen::Vector4f p = pcl_cloud.points[i].getNormalVector4fMap ();
+    normals_list.push_back ( Eigen::Vector3d( p[0],p[1],p[2] ) ) ;
+  }
+  pcl::copyPointCloud(pcl_cloud, *cloud_tmp);
+
+  // obj: id name type reset
+  // pts: id name type reset objcoll usergb rgb
+  obj_cfg oconfig = obj_cfg(frame_index,frame_name.str().c_str(),5,reset);
+  pc_vis->pose_to_lcm(oconfig, poseT);
+  ptcld_cfg pconfig = ptcld_cfg(pc_index, pc_name.str().c_str(), 1, 1, frame_index, 0, {0.1,0.7,0.1});
+  pc_vis->ptcld_to_lcm(pconfig, *cloud_tmp, normals_list, 0, 0);
+}
 
 // NOTE: Visualization using lcmgl shows (sometimes) imperfections
 // in clouds (random lines). The clouds are actually correct, but lcm cannot manage
@@ -59,27 +84,6 @@ void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, pcl::PointCloud<pcl::PointXYZRGB>& 
   {
     if (j < point_cloud.size())
       point_cloud.at(j) << pcl_cloud.points[point].x, pcl_cloud.points[point].y, pcl_cloud.points[point].z; 
-    j++;
-  }
-    
-  drawPointCloudLCMGL(lcmgl, point_cloud);
-}
-
-void drawPointCloudLCMGL(bot_lcmgl_t *lcmgl, DP &dp_cloud)
-{
-  MatrixXf x_values = (dp_cloud.getFeatureCopyByName("x"));
-  MatrixXf y_values = (dp_cloud.getFeatureCopyByName("y"));
-  MatrixXf z_values = (dp_cloud.getFeatureCopyByName("z"));
-  vector<Eigen::Vector3f> point_cloud;
-  int cloud_size = dp_cloud.getNbPoints();
-  float n_supp_points = 70000.0; // max number of floats supported by lcm channel
-  int step = round(cloud_size/n_supp_points);
-  point_cloud.resize(n_supp_points);
-  int j = 0;
-  for (int point = 0; point < cloud_size; point=point+step)
-  {
-    if (j < point_cloud.size())
-      point_cloud.at(j) << x_values(point), y_values(point), z_values(point); 
     j++;
   }
     
@@ -263,4 +267,24 @@ void HSVtoRGB( float &r, float &g, float &b, float h, float s, float v )
       b = q;
     break;
   }
+}
+
+void publishOctreeToLCM(boost::shared_ptr<lcm::LCM> &lcm, octomap::ColorOcTree* tree, string octree_channel){
+  octomap_raw_t msg;
+  msg.utime = bot_timestamp_now();
+
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      msg.transform[i][j] = 0;
+    }
+    msg.transform[i][i] = 1;
+  }
+
+  std::stringstream datastream;
+  tree->write(datastream);
+  std::string datastring = datastream.str();
+  msg.data = (uint8_t *) datastring.c_str();
+  msg.length = datastring.size();
+
+  octomap_raw_t_publish(lcm->getUnderlyingLCM(), octree_channel.c_str(), &msg);
 }
