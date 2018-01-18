@@ -1,8 +1,8 @@
 #ifndef AICP_OVERLAP_CREATE_REGISTRATOR_HPP_
 #define AICP_OVERLAP_CREATE_REGISTRATOR_HPP_
 
-#include "aicpOverlap/abstract_overlapper.hpp"
-#include "aicpOverlap/octrees_overlap.hpp"
+#include "aicp_overlap/abstract_overlapper.hpp"
+#include "aicp_overlap/octrees_overlap.hpp"
 
 namespace aicp {
 

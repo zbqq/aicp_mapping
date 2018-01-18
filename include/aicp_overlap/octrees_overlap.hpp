@@ -2,12 +2,12 @@
 #define AICP_OCTREES_OVERLAP_HPP_
 
 //Project lib
-#include "aicpOverlap/common.hpp"
-#include "aicpOverlap/abstract_overlapper.hpp"
+#include "aicp_overlap/common.hpp"
+#include "aicp_overlap/abstract_overlapper.hpp"
 
 #include <octomap/octomap.h>
 #include <octomap/ColorOcTree.h>
-#include <octomap_utils/octomap_util.hpp>
+#include <octomap_utils/octomap_utils.hpp>
 #include <pcl/point_types.h>
 #include <pcl/common/io.h>
 

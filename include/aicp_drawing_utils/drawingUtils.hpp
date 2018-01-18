@@ -5,14 +5,14 @@
 
 //LCM
 #include <lcm/lcm-cpp.hpp>
-#include <lcmtypes/octomap_utils.h>
+#include <lcmtypes/octomap_raw_t.h>
 
 //Pronto
-#include <pronto_utils/pronto_vis.hpp> // visualize point clouds
+#include <pronto_vis/pronto_vis.hpp> // visualize point clouds
 
 //Octomap
 #include <octomap/octomap.h>
-#include <octomap_utils/octomap_util.hpp>
+#include <octomap_utils/octomap_utils.hpp>
 #include <octomap/ColorOcTree.h>
 
 using namespace std;

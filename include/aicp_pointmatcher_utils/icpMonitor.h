@@ -10,7 +10,7 @@
 #include "pointmatcher/PointMatcher.h"
 
 //Project lib
-#include <aicpCommonUtils/vtkUtils.h>
+#include <aicp_common_utils/vtkUtils.h>
 
 
 using namespace std;
