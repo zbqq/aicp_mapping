@@ -1,7 +1,7 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-project(aicp)
+#cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+#project(aicp)
 
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
@@ -45,12 +45,14 @@ add_definitions(${PCL_DEFINITIONS})
 
 ############### concatenate executable
 add_executable (aicp-concatenate-clouds concatenate.cpp)
-pods_use_pkg_config_packages(aicp-concatenate-clouds ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-target_link_libraries (aicp-concatenate-clouds boost_system ${VTK_LIBRARIES})
-pods_install_executables(aicp-concatenate-clouds)
+#pods_use_pkg_config_packages(aicp-concatenate-clouds ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+target_link_libraries (aicp-concatenate-clouds 
+	${catkin_LIBRARIES} boost_system ${VTK_LIBRARIES})
+#pods_install_executables(aicp-concatenate-clouds)
 
 ############### create cube cloud executable
 add_executable (aicp-create-cube-cloud create_cube_cloud.cpp)
-pods_use_pkg_config_packages(aicp-create-cube-cloud ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-target_link_libraries (aicp-create-cube-cloud boost_system ${VTK_LIBRARIES})
-pods_install_executables(aicp-create-cube-cloud)
+#pods_use_pkg_config_packages(aicp-create-cube-cloud ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+target_link_libraries (aicp-create-cube-cloud
+	${catkin_LIBRARIES} boost_system ${VTK_LIBRARIES})
+#pods_install_executables(aicp-create-cube-cloud)

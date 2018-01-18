@@ -1,4 +1,4 @@
-#include "icpMonitor.h"
+#include "aicp_pointmatcher_utils/icpMonitor.h"
 
 /* Compute metrics (implemented in libpointmatcher) given registration between a reference and an input cloud
 (Haussdorff distance, Haussdorff quantile distance and Robust mean distance in meters). */
@@ -176,7 +176,8 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   const PM::OutlierWeights outlierWeights = icp.outlierFilters.compute(out, ref, matches);
   
   // generate tuples of matched points and remove pairs with zero weight
-  const PM::ErrorMinimizer::ErrorElements matchedPoints = icp.errorMinimizer->getMatchedPoints(out, ref, matches, outlierWeights);
+  // mfallon change:
+  const PM::ErrorMinimizer::ErrorElements matchedPoints;// = icp.errorMinimizer->getMatchedPoints(out, ref, matches, outlierWeights);
 
   // extract relevant information for convenience
   const int dim = matchedPoints.reading.getEuclideanDim();

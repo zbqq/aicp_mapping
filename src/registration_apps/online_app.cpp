@@ -34,20 +34,20 @@
 #include <random>
 
 // Project lib
-#include "aicpRegistration/registration.hpp"
-#include "aicpRegistration/common.hpp"
-#include "aicpRegistration/aligned_sweeps_collection.hpp"
+#include "aicp_registration/registration.hpp"
+#include "aicp_registration/common.hpp"
+#include "aicp_registration/aligned_sweeps_collection.hpp"
 
-#include "aicpOverlap/overlap.hpp"
-#include "aicpOverlap/common.hpp"
+#include "aicp_overlap/overlap.hpp"
+#include "aicp_overlap/common.hpp"
 
-#include "aicpClassification/classification.hpp"
-#include "aicpClassification/common.hpp"
+#include "aicp_classification/classification.hpp"
+#include "aicp_classification/common.hpp"
 
-#include "aicpCommonUtils/cloudIO.h"
-#include "aicpCommonUtils/timing.hpp"
-#include "aicpCommonUtils/common.hpp"
-#include "aicpDrawingUtils/drawingUtils.hpp"
+#include "aicp_common_utils/cloudIO.h"
+#include "aicp_common_utils/timing.hpp"
+#include "aicp_common_utils/common.hpp"
+#include "aicp_drawing_utils/drawingUtils.hpp"
 
 // accumulator
 #include <cloud_accumulate/cloud_accumulate.hpp>
@@ -59,7 +59,6 @@
 #include <lcm/lcm-cpp.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <lcmtypes/octomap_utils.h>
 #include <lcmtypes/bot_core/planar_lidar_t.hpp>
 #include <lcmtypes/bot_core/pose_t.hpp>
 #include <lcmtypes/bot_core/rigid_transform_t.hpp>

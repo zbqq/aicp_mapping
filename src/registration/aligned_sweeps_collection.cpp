@@ -1,4 +1,4 @@
-#include "aligned_sweeps_collection.hpp"
+#include "aicp_registration/aligned_sweeps_collection.hpp"
 
 AlignedSweepsCollection::AlignedSweepsCollection()
 { 

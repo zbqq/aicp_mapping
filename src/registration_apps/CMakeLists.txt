@@ -1,4 +1,4 @@
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
 #cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 #project(aicp)
 
@@ -45,22 +45,30 @@ add_definitions(${PCL_DEFINITIONS})
 
 
 ############## registration library
-add_library(aicpRegistration SHARED pointmatcher_registration.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
-set_target_properties(aicpRegistration PROPERTIES SOVERSION 1)
-target_link_libraries(aicpRegistration)# aicpPointmatcherUtils aicpCommonUtils aicpFilteringUtils pointmatcher)
+#add_library(aicp_registration SHARED pointmatcher_registration.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
+#set_target_properties(aicp_registration PROPERTIES SOVERSION 1)
+#target_link_libraries(aicp_registration)# aicpPointmatcherUtils aicpCommonUtils aicpFilteringUtils pointmatcher)
 #pods_install_libraries(aicpRegistration)
 #pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/aligned_sweeps_collection.hpp impl/sweep_scan.hpp impl/lidar_scan.hpp DESTINATION aicpRegistration)
 #pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)
 
 ############### registration executable
-#add_executable(aicp-registration main.cpp)
-#target_link_libraries(aicp-registration boost_system aicpPointmatcherUtils aicpCommonUtils aicpDrawingUtils aicpRegistration aicpOverlap aicpClassification)
+add_executable(aicp-registration main.cpp)
+target_link_libraries(aicp-registration ${catkin_LIBRARIES}
+	boost_system yaml-cpp
+	aicpPointmatcherUtils aicpFilteringUtils
+	aicpCommonUtils aicpDrawingUtils aicpRegistration
+	aicpOverlap aicpClassification)
 #pods_use_pkg_config_packages(aicp-registration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
 #pods_install_executables(aicp-registration)
 
 ############### online registration executable
-#add_executable(aicp-registration-online online_app.cpp)
-#target_link_libraries(aicp-registration-online boost_system boost_filesystem cloud_accumulate aicpPointmatcherUtils aicpCommonUtils aicpDrawingUtils aicpRegistration aicpOverlap aicpClassification)
+add_executable(aicp-registration-online online_app.cpp)
+target_link_libraries(aicp-registration-online ${catkin_LIBRARIES} 
+	boost_system boost_filesystem yaml-cpp
+	aicpPointmatcherUtils aicpFilteringUtils
+	aicpCommonUtils aicpDrawingUtils aicpRegistration
+	aicpOverlap aicpClassification)
 #pods_use_pkg_config_packages(aicp-registration-online ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
 #pods_install_executables(aicp-registration-online)
 

@@ -1,9 +1,14 @@
-#include "svm.hpp"
+#include "aicp_classification/svm.hpp"
+
+using namespace cv::ml;
+
 
 namespace aicp {
 
   SVM::SVM(const ClassificationParams& params)
       : params_(params) {
+    //svm = ml::SVM::create();
+
   }
 
   SVM::~SVM() {}
@@ -27,19 +32,21 @@ namespace aicp {
     }
 
     // SVM's parameters
-    CvSVMParams svm_params;
-    svm_params.svm_type = CvSVM::C_SVC;
-    svm_params.kernel_type = CvSVM::POLY;
-    svm_params.degree = 3;
-    svm_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+    // disabled for now, mfallon
+    //SVM::Params svm_params;
+    //svm_params.svm_type = SVM::C_SVC;
+    //svm_params.kernel_type = SVM::POLY;
+    //svm_params.degree = 3;
+    //svm_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
 
     // Train the SVM
-    svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
+    // disabled for now, mfallon
+    //svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
 //    svm_.train(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
 
     if (params_.svm.saveFile.compare("") != 0) {
       std::cout << "[Classifier] Saving the classifier to: " << params_.svm.saveFile << "." << std::endl;
-      svm_.save(params_.svm.saveFile.c_str());
+      //svm_.save(params_.svm.saveFile.c_str());
     }
   }
 
@@ -55,7 +62,7 @@ namespace aicp {
     // Load the classifier
     if (params_.svm.saveFile.compare("") != 0) {
       std::cout << "[Classifier] Loading the classifier from: " << params_.svm.saveFile << "." << std::endl;
-      svm_.load(params_.svm.saveFile.c_str());
+      //svm_.load(params_.svm.saveFile.c_str());
     }
 
     const unsigned int n_testing_samples = testing_data.rows();
@@ -77,7 +84,7 @@ namespace aicp {
           sample.at<float>(j) = testing_data(i, j);
         }
 
-        double decision = svm_.predict(sample, true); // true: enable probabilities
+        double decision;// = svm_.predict(sample, true); // true: enable probabilities
         double probability = 1.0 - 1.0 / (1.0 + exp(-decision));
 //        double probability = svm_.predict(sample);
         if (!labels.isZero() && probability >= params_.svm.threshold) { // high alignment risk
@@ -106,12 +113,12 @@ namespace aicp {
 
   void SVM::save(const std::string &filename) {
     std::cout << "[Classifier] Saving the classifier model to: " << filename << "." << std::endl;
-    svm_.save(filename.c_str());
+    //svm_.save(filename.c_str());
   }
 
   void SVM::load(const std::string &filename) {
     std::cout << "[Classifier] Loading a classifier model from: " << filename << "." << std::endl;
-    svm_.load(filename.c_str());
+    //svm_.load(filename.c_str());
   }
 
 }  // namespace aicp

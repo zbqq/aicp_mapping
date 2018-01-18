@@ -1,4 +1,4 @@
-#include "sweep_scan.hpp"
+#include "aicp_registration/sweep_scan.hpp"
 
 SweepScan::SweepScan()
 { 

@@ -4,7 +4,7 @@
 #include <ConciseArgs>
 
 
-#include <pronto_utils/pronto_vis.hpp> // visualize pt clds
+#include <pronto_vis/pronto_vis.hpp> // visualize pt clds
 #include <pcl/io/pcd_io.h>
 
 float packColor(unsigned char* color) {

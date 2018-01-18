@@ -22,6 +22,14 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+#include_directories(
+#  include
+#  ${catkin_INCLUDE_DIRS}
+#)
+
+find_package(libpointmatcher REQUIRED)
+
+
 ### libpointmatcher (as a submodule)
 #message(STATUS "Looking for pointmatcher")
 #find_path(pointmatcher_INCLUDE_DIRS NAMES pointmatcher/IO.h pointmatcher/Parametrizable.h
@@ -44,47 +52,49 @@ add_definitions(${PCL_DEFINITIONS})
 ##############
 add_library(aicpPointmatcherUtils SHARED icpMonitor.cpp)
 set_target_properties(aicpPointmatcherUtils PROPERTIES SOVERSION 1)
-target_link_libraries(aicpPointmatcherUtils ${VTK_LIBRARIES})
-pods_install_libraries(aicpPointmatcherUtils)
-pods_install_headers(icpMonitor.h DESTINATION aicpPointmatcherUtils)
-pods_use_pkg_config_packages(aicpPointmatcherUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(aicpPointmatcherUtils
-  LIBS
-  REQUIRES eigen3
-  VERSION 0.0.1)
+target_link_libraries(aicpPointmatcherUtils  ${catkin_LIBRARIES} ${VTK_LIBRARIES})
+#pods_install_libraries(aicpPointmatcherUtils)
+#pods_install_headers(icpMonitor.h DESTINATION aicpPointmatcherUtils)
+#pods_use_pkg_config_packages(aicpPointmatcherUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+#pods_install_pkg_config_file(aicpPointmatcherUtils
+#  LIBS
+#  REQUIRES eigen3
+#  VERSION 0.0.1)
 
 ###############
 add_library(aicpDrawingUtils SHARED drawingUtils.cpp)
 set_target_properties(aicpDrawingUtils PROPERTIES SOVERSION 1)
-target_link_libraries(aicpDrawingUtils ${VTK_LIBRARIES} octomap lcmtypes_octomap-utils bot2-core)
-pods_install_libraries(aicpDrawingUtils)
-pods_install_headers(drawingUtils.hpp DESTINATION aicpDrawingUtils)
-pods_use_pkg_config_packages(aicpDrawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(aicpDrawingUtils
-  LIBS
-  REQUIRES eigen3
-  VERSION 0.0.1)
+target_link_libraries(aicpDrawingUtils  ${catkin_LIBRARIES} ${VTK_LIBRARIES})# octomap lcmtypes_octomap-utils bot2-core)
+#pods_install_libraries(aicpDrawingUtils)
+#pods_install_headers(drawingUtils.hpp DESTINATION aicpDrawingUtils)
+#pods_use_pkg_config_packages(aicpDrawingUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+#pods_install_pkg_config_file(aicpDrawingUtils
+#  LIBS
+#  REQUIRES eigen3
+#  VERSION 0.0.1)
 
 ##############
 add_library(aicpFilteringUtils SHARED filteringUtils.cpp)
 set_target_properties(aicpFilteringUtils PROPERTIES SOVERSION 1)
-target_link_libraries(aicpFilteringUtils ${VTK_LIBRARIES})
-pods_install_libraries(aicpFilteringUtils)
-pods_install_headers(filteringUtils.hpp DESTINATION aicpFilteringUtils)
-pods_use_pkg_config_packages(aicpFilteringUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(aicpFilteringUtils
-  LIBS
-  REQUIRES eigen3
-  VERSION 0.0.1)
+target_link_libraries(aicpFilteringUtils ${catkin_LIBRARIES} ${VTK_LIBRARIES})
+#pods_install_libraries(aicpFilteringUtils)
+#pods_install_headers(filteringUtils.hpp DESTINATION aicpFilteringUtils)
+#pods_use_pkg_config_packages(aicpFilteringUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+#pods_install_pkg_config_file(aicpFilteringUtils
+#  LIBS
+#  REQUIRES eigen3
+#  VERSION 0.0.1)
+
+
 
 ###############
 add_library(aicpCommonUtils SHARED common.cpp timing.cpp cloudIO.cpp fileIO.cpp)
 set_target_properties(aicpCommonUtils PROPERTIES SOVERSION 1)
-target_link_libraries(aicpCommonUtils ${VTK_LIBRARIES} pointmatcher)
-pods_install_libraries(aicpCommonUtils)
-pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION aicpCommonUtils)
-pods_use_pkg_config_packages(aicpCommonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
-pods_install_pkg_config_file(aicpCommonUtils
-  LIBS
-  REQUIRES eigen3
-  VERSION 0.0.1)
+target_link_libraries(aicpCommonUtils ${catkin_LIBRARIES} ${VTK_LIBRARIES} ${libpointmatcher_LIBRARIES})# pointmatcher)
+#pods_install_libraries(aicpCommonUtils)
+#pods_install_headers(common.hpp timing.hpp cloudIO.h vtkUtils.h fileIO.h DESTINATION aicpCommonUtils)
+#pods_use_pkg_config_packages(aicpCommonUtils ${REQUIRED_PACKAGES} ${PCL_LIBRARIES})
+#pods_install_pkg_config_file(aicpCommonUtils
+#  LIBS
+#  REQUIRES eigen3
+#  VERSION 0.0.1)
