@@ -2,8 +2,8 @@
 #define AICP_CLASSIFICATION_IMPL_RF_HPP_
 
 // classification
-#include "aicpClassification/common.hpp"
-#include "aicpClassification/abstract_classification.hpp"
+#include "aicp_classification/common.hpp"
+#include "aicp_classification/abstract_classification.hpp"
 
 // opencv
 #include <opencv2/core/core.hpp>
@@ -31,7 +31,8 @@ namespace aicp {
 
   private:
     ClassificationParams params_;
-    CvSVM svm_;
+    cv::ml::SVM* svm_;
+    //CvSVM svm_;
 
 //    // all 3 are indexed in the same way
 //    std::vector<unsigned int> target_cloud_segments_ids_;
