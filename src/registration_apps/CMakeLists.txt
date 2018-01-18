@@ -59,8 +59,6 @@ target_link_libraries(aicp-registration ${catkin_LIBRARIES}
 	aicpPointmatcherUtils aicpFilteringUtils
 	aicpCommonUtils aicpDrawingUtils aicpRegistration
 	aicpOverlap aicpClassification)
-#pods_use_pkg_config_packages(aicp-registration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
-#pods_install_executables(aicp-registration)
 
 ############### online registration executable
 add_executable(aicp-registration-online online_app.cpp)
@@ -69,8 +67,3 @@ target_link_libraries(aicp-registration-online ${catkin_LIBRARIES}
 	aicpPointmatcherUtils aicpFilteringUtils
 	aicpCommonUtils aicpDrawingUtils aicpRegistration
 	aicpOverlap aicpClassification)
-#pods_use_pkg_config_packages(aicp-registration-online ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} yaml-cpp eigen3 lcm pronto_vis bot2-lcmgl-client)
-#pods_install_executables(aicp-registration-online)
-
-
-
