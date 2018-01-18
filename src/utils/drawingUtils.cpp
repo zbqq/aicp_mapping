@@ -1,4 +1,4 @@
-#include "drawingUtils.hpp"
+#include "aicp_drawing_utils/drawingUtils.hpp"
 
 void drawPointCloudCollections(boost::shared_ptr<lcm::LCM> &lcm, int index, Eigen::Isometry3d& pose, pcl::PointCloud<pcl::PointXYZRGB>& pcl_cloud, long long int utime, std::string pc_name_root)
 {

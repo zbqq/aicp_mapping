@@ -1,13 +1,13 @@
 // classification
-#include "aicpClassification/classification.hpp"
-#include "aicpClassification/common.hpp"
+#include "aicp_classification/classification.hpp"
+#include "aicp_classification/common.hpp"
 
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config
 
 // project
-#include "aicpCommonUtils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
-#include "aicpCommonUtils/fileIO.h"
+#include "aicp_common_utils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
+#include "aicp_common_utils/fileIO.h"
 
 #include <memory> // unique_ptr
 
@@ -17,7 +17,10 @@
 #include <fstream>
 
 // opencv
-#include <opencv2/highgui/highgui.hpp>
+//#include "opencv2/objdetect.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+//#include <opencv2/highgui/highgui.hpp>
 
 using namespace Eigen;
 using namespace aicp;

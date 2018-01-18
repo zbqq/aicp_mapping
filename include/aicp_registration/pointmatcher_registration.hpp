@@ -7,13 +7,13 @@
 #include <Eigen/Eigenvalues>
 
 //Project lib
-#include "aicpRegistration/common.hpp"
-#include "aicpRegistration/abstract_registrator.hpp"
+#include "aicp_registration/common.hpp"
+#include "aicp_registration/abstract_registrator.hpp"
 
-#include "aicpCommonUtils/cloudIO.h"
-#include "aicpCommonUtils/fileIO.h"
-#include "aicpPointmatcherUtils/icpMonitor.h"
-#include "aicpFilteringUtils/filteringUtils.hpp"
+#include "aicp_common_utils/cloudIO.h"
+#include "aicp_common_utils/fileIO.h"
+#include "aicp_pointmatcher_utils/icpMonitor.h"
+#include "aicp_filtering_utils/filteringUtils.hpp"
 
 using namespace std;
 

@@ -1,13 +1,13 @@
 // classification
-#include "aicpClassification/classification.hpp"
-#include "aicpClassification/common.hpp"
+#include "aicp_classification/classification.hpp"
+#include "aicp_classification/common.hpp"
 
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config
 
 // project
-#include "aicpCommonUtils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
-#include "aicpCommonUtils/fileIO.h"
+#include "aicp_common_utils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
+#include "aicp_common_utils/fileIO.h"
 
 #include <memory> // unique_ptr
 
@@ -17,7 +17,11 @@
 #include <fstream>
 
 // opencv
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+
 
 using namespace cv;
 using namespace Eigen;
@@ -126,13 +130,13 @@ int main()
     // Show the training data
     int thickness = -1;
     int lineType = 8;
-    circle( image, Point(501,  10), 5, Scalar(  0,   0,   0), thickness, lineType);
-    circle( image, Point(255,  10), 5, Scalar(255, 255, 255), thickness, lineType);
-    circle( image, Point(501, 255), 5, Scalar(255, 255, 255), thickness, lineType);
-    circle( image, Point( 10, 501), 5, Scalar(255, 255, 255), thickness, lineType);
+    cv::circle( image, Point(501,  10), 5, Scalar(  0,   0,   0), thickness, lineType);
+    cv::circle( image, Point(255,  10), 5, Scalar(255, 255, 255), thickness, lineType);
+    cv::circle( image, Point(501, 255), 5, Scalar(255, 255, 255), thickness, lineType);
+    cv::circle( image, Point( 10, 501), 5, Scalar(255, 255, 255), thickness, lineType);
 
-    imwrite("result.png", image);        // save the image
+    cv::imwrite("result.png", image);        // save the image
 
-    imshow("SVM Simple Example", image); // show it to the user
-    waitKey(0);
+    cv::imshow("SVM Simple Example", image); // show it to the user
+    cv::waitKey(0);
 }

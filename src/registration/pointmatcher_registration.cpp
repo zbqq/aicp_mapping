@@ -1,4 +1,4 @@
-#include "pointmatcher_registration.hpp"
+#include "aicp_registration/pointmatcher_registration.hpp"
 
 namespace aicp{
 
@@ -115,7 +115,8 @@ namespace aicp{
 
    // simalpha: using robotperception/libpointmatcher 3393c9327677c649d480799e76159ea223d95004
    // Get System Covariance:
-   Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
+   std::cout << "mfallon catkin porting hack\n";
+   Eigen::MatrixXf system_covariance;// = (icp_.errorMinimizer->getSystemCovariance());
    //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
    registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
    //cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;

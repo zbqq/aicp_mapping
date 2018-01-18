@@ -13,12 +13,12 @@
 #include <ConciseArgs>
 
 // Project lib
-#include "aicpOverlap/overlap.hpp"
-#include "aicpOverlap/common.hpp"
+#include "aicp_overlap/overlap.hpp"
+#include "aicp_overlap/common.hpp"
 
-#include "aicpCommonUtils/fileIO.h"
-#include "aicpCommonUtils/common.hpp"
-#include "aicpDrawingUtils/drawingUtils.hpp"
+#include "aicp_common_utils/fileIO.h"
+#include "aicp_common_utils/common.hpp"
+#include "aicp_drawing_utils/drawingUtils.hpp"
 
 // pcl
 #include <pcl/point_types.h>
@@ -31,7 +31,6 @@
 // lcm
 #include <boost/shared_ptr.hpp>
 #include <lcm/lcm-cpp.hpp>
-#include <lcmtypes/octomap_utils.h>
 
 using namespace std;
 using namespace aicp;

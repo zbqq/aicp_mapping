@@ -1,10 +1,10 @@
 //#include "octomap_util.hpp"
 #include <iostream>
 #include <sstream>
-#include <lcmtypes/octomap_utils.h>
+#include <lcmtypes/octomap_raw_t.h>
 #include <ConciseArgs>
 
-#include "octomap_utils/octomap_util.hpp"
+#include "octomap_utils/octomap_utils.hpp"
 
 using namespace std;
 using namespace octomap;

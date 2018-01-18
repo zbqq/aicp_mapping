@@ -20,18 +20,18 @@
 #include <iostream>
 
 // Project lib
-#include "aicpRegistration/registration.hpp"
-#include "aicpRegistration/common.hpp"
+#include "aicp_registration/registration.hpp"
+#include "aicp_registration/common.hpp"
 
-#include "aicpOverlap/overlap.hpp"
-#include "aicpOverlap/common.hpp"
+#include "aicp_overlap/overlap.hpp"
+#include "aicp_overlap/common.hpp"
 
-#include "aicpClassification/classification.hpp"
-#include "aicpClassification/common.hpp"
+#include "aicp_classification/classification.hpp"
+#include "aicp_classification/common.hpp"
 
-#include "aicpCommonUtils/cloudIO.h"
-#include "aicpCommonUtils/common.hpp"
-#include "aicpDrawingUtils/drawingUtils.hpp"
+#include "aicp_common_utils/cloudIO.h"
+#include "aicp_common_utils/common.hpp"
+#include "aicp_drawing_utils/drawingUtils.hpp"
 
 // yaml
 #include "yaml-cpp/yaml.h" // read the yaml config

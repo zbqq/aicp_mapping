@@ -1,4 +1,4 @@
-#include "lidar_scan.hpp"
+#include "aicp_registration/lidar_scan.hpp"
 
 LidarScan::LidarScan(long long int t_stamp,float init_angle,float step_angle,
                      std::vector< float > r,std::vector< float > i,
