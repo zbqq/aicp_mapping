@@ -8,7 +8,7 @@
 //  6. Compare file with expected result
 
 // Test data at: <HOME>/drc-testing-data/aicp-data
-// Run: test-aicp
+// Run: rosrun aicp aicp-test
 
 // Get path to AICP base
 #ifdef CONFDIR
@@ -175,19 +175,19 @@ int main (int argc, char** argv)
         classification_params_.svm.threshold = it->second.as<double>();
       }
       else if(key.compare("trainingFile") == 0) {
-        classification_params_.svm.trainingFile = it->second.as<std::string>();
+        classification_params_.svm.trainingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("testingFile") == 0) {
-          classification_params_.svm.testingFile = it->second.as<std::string>();
+          classification_params_.svm.testingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveFile") == 0) {
-        classification_params_.svm.saveFile = it->second.as<std::string>();
+        classification_params_.svm.saveFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveProbs") == 0) {
-        classification_params_.svm.saveProbs = it->second.as<std::string>();
+        classification_params_.svm.saveProbs = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("modelLocation") == 0) {
-        classification_params_.svm.modelLocation = it->second.as<std::string>();
+        classification_params_.svm.modelLocation = expandEnvironmentVariables(it->second.as<std::string>());
       }
     }
   }
@@ -369,8 +369,11 @@ int main (int argc, char** argv)
 
       vector<float> soa_predictions;
       registr_->registerClouds(*ref_xyz_prefiltered, *read_xyz_prefiltered, T, soa_predictions);
-      cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
-      cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
+      if (!soa_predictions.empty())
+      {
+        cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
+        cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
+      }
 
       cout << "============================" << endl
            << "Computed 3D Transform:" << endl

@@ -379,8 +379,11 @@ void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCl
   =          Register Clouds          =
   ===================================*/
   registr_->registerClouds(reference, reading, T, failure_prediction_factors);
-  cout << "[Main] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
-  cout << "[Main] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
+  if (!failure_prediction_factors.empty())
+  {
+    cout << "[Main] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
+    cout << "[Main] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
+  }
 
   cout << "==============================" << endl
        << "[Main] Computed 3D Transform:" << endl
@@ -1008,19 +1011,19 @@ int main(int argc, char **argv){
         classification_params.svm.threshold = it->second.as<double>();
       }
       else if(key.compare("trainingFile") == 0) {
-        classification_params.svm.trainingFile = it->second.as<std::string>();
+        classification_params.svm.trainingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("testingFile") == 0) {
-          classification_params.svm.testingFile = it->second.as<std::string>();
+          classification_params.svm.testingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveFile") == 0) {
-        classification_params.svm.saveFile = it->second.as<std::string>();
+        classification_params.svm.saveFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveProbs") == 0) {
-        classification_params.svm.saveProbs = it->second.as<std::string>();
+        classification_params.svm.saveProbs = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("modelLocation") == 0) {
-        classification_params.svm.modelLocation = it->second.as<std::string>();
+        classification_params.svm.modelLocation = expandEnvironmentVariables(it->second.as<std::string>());
       }
     }
   }
