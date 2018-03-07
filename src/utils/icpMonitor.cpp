@@ -176,7 +176,9 @@ float pairedPointsMeanDistance(DP &ref, DP &out, PM::ICP &icp, const char *filen
   const PM::OutlierWeights outlierWeights = icp.outlierFilters.compute(out, ref, matches);
   
   // generate tuples of matched points and remove pairs with zero weight
-  // mfallon change:
+  // simalpha: this is disabled after catkinize
+  // (error: ‘struct PointMatcher<float>::ErrorMinimizer’ has no member named ‘getMatchedPoints’)
+  std::cout << "[ICP Monitor] pairedPointsMeanDistance(...): DISABLED!\n";
   const PM::ErrorMinimizer::ErrorElements matchedPoints;// = icp.errorMinimizer->getMatchedPoints(out, ref, matches, outlierWeights);
 
   // extract relevant information for convenience
