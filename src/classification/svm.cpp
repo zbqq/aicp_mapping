@@ -1,14 +1,15 @@
 #include "aicp_classification/svm.hpp"
 
-using namespace cv::ml;
-
-
 namespace aicp {
 
   SVM::SVM(const ClassificationParams& params)
       : params_(params) {
-    //svm = ml::SVM::create();
-
+    svm_ = cv::ml::SVM::create();
+    // SVM's parameters
+    svm_->setType(cv::ml::SVM::C_SVC);
+    svm_->setKernel(cv::ml::SVM::POLY);
+    svm_->setDegree(3);
+    svm_->setTermCriteria(cv::TermCriteria(cv::TermCriteria::MAX_ITER, 100, 1e-6));
   }
 
   SVM::~SVM() {}
@@ -21,8 +22,8 @@ namespace aicp {
     std::cout << "[Classifier] Training SVM with " << n_training_samples << " samples of dimension " << variables_dimension << "." << std::endl;
 
     // Set up training data
-    cv::Mat opencv_labels(n_training_samples, 1, CV_32FC1);
-    cv::Mat opencv_training_data(n_training_samples, variables_dimension, CV_32FC1);
+    cv::Mat1i opencv_labels(n_training_samples, 1, CV_32FC1);
+    cv::Mat1f opencv_training_data(n_training_samples, variables_dimension, CV_32FC1);
 
     for (unsigned int i = 0u; i < n_training_samples; ++i) {
       for (unsigned int j = 0u; j < variables_dimension; ++j) {
@@ -31,22 +32,14 @@ namespace aicp {
       opencv_labels.at<float>(i, 0) = labels(i, 0);
     }
 
-    // SVM's parameters
-    // disabled for now, mfallon
-    //SVM::Params svm_params;
-    //svm_params.svm_type = SVM::C_SVC;
-    //svm_params.kernel_type = SVM::POLY;
-    //svm_params.degree = 3;
-    //svm_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
-
     // Train the SVM
-    // disabled for now, mfallon
-    //svm_.train_auto(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
-//    svm_.train(opencv_training_data, opencv_labels, cv::Mat(), cv::Mat(), svm_params);
+    cv::Ptr<cv::ml::TrainData> td = cv::ml::TrainData::create(opencv_training_data, cv::ml::ROW_SAMPLE, opencv_labels);
+    // svm_->train(td);
+    // or auto train
+    svm_->trainAuto(td);
 
     if (params_.svm.saveFile.compare("") != 0) {
-      std::cout << "[Classifier] Saving the classifier to: " << params_.svm.saveFile << "." << std::endl;
-      //svm_.save(params_.svm.saveFile.c_str());
+      save(params_.svm.saveFile.c_str());
     }
   }
 
@@ -61,14 +54,13 @@ namespace aicp {
 
     // Load the classifier
     if (params_.svm.saveFile.compare("") != 0) {
-      std::cout << "[Classifier] Loading the classifier from: " << params_.svm.saveFile << "." << std::endl;
-      //svm_.load(params_.svm.saveFile.c_str());
+      load(params_.svm.saveFile.c_str());
     }
 
     const unsigned int n_testing_samples = testing_data.rows();
     const unsigned int variables_dimension = testing_data.cols();
 
-    std::cout << "[Classifier] Testing SVM with " << n_testing_samples << " samples of dimension " << variables_dimension << "." << std::endl;
+    std::cout << "[SVM] Testing SVM with " << n_testing_samples << " samples of dimension " << variables_dimension << "." << std::endl;
 
     if (probabilities != NULL)
       probabilities->resize(n_testing_samples, 1);
@@ -84,9 +76,12 @@ namespace aicp {
           sample.at<float>(j) = testing_data(i, j);
         }
 
-        double decision;// = svm_.predict(sample, true); // true: enable probabilities
-        double probability = 1.0 - 1.0 / (1.0 + exp(-decision));
-//        double probability = svm_.predict(sample);
+        int enable = 1;
+        cv::Mat1f output;
+        svm_->predict(sample, output, enable); // enable: enable probabilities
+        double probability = 1.0 - 1.0 / (1.0 + exp(-output.at<float>(0, 0)));
+        // std::cout << "[SVM] Output:" << output << std::endl;
+        // std::cout << "[SVM] Probability:" << probability << std::endl;
         if (!labels.isZero() && probability >= params_.svm.threshold) { // high alignment risk
                                                     // --> expected failure (positive label = 1)
           if (labels(i, 0) == 1.0) {
@@ -106,19 +101,20 @@ namespace aicp {
           (*probabilities)(i, 0) = probability;
         }
       }
-      if (!labels.isZero())
+      if (!labels.isZero() && probabilities->rows() > 1)
         confusionMatrix(tp, tn, fp, fn);
     }
   }
 
   void SVM::save(const std::string &filename) {
-    std::cout << "[Classifier] Saving the classifier model to: " << filename << "." << std::endl;
-    //svm_.save(filename.c_str());
+    std::cout << "[SVM] Saving the classifier model to: " << filename << "." << std::endl;
+    svm_->save(filename.c_str());
   }
 
   void SVM::load(const std::string &filename) {
-    std::cout << "[Classifier] Loading a classifier model from: " << filename << "." << std::endl;
-    //svm_.load(filename.c_str());
+    std::cout << "[SVM] Loading a classifier model from: " << filename << "." << std::endl;
+    // in opencv3, cv::ml::SVM::load() creates a new instance, so you have to load your SVM like:
+    svm_ = cv::ml::SVM::load(filename.c_str());
   }
 
 }  // namespace aicp

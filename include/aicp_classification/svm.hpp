@@ -31,16 +31,7 @@ namespace aicp {
 
   private:
     ClassificationParams params_;
-    cv::ml::SVM* svm_;
-    //CvSVM svm_;
-
-//    // all 3 are indexed in the same way
-//    std::vector<unsigned int> target_cloud_segments_ids_;
-//    std::vector<pcl::PointXYZ> target_cloud_centroids_;
-//    std::vector<Eigen::MatrixXf> target_cloud_features_;
-//    static constexpr unsigned int kMinNumberSegmentInTargetCloud = 50u; // minimum number in target map in order to perform matching
-
-//    Eigen::MatrixXf target_matrix_;
+    cv::Ptr<cv::ml::SVM> svm_;
   };
 
 }

@@ -3,13 +3,7 @@
 
 #include <fstream>
 #include <iostream>
-
-//libpointmatcher
-//#include "pointmatcher/PointMatcher.h"
-
-//typedef PointMatcher<float> PM;
-//typedef PM::DataPoints DP;
-//typedef PM::Parameters Parameters;
+#include <regex>
 
 #include <Eigen/Dense>
 
@@ -27,5 +21,9 @@ void writeTransformToFile(Eigen::MatrixXf &transformations, string out_file, int
 void writeLineToFile(Eigen::MatrixXf &values, string out_file, int line_number);
 
 void replaceRatioConfigFile(string in_file, string out_file, float ratio);
+
+// Expand Environment Variables.
+void autoExpandEnvironmentVariables( std::string & text );
+std::string expandEnvironmentVariables( const std::string & input );
 
 #endif

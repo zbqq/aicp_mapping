@@ -1,6 +1,7 @@
 ############### clasification library
 add_library(aicpClassification SHARED svm.cpp)
 set_target_properties(aicpClassification PROPERTIES SOVERSION 1)
+target_link_libraries(aicpClassification ${OpenCV_LIBS})
 
 ############### classifier main executable
 add_executable(aicp-classification main.cpp)
