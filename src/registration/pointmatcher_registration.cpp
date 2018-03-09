@@ -113,13 +113,16 @@ namespace aicp{
     //Ratio of how many points were used for error minimization (defined as TrimmedDistOutlierFilter ratio)
     cout << "[Pointmatcher] Accepted matches (inliers): " << (icp_.errorMinimizer->getWeightedPointUsedRatio())*100 << " %" << endl;
 
-   // simalpha: using robotperception/libpointmatcher 3393c9327677c649d480799e76159ea223d95004
-   // Get System Covariance:
-   std::cout << "mfallon catkin porting hack\n";
-   Eigen::MatrixXf system_covariance;// = (icp_.errorMinimizer->getSystemCovariance());
-   //cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
-   registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
-   //cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
+    // simalpha: this is disabled after catkinize (set failure_prediction_factors to empty)
+    // // simalpha: using robotperception/libpointmatcher 3393c9327677c649d480799e76159ea223d95004
+    // // Get System Covariance:
+    // Eigen::MatrixXf system_covariance = (icp_.errorMinimizer->getSystemCovariance());
+    // cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
+    // registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
+    // cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
+    std::cout << "[Pointmatcher] Degeneracy and ICN state: DISABLED!\n";
+    if (!failure_prediction_factors.empty())
+      failure_prediction_factors.clear();
 
     // Transform reading with T
     DP tmp_out_read_cloud_(reading_cloud_);

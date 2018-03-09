@@ -20,11 +20,11 @@ AICP: {
 
     SVM: {
       threshold: 0.50,
-      trainingFile: "/home/snobili/rpg-navigation/software/aicp/data/labels/training_all_labelled_1Sep.txt",
-      testingFile: "/home/snobili/rpg-navigation/software/aicp/data/labels/testing_labelled_27Aug.txt",
-      saveFile: "/home/snobili/rpg-navigation/software/aicp/data/classification/svm_1000training_thresh50_cross_validation.xml",
-      saveProbs: "/home/snobili/rpg-navigation/software/aicp/data/classification/probs.txt",
-      modelLocation: "/home/snobili/rpg-navigation/software/aicp/data/models/svm.xml",
+      trainingFile: "${DRS_BASE}/code/src/aicp/data/labels/training_all_labelled_1Sep.txt",
+      testingFile: "${DRS_BASE}/code/src/aicp/data/labels/testing_labelled_27Aug.txt",
+      saveFile: "${DRS_BASE}/code/src/aicp/data/classification/svm_1000training_thresh50_cross_validation_opencv3.xml",
+      saveProbs: "${DRS_BASE}/code/src/aicp/data/classification/probs_test.txt",
+      modelLocation: "${DRS_BASE}/code/src/aicp/data/models/svm_opencv3.xml",
     },
   },
 }

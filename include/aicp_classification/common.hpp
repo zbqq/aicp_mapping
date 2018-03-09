@@ -11,9 +11,9 @@
 
 
 static void confusionMatrix(unsigned int tp, unsigned int tn, unsigned int fp, unsigned int fn) {
-  std::cout << "===============================" << std::endl
-            << "[Classifier] SVM Statistics: "   << std::endl
-            << "===============================" << std::endl;
+  std::cout << "====================================" << std::endl
+            << "[Classifier Common] SVM Statistics: "   << std::endl
+            << "====================================" << std::endl;
 
   std::cout << "TP: " << tp << ", "
             << "TN: " << tn << ", "
@@ -31,6 +31,7 @@ static void confusionMatrix(unsigned int tp, unsigned int tn, unsigned int fp, u
   std::cout << "(FPR): " << false_positive_rate << std::endl;
   std::cout << "Precision: " << double(tp) / double(tp + fp) << std::endl;
   std::cout << "Positive likelyhood ratio: " << true_positive_rate / false_positive_rate << std::endl;
+  std::cout << "====================================" << std::endl;
 }
 
 

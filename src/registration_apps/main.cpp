@@ -211,19 +211,19 @@ int main(int argc, char **argv)
         classification_params.svm.threshold = it->second.as<double>();
       }
       else if(key.compare("trainingFile") == 0) {
-        classification_params.svm.trainingFile = it->second.as<std::string>();
+        classification_params.svm.trainingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("testingFile") == 0) {
-          classification_params.svm.testingFile = it->second.as<std::string>();
+          classification_params.svm.testingFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveFile") == 0) {
-        classification_params.svm.saveFile = it->second.as<std::string>();
+        classification_params.svm.saveFile = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("saveProbs") == 0) {
-        classification_params.svm.saveProbs = it->second.as<std::string>();
+        classification_params.svm.saveProbs = expandEnvironmentVariables(it->second.as<std::string>());
       }
       else if(key.compare("modelLocation") == 0) {
-        classification_params.svm.modelLocation = it->second.as<std::string>();
+        classification_params.svm.modelLocation = expandEnvironmentVariables(it->second.as<std::string>());
       }
     }
   }
@@ -466,8 +466,11 @@ int main(int argc, char **argv)
   vector<float> soa_predictions;
   registration->registerClouds(*point_cloud_A_prefiltered, *point_cloud_B_prefiltered, T, soa_predictions);
 //  registration->registerClouds(point_cloud_A, *initialized_reading_cloud_ptr, T, soa_predictions);
-  cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
-  cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
+  if (!soa_predictions.empty())
+  {
+    cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
+    cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
+  }
 
   cout << "============================" << endl
        << "Computed 3D Transform:" << endl
