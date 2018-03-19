@@ -16,7 +16,7 @@ find_package(OpenCV 3.0 QUIET)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES aicp_registration
-  CATKIN_DEPENDS bot_lcmgl octomap_utils octomap_lcmtypes pronto_vis concise_args cloud_accumulate pointmatcher_ros pcl_ros
+  CATKIN_DEPENDS bot_lcmgl octomap_utils octomap_lcmtypes pronto_vis concise_args pointmatcher_ros pcl_ros
 )
 
 include_directories(
