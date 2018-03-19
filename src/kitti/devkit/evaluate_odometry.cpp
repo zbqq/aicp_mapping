@@ -1,4 +1,4 @@
-// Run: kitti_evaluate -g /media/snobili/SimonaHD/logs/kitti/raw/poses/oxts_poses/ 
+// Run: rosrun aicp aicp-kitti-evaluate -g /media/snobili/SimonaHD/logs/kitti/raw/poses/oxts_poses/
 // -r /home/snobili/data/outDeepLO/out_block_3/ -e exp_b
 
 #include <iostream>
@@ -6,6 +6,9 @@
 #include <math.h>
 #include <vector>
 #include <limits>
+#include <algorithm>
+#include <iostream>
+#include <string>
 
 #include "aicp_kitti/matrix.h"
 
@@ -17,7 +20,7 @@ using namespace std;
 struct CommandLineConfig {
   string gt_path;
   string result_path;
-  string exp_id;
+  string exp_ids;
 } cl_cfg;
 
 // static parameter
@@ -202,14 +205,13 @@ vector<int32_t> computeRoi (vector<Matrix> &poses_gt,vector<Matrix> &poses_resul
   return roi;
 }
 
-void plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
+void plotPathPlot (string dir,string res_dir,vector<int32_t> &roi,vector<string> &exp_ids,int32_t idx) {
 
   // gnuplot file name
   char command[1024];
   char file_name[256];
   sprintf(file_name,"%02d.gp",idx);
   string full_name = dir + "/" + file_name;
-  
   // create png + eps
   for (int32_t i=0; i<2; i++) {
 
@@ -225,23 +227,30 @@ void plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
       fprintf(fp,"set output \"%02d.eps\"\n",idx);
     }
 
+    fprintf(fp,"set title 'Sequence %02d'\n",idx);
     fprintf(fp,"set size ratio -1\n");
     fprintf(fp,"set xrange [%d:%d]\n",roi[0],roi[1]);
     fprintf(fp,"set yrange [%d:%d]\n",roi[2],roi[3]);
     fprintf(fp,"set xlabel \"x [m]\"\n");
     fprintf(fp,"set ylabel \"y [m]\"\n");
-    fprintf(fp,"plot \"%02d.txt\" using 1:2 lc rgb \"#FF0000\" title 'Ground Truth' w lines,",idx);
-    fprintf(fp,"\"%02d.txt\" using 3:4 lc rgb \"#0000FF\" title 'DeepLO' w lines,",idx);
-    fprintf(fp,"\"< head -1 %02d.txt\" using 1:2 lc rgb \"#000000\" pt 4 ps 1 lw 2 title 'Sequence Start' w points\n",idx);
-    
+
+    fprintf(fp,"plot \"%02d_%s.txt\" using 1:2 lc rgb \"#FF0000\" title 'Ground Truth' w lines,",idx,exp_ids.at(0).c_str());
+    for (int e = 0; e < exp_ids.size(); e++)
+    {
+      string exp_name = exp_ids.at(e);
+      replace( exp_name.begin(), exp_name.end(), '_', ' ' );
+      fprintf(fp,"\"%02d_%s.txt\" using 3:4 title '%s DeepLO ' w lines,",idx,exp_ids.at(e).c_str(),exp_name.c_str());
+    }
+    fprintf(fp,"\"< head -1 %02d_%s.txt\" using 1:2 lc rgb \"#000000\" pt 4 ps 1 lw 2 title 'Sequence Start' w points\n",idx,exp_ids.at(0).c_str());
+
     // close file
     fclose(fp);
-    
+
     // run gnuplot => create png + eps
     sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
     system(command);
   }
-  
+
   // create pdf and crop
   sprintf(command,"cd %s; ps2pdf %02d.eps %02d_large.pdf",dir.c_str(),idx,idx);
   system(command);
@@ -249,6 +258,7 @@ void plotPathPlot (string dir,vector<int32_t> &roi,int32_t idx) {
   system(command);
   sprintf(command,"cd %s; rm %02d_large.pdf",dir.c_str(),idx);
   system(command);
+  cout << "--------------------------------------------------------" << endl;
 }
 
 void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,char* prefix) {
@@ -318,7 +328,7 @@ void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,char* prefix) 
   fclose(fp_rs);
 }
 
-void plotErrorPlots (string dir,char* prefix) {
+void plotErrorPlots (string dir,vector<string> &exp_ids,char* idx) {
 
   char command[1024];
 
@@ -336,7 +346,7 @@ void plotErrorPlots (string dir,char* prefix) {
        
     // gnuplot file name
     char file_name[1024]; char full_name[1024];
-    sprintf(file_name,"%s_%s.gp",prefix,suffix);
+    sprintf(file_name,"%s_%s.gp",idx,suffix);
     sprintf(full_name,"%s/%s",dir.c_str(),file_name);
     
     // create png + eps
@@ -348,12 +358,13 @@ void plotErrorPlots (string dir,char* prefix) {
       // save gnuplot instructions
       if (j==0) {
         fprintf(fp,"set term png size 500,250 font \"Helvetica\" 11\n");
-        fprintf(fp,"set output \"%s_%s.png\"\n",prefix,suffix);
+        fprintf(fp,"set output \"%s_%s.png\"\n",idx,suffix);
       } else {
         fprintf(fp,"set term postscript eps enhanced color\n");
-        fprintf(fp,"set output \"%s_%s.eps\"\n",prefix,suffix);
+        fprintf(fp,"set output \"%s_%s.eps\"\n",idx,suffix);
       }
       
+      fprintf(fp,"set title 'Sequence %s'\n",idx);
       // start plot at 0
       fprintf(fp,"set size ratio 0.5\n");
       fprintf(fp,"set yrange [0:*]\n");
@@ -367,14 +378,20 @@ void plotErrorPlots (string dir,char* prefix) {
       else              fprintf(fp,"set ylabel \"Rotation Error [deg/m]\"\n");
       
       // plot error curve
-      fprintf(fp,"plot \"%s_%s.txt\" using ",prefix,suffix);
-      switch (i) {
-        case 0: fprintf(fp,"1:($2*100) title 'Translation Error'"); break;
-        case 1: fprintf(fp,"1:($2*57.3) title 'Rotation Error'"); break;
-        case 2: fprintf(fp,"($1*3.6):($2*100) title 'Translation Error'"); break;
-        case 3: fprintf(fp,"($1*3.6):($2*57.3) title 'Rotation Error'"); break;
+      fprintf(fp,"plot ");
+      for (int e = 0; e < exp_ids.size(); e++)
+      {
+        string exp_name = exp_ids.at(e);
+        replace( exp_name.begin(), exp_name.end(), '_', ' ' );
+        fprintf(fp," \"%s_%s_%s.txt\" using ",idx,exp_ids.at(e).c_str(),suffix);
+        switch (i) {
+          case 0: fprintf(fp,"1:($2*100) title '%s' pt 4 w linespoints,",exp_name.c_str()); break;
+          case 1: fprintf(fp,"1:($2*57.3) title '%s' pt 4 w linespoints,",exp_name.c_str()); break;
+          case 2: fprintf(fp,"($1*3.6):($2*100) title '%s' pt 4 w linespoints,",exp_name.c_str()); break;
+          case 3: fprintf(fp,"($1*3.6):($2*57.3) title '%s' pt 4 w linespoints,",exp_name.c_str()); break;
+        }
       }
-      fprintf(fp," lc rgb \"#0000FF\" pt 4 w linespoints\n");
+      fprintf(fp," \n");
       
       // close file
       fclose(fp);
@@ -385,11 +402,11 @@ void plotErrorPlots (string dir,char* prefix) {
     }
     
     // create pdf and crop
-    sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),idx,suffix,idx,suffix);
     system(command);
-    sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),idx,suffix,idx,suffix);
     system(command);
-    sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),prefix,suffix);
+    sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),idx,suffix);
     system(command);
   }
 }
@@ -416,12 +433,24 @@ void saveStats (vector<errors> err,string dir) {
   fclose(fp);
 }
 
-bool eval (string gt_path, string result_path, string exp_id) {
+bool eval (string gt_path, string result_path, string exp_ids) {
+  vector<string> exp_ids_vector;
+  stringstream ss(exp_ids);
+  while( ss.good() )
+  {
+    string substr;
+    getline( ss, substr, ',' );
+    exp_ids_vector.push_back( substr );
+  }
+
+  string eval_dir;
+  if(exp_ids_vector.size() > 1)
+    eval_dir = result_path + "kitti_evaluate";  // will be filled with evaluations
+  else
+    eval_dir = result_path + exp_ids_vector.at(0) + "/kitti_evaluate";
 
   // ground truth and result directories
-  string gt_dir         = gt_path;                           // contains ground truth
-  string result_dir     = result_path + exp_id;              // contains predictions
-  string eval_dir       = result_dir + "/kitti_evaluate";    // will be filled with evaluations
+  string gt_dir         = gt_path;                         // contains ground truth
   string error_dir      = eval_dir + "/errors";
   string plot_path_dir  = eval_dir + "/plot_path";
   string plot_error_dir = eval_dir + "/plot_error";
@@ -434,66 +463,106 @@ bool eval (string gt_path, string result_path, string exp_id) {
 
   // plot status
   cout << "Ground truth directory: " << gt_dir << endl;
-  cout << "Predictions directory: " << result_dir << endl;
-  
+
   // total errors
-  vector<errors> total_err;
+  vector<vector<errors>> total_err_vector(exp_ids_vector.size());
 
   // for all sequences do
   for (int32_t i=0; i<11; i++) {
-   
-    // file name
+    // input file name
     char file_name[256];
     sprintf(file_name,"%02d.txt",i);
-    
-    // read ground truth and result poses
-    vector<Matrix> poses_gt     = loadPoses(gt_dir + file_name);
-    vector<Matrix> poses_result = loadPoses(result_dir + "/results/" + file_name);
-   
-    // plot status
-    cout << "Processing: " << file_name << ", poses: " << poses_result.size() << "/" << poses_gt.size() << endl;
-    
-    bool sequence_exists = true;
-    // check for errors
-    if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
-      cout << "ERROR: Couldn't read (all) poses of: " << file_name << endl;
-      sequence_exists = false;
-    }
 
-    if (sequence_exists)
+    vector<int32_t> roi_final;
+
+    for (int j=0; j<exp_ids_vector.size(); j++)
     {
-      // compute sequence errors    
-      vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
-      saveSequenceErrors(seq_err,error_dir + "/" + file_name);
-      
-      // add to total errors
-      total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
-      
-      // for first half => plot trajectory and compute individual stats
-      if (i<=10) {
-      
-        // save + plot bird's eye view trajectories
-        savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name);
-        vector<int32_t> roi = computeRoi(poses_gt,poses_result);
-        plotPathPlot(plot_path_dir,roi,i);
+      string result_dir = result_path + exp_ids_vector.at(j) + '/';   // contains predictions
+      // plot status
+      cout << "Predictions directory: " << result_dir << endl;
 
-        // save + plot individual errors
+      // read ground truth and result poses
+      vector<Matrix> poses_gt     = loadPoses(gt_dir + file_name);
+      vector<Matrix> poses_result = loadPoses(result_dir + "/results/" + file_name);
+
+      // plot status
+      cout << "Processing: " << file_name << ", poses: " << poses_result.size() << "/" << poses_gt.size() << endl;
+      
+      bool sequence_exists = true;
+      // check for errors
+      if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
+        cout << "ERROR: Couldn't read (all) poses of: " << file_name << endl;
+        sequence_exists = false;
+      }
+
+      if (sequence_exists)
+      {
+        // output file name
+        char out_file_name[256];
+        sprintf(out_file_name,"%02d_%s.txt",i,exp_ids_vector.at(j).c_str());
+
+        // compute sequence errors
+        vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
+        saveSequenceErrors(seq_err,error_dir + "/" + out_file_name);
+
+        // add to total errors
+        // total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
+        total_err_vector.at(j).insert(total_err_vector.at(j).end(),seq_err.begin(),seq_err.end());
+
+        // for first half => plot trajectory and compute individual stats
+        if (i<=10) {
+
+          // save + plot bird's eye view trajectories
+          savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + out_file_name);
+          vector<int32_t> roi = computeRoi(poses_gt,poses_result);
+          if (roi_final.empty())
+            roi_final = roi;
+          // else if(roi.at(0) < roi_final.at(0))
+          //   roi_final.at(0) = roi.at(0);
+          // else if(roi.at(1) > roi_final.at(1))
+          //   roi_final.at(1) = roi.at(1);
+          // else if(roi.at(2) < roi_final.at(2))
+          //   roi_final.at(2) = roi.at(2);
+          // else if(roi_final.at(3) > roi.at(3))
+          //   roi_final.at(3) = roi.at(3);
+
+          // plotPathPlot(plot_path_dir,roi,i);
+
+          // save + plot individual errors
+          char prefix[16];
+          sprintf(prefix,"%02d_%s",i,exp_ids_vector.at(j).c_str());
+          saveErrorPlots(seq_err,plot_error_dir,prefix);
+        }
+
+        plotPathPlot(plot_path_dir,result_path,roi_final,exp_ids_vector,i);
         char prefix[16];
         sprintf(prefix,"%02d",i);
-        saveErrorPlots(seq_err,plot_error_dir,prefix);
-        plotErrorPlots(plot_error_dir,prefix);
+        plotErrorPlots(plot_error_dir,exp_ids_vector,prefix);
+      }
+
+      // save
+      if (total_err_vector.size()>0) {
+        char prefix[16];
+        sprintf(prefix,"avg_%s",exp_ids_vector.at(j).c_str());
+        saveErrorPlots(total_err_vector.at(j),plot_error_dir,prefix);
       }
     }
   }
   
-  // save + plot total errors + summary statistics
-  if (total_err.size()>0) {
+  // plot total errors + summary statistics
+  if (total_err_vector.size()>0) {
     char prefix[16];
     sprintf(prefix,"avg");
-    saveErrorPlots(total_err,plot_error_dir,prefix);
-    plotErrorPlots(plot_error_dir,prefix);
-    saveStats(total_err,error_dir);
+    plotErrorPlots(plot_error_dir,exp_ids_vector,prefix);
   }
+  // // save + plot total errors + summary statistics
+  // if (total_err.size()>0) {
+  //   char prefix[16];
+  //   sprintf(prefix,"avg");
+  //   saveErrorPlots(total_err,plot_error_dir,prefix);
+  //   plotErrorPlots(plot_error_dir,prefix);
+  //   saveStats(total_err,error_dir);
+  // }
 
   // success
 	return true;
@@ -502,16 +571,17 @@ bool eval (string gt_path, string result_path, string exp_id) {
 int main (int argc, char **argv) {
   cl_cfg.gt_path = "";      // /media/snobili/SimonaHD/logs/kitti/raw/poses/oxts_poses/
   cl_cfg.result_path = "";  // /home/snobili/data/outDeepLO/out_block_3/
-  cl_cfg.exp_id = "";       // exp_b
+  cl_cfg.exp_ids = "";       // exp_a or exp_a,exp_b,exp_c,...
 
   ConciseArgs parser(argc, argv, "");
   parser.add(cl_cfg.gt_path, "g", "gt_path", "Absolute path to ground truth directory (ends with oxts_poses)");
   parser.add(cl_cfg.result_path, "r", "result_path", "Absolute path to predicted poses directory (ends with out_block_#)");
-  parser.add(cl_cfg.exp_id, "e", "exp_id", "Experiment name (e.g. exp_b)");
+  parser.add(cl_cfg.exp_ids, "e", "exp_ids", "Experiment names list (e.g. exp_a or exp_a,exp_b,exp_c,...)");
+
   parser.parse();
 
   // run evaluation
-  bool success = eval(cl_cfg.gt_path, cl_cfg.result_path, cl_cfg.exp_id);
+  bool success = eval(cl_cfg.gt_path, cl_cfg.result_path, cl_cfg.exp_ids);
 
   return 0;
 }
