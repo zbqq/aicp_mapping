@@ -411,22 +411,26 @@ void plotErrorPlots (string dir,vector<string> &exp_ids,char* idx) {
   }
 }
 
-void saveStats (vector<errors> err,string dir) {
+void saveStats (vector<vector<errors>> err,string dir) {
 
   float t_err = 0;
   float r_err = 0;
 
-  // for all errors do => compute sum of t_err, r_err
-  for (vector<errors>::iterator it=err.begin(); it!=err.end(); it++) {
-    t_err += it->t_err;
-    r_err += it->r_err;
+  float num = 0;
+  for (int j=0; j<err.size(); j++)
+  {
+    // for all errors do => compute sum of t_err, r_err
+    for (vector<errors>::iterator it=err.at(j).begin(); it!=err.at(j).end(); it++) {
+      t_err += it->t_err;
+      r_err += it->r_err;
+      num ++;
+    }
   }
 
   // open file  
   FILE *fp = fopen((dir + "/stats.txt").c_str(),"w");
  
   // save errors
-  float num = err.size();
   fprintf(fp,"%f %f\n",t_err/num,r_err/num);
   
   // close file
@@ -554,6 +558,7 @@ bool eval (string gt_path, string result_path, string exp_ids) {
     char prefix[16];
     sprintf(prefix,"avg");
     plotErrorPlots(plot_error_dir,exp_ids_vector,prefix);
+    saveStats(total_err_vector,error_dir);
   }
   // // save + plot total errors + summary statistics
   // if (total_err.size()>0) {
