@@ -472,83 +472,87 @@ bool eval (string gt_path, string result_path, string exp_ids) {
   vector<vector<errors>> total_err_vector(exp_ids_vector.size());
 
   // for all sequences do
-  for (int32_t i=0; i<11; i++) {
-    // input file name
-    char file_name[256];
-    sprintf(file_name,"%02d.txt",i);
-
-    vector<int32_t> roi_final;
-
-    for (int j=0; j<exp_ids_vector.size(); j++)
+  for (int32_t i=0; i<11; i++) { //only test sequence:  for (int32_t i=5; i<6; i++) {
+                                //all sequences:       for (int32_t i=0; i<11; i++) {
+    if ((i == 4) || (i == 5) || (i == 6) || (i == 7) || (i == 10)) //choose test sequences
     {
-      string result_dir = result_path + exp_ids_vector.at(j) + '/';   // contains predictions
-      // plot status
-      cout << "Predictions directory: " << result_dir << endl;
+      // input file name
+      char file_name[256];
+      sprintf(file_name,"%02d.txt",i);
 
-      // read ground truth and result poses
-      vector<Matrix> poses_gt     = loadPoses(gt_dir + file_name);
-      vector<Matrix> poses_result = loadPoses(result_dir + "/results/" + file_name);
+      vector<int32_t> roi_final;
 
-      // plot status
-      cout << "Processing: " << file_name << ", poses: " << poses_result.size() << "/" << poses_gt.size() << endl;
-      
-      bool sequence_exists = true;
-      // check for errors
-      if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
-        cout << "ERROR: Couldn't read (all) poses of: " << file_name << endl;
-        sequence_exists = false;
-      }
-
-      if (sequence_exists)
+      for (int j=0; j<exp_ids_vector.size(); j++)
       {
-        // output file name
-        char out_file_name[256];
-        sprintf(out_file_name,"%02d_%s.txt",i,exp_ids_vector.at(j).c_str());
+        string result_dir = result_path + exp_ids_vector.at(j) + '/';   // contains predictions
+        // plot status
+        cout << "Predictions directory: " << result_dir << endl;
 
-        // compute sequence errors
-        vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
-        saveSequenceErrors(seq_err,error_dir + "/" + out_file_name);
+        // read ground truth and result poses
+        vector<Matrix> poses_gt     = loadPoses(gt_dir + file_name);
+        vector<Matrix> poses_result = loadPoses(result_dir + "/results/" + file_name);
 
-        // add to total errors
-        // total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
-        total_err_vector.at(j).insert(total_err_vector.at(j).end(),seq_err.begin(),seq_err.end());
-
-        // for first half => plot trajectory and compute individual stats
-        if (i<=10) {
-
-          // save + plot bird's eye view trajectories
-          savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + out_file_name);
-          vector<int32_t> roi = computeRoi(poses_gt,poses_result);
-          if (roi_final.empty())
-            roi_final = roi;
-          // else if(roi.at(0) < roi_final.at(0))
-          //   roi_final.at(0) = roi.at(0);
-          // else if(roi.at(1) > roi_final.at(1))
-          //   roi_final.at(1) = roi.at(1);
-          // else if(roi.at(2) < roi_final.at(2))
-          //   roi_final.at(2) = roi.at(2);
-          // else if(roi_final.at(3) > roi.at(3))
-          //   roi_final.at(3) = roi.at(3);
-
-          // plotPathPlot(plot_path_dir,roi,i);
-
-          // save + plot individual errors
-          char prefix[16];
-          sprintf(prefix,"%02d_%s",i,exp_ids_vector.at(j).c_str());
-          saveErrorPlots(seq_err,plot_error_dir,prefix);
+        // plot status
+        cout << "Processing: " << file_name << ", poses: " << poses_result.size() << "/" << poses_gt.size() << endl;
+        
+        bool sequence_exists = true;
+        // check for errors
+        if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
+          cout << "ERROR: Couldn't read (all) poses of: " << file_name << endl;
+          sequence_exists = false;
         }
 
-        plotPathPlot(plot_path_dir,result_path,roi_final,exp_ids_vector,i);
-        char prefix[16];
-        sprintf(prefix,"%02d",i);
-        plotErrorPlots(plot_error_dir,exp_ids_vector,prefix);
-      }
+        if (sequence_exists)
+        {
+          // output file name
+          char out_file_name[256];
+          sprintf(out_file_name,"%02d_%s.txt",i,exp_ids_vector.at(j).c_str());
 
-      // save
-      if (total_err_vector.size()>0) {
-        char prefix[16];
-        sprintf(prefix,"avg_%s",exp_ids_vector.at(j).c_str());
-        saveErrorPlots(total_err_vector.at(j),plot_error_dir,prefix);
+          // compute sequence errors
+          vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
+          saveSequenceErrors(seq_err,error_dir + "/" + out_file_name);
+
+          // add to total errors
+          // total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
+          total_err_vector.at(j).insert(total_err_vector.at(j).end(),seq_err.begin(),seq_err.end());
+
+          // for first half => plot trajectory and compute individual stats
+          if (i<=10) {
+
+            // save + plot bird's eye view trajectories
+            savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + out_file_name);
+            vector<int32_t> roi = computeRoi(poses_gt,poses_result);
+            if (roi_final.empty())
+              roi_final = roi;
+            // else if(roi.at(0) < roi_final.at(0))
+            //   roi_final.at(0) = roi.at(0);
+            // else if(roi.at(1) > roi_final.at(1))
+            //   roi_final.at(1) = roi.at(1);
+            // else if(roi.at(2) < roi_final.at(2))
+            //   roi_final.at(2) = roi.at(2);
+            // else if(roi_final.at(3) > roi.at(3))
+            //   roi_final.at(3) = roi.at(3);
+
+            // plotPathPlot(plot_path_dir,roi,i);
+
+            // save + plot individual errors
+            char prefix[16];
+            sprintf(prefix,"%02d_%s",i,exp_ids_vector.at(j).c_str());
+            saveErrorPlots(seq_err,plot_error_dir,prefix);
+          }
+
+          plotPathPlot(plot_path_dir,result_path,roi_final,exp_ids_vector,i);
+          char prefix[16];
+          sprintf(prefix,"%02d",i);
+          plotErrorPlots(plot_error_dir,exp_ids_vector,prefix);
+        }
+
+        // save
+        if (total_err_vector.size()>0) {
+          char prefix[16];
+          sprintf(prefix,"avg_%s",exp_ids_vector.at(j).c_str());
+          saveErrorPlots(total_err_vector.at(j),plot_error_dir,prefix);
+        }
       }
     }
   }
