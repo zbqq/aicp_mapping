@@ -95,7 +95,7 @@ void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints dat
 
   if ((distance.rows() == 1) && (distance.cols() == 1))// If filled, distance is (1 X nbPoints).
   {
-    PointMatcher<float>::Matrix distance(1, nbPoints);  
+    distance.resize(1, nbPoints);  
     for (int i = 0; i < nbPoints; i++)
     {  
       distance(0, i) = -1;
