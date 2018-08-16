@@ -14,6 +14,7 @@
   <build_depend>pronto_vis</build_depend>
   <build_depend>concise_args</build_depend>
   <build_depend>yaml-cpp</build_depend>
+  <build_depend>cloud_accumulate</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>pointmatcher_ros</build_depend>
   <build_depend>pcl_ros</build_depend>
