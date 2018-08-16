@@ -474,7 +474,8 @@ bool eval (string gt_path, string result_path, string exp_ids) {
   // for all sequences do
   for (int32_t i=0; i<11; i++) { //only test sequence:  for (int32_t i=5; i<6; i++) {
                                 //all sequences:       for (int32_t i=0; i<11; i++) {
-    if ((i == 4) || (i == 5) || (i == 6) || (i == 7) || (i == 10)) //choose test sequences
+    //if ((i == 4) || (i == 5) || (i == 6) || (i == 7) || (i == 10)) //choose test sequences
+    if ((i == 5))
     {
       // input file name
       char file_name[256];
