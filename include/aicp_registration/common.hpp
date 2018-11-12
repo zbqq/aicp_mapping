@@ -4,9 +4,10 @@
 #include <iostream>
 #include <string>
 
-using namespace std;
+
 
 struct RegistrationParams {
+  typedef std::string string;
   string type;
   float sensorRange;
   float sensorAngularView;
