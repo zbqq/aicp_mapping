@@ -61,7 +61,7 @@ target_link_libraries(aicp-registration ${catkin_LIBRARIES}
 	aicpOverlap aicpClassification)
 
 ############### online registration executable
-add_executable(aicp-registration-online online_app.cpp)
+add_executable(aicp-registration-online online_app.cpp app.cpp)
 target_link_libraries(aicp-registration-online ${catkin_LIBRARIES} 
 	boost_system boost_filesystem yaml-cpp
 	aicpPointmatcherUtils aicpFilteringUtils
