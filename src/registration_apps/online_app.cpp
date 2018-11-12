@@ -58,7 +58,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 
-#include "app.hpp"
+#include "registration_apps/app_lcm.hpp"
 #include "aicp_common_utils/common.hpp"
 
 using namespace std;
@@ -281,9 +281,10 @@ int main(int argc, char **argv){
   if(!lcm->good()){
     std::cerr <<"ERROR: lcm is not good()" <<std::endl;
   }
-  App* app= new App(lcm, cl_cfg, ca_cfg,
+  AppLCM* app= new AppLCM(lcm, cl_cfg, ca_cfg,
                     registration_params, overlap_params,
                     classification_params, experiments_param);
 
   while(0 == lcm->handle());
+  delete app;
 }

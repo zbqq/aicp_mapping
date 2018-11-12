@@ -1,6 +1,4 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
-#cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-#project(aicp)
 
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
@@ -24,34 +22,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-### libpointmatcher (as a submodule)
-#message(STATUS "Looking for pointmatcher")
-#find_path(pointmatcher_INCLUDE_DIRS NAMES pointmatcher/IO.h pointmatcher/Parametrizable.h
-#                                          pointmatcher/PointMatcher.h pointmatcher/#PointMatcherPrivate.h
-#                                          pointmatcher/Registrar.h pointmatcher/Timer.h]
-#            NO_DEFAULT_PATH PATHS /home/edbot/rpg-navigation/software/libpointmatcher
-#)
-#find_library(pointmatcher_LIBRARIES NAMES pointmatcher NO_DEFAULT_PATH PATHS
-#            /home/edbot/rpg-navigation/software/libpointmatcher/build
-#)
-#if(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
-#        include_directories(${pointmatcher_INCLUDE_DIRS})
-#        message("-- pointmatcher found.")
-#else(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
-#        message("-- pointmatcher not found.")
-#endif(pointmatcher_LIBRARIES AND pointmatcher_INCLUDE_DIRS)
-#message(${pointmatcher_INCLUDE_DIRS})
-#message(${pointmatcher_LIBRARIES})
-
-
-############## registration library
-#add_library(aicp_registration SHARED pointmatcher_registration.cpp aligned_sweeps_collection.cpp sweep_scan.cpp lidar_scan.cpp)
-#set_target_properties(aicp_registration PROPERTIES SOVERSION 1)
-#target_link_libraries(aicp_registration)# aicpPointmatcherUtils aicpCommonUtils aicpFilteringUtils pointmatcher)
-#pods_install_libraries(aicpRegistration)
-#pods_install_headers(include/common.hpp include/abstract_registrator.hpp impl/registration.hpp impl/pointmatcher_registration.hpp impl/aligned_sweeps_collection.hpp impl/sweep_scan.hpp impl/lidar_scan.hpp DESTINATION aicpRegistration)
-#pods_use_pkg_config_packages(aicpRegistration ${REQUIRED_PACKAGES} ${PCL_LIBRARIES} eigen3)
-
+include_directories(include)
 ############### registration executable
 add_executable(aicp-registration main.cpp)
 target_link_libraries(aicp-registration ${catkin_LIBRARIES}
@@ -61,9 +32,15 @@ target_link_libraries(aicp-registration ${catkin_LIBRARIES}
 	aicpOverlap aicpClassification)
 
 ############### online registration executable
-add_executable(aicp-registration-online online_app.cpp app.cpp)
-target_link_libraries(aicp-registration-online ${catkin_LIBRARIES} 
-	boost_system boost_filesystem yaml-cpp
-	aicpPointmatcherUtils aicpFilteringUtils
-	aicpCommonUtils aicpDrawingUtils aicpRegistration
-	aicpOverlap aicpClassification)
+add_executable(aicp-registration-lcm-online online_app.cpp app.cpp app_lcm.cpp)
+target_link_libraries(aicp-registration-lcm-online ${catkin_LIBRARIES}
+                                                   boost_system
+                                                   boost_filesystem
+                                                   yaml-cpp
+                                                   aicpPointmatcherUtils
+                                                   aicpFilteringUtils
+                                                   aicpCommonUtils
+                                                   aicpDrawingUtils
+                                                   aicpRegistration
+                                                   aicpOverlap
+                                                   aicpClassification)

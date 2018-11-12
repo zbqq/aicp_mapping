@@ -34,15 +34,15 @@ struct CommandLineConfig
 namespace aicp {
 class App{
   public:
-    App(boost::shared_ptr<lcm::LCM> &lcm_, const CommandLineConfig& cl_cfg_,
-        CloudAccumulateConfig ca_cfg_,
-        RegistrationParams reg_params_, OverlapParams overlap_params_,
-        ClassificationParams class_params_, string exp_params_);
+    App(const CommandLineConfig& cl_cfg,
+        RegistrationParams reg_params,
+        OverlapParams overlap_params,
+        ClassificationParams class_params,
+        string exp_params);
+
     
     ~App(){
     }
-    
-    CloudAccumulateConfig ca_cfg_;
     RegistrationParams reg_params_;
     OverlapParams overlap_params_;
     ClassificationParams class_params_;
@@ -52,7 +52,7 @@ class App{
     // thread function for doing actual work
     void operator()();
   protected:
-    boost::shared_ptr<lcm::LCM> lcm_;
+
     const CommandLineConfig cl_cfg_;
   
     CloudAccumulate* accu_; 
@@ -72,9 +72,6 @@ class App{
     std::mutex robot_behavior_mutex_;
     std::mutex cloud_accumulate_mutex_;
     // %%%%%%%%%%%%%%%%%%%%%%%%
-
-    BotParam* botparam_;
-    BotFrames* botframes_;
 
     // Data structures for storage
     std::vector<LidarScan> lidar_scans_list_;
@@ -121,24 +118,13 @@ class App{
     // Reference cloud update counters
     int updates_counter_;
 
-    // Used for: convertCloudProntoToPcl
-    pronto_vis* pc_vis_;
+
 
     // Write to file
     pcl::PCDWriter pcd_writer_;
 
     // Init handlers:
-    void planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
-                            const std::string& channel, const  bot_core::planar_lidar_t* msg);
     void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading,
                         Eigen::Matrix4f &T, vector<float>& failure_prediction_factors);
-
-    void poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg);
-
-    // Tool functions
-    bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);
-    Eigen::Isometry3d getPoseAsIsometry3d(const bot_core::pose_t* pose);
-    Eigen::Isometry3d getBodyAsIsometry3d(const bot_core::rigid_transform_t* pose);
-    Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
 };
 } // namespace aicp
