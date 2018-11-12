@@ -33,7 +33,7 @@ private:
     BotParam* botparam_;
     BotFrames* botframes_;
 
-    int get_trans_with_utime(BotFrames *bot_frames,
+    int getTransWithMicroTime(BotFrames *bot_frames,
                              const char *from_frame,
                              const char *to_frame,
                              const int64_t& utime,

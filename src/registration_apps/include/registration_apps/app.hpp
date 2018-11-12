@@ -53,6 +53,36 @@ class App{
     void operator()();
   protected:
 
+    void paramInit(){
+        pose_initialized_ = FALSE;
+        updated_correction_ = TRUE;
+        rejected_correction = TRUE;
+
+        valid_correction_ = FALSE;
+        force_reference_update_ = FALSE;
+
+        // Reference cloud update counters
+        updates_counter_ = 0;
+
+        // Count lines output file
+        online_results_line_ = 0;
+
+        clear_clouds_buffer_ = FALSE;
+
+        fov_overlap_ = -1.0;
+        octree_overlap_ = -1.0;
+        alignability_ = -1.0;
+
+        // Initialize reading with previous correction when "debug" mode
+        initialT_ = Eigen::Matrix4f::Identity(4,4);
+
+        local_ = Eigen::Isometry3d::Identity();
+        world_to_body_msg_ = Eigen::Isometry3d::Identity();
+        world_to_body_corr_first_ = Eigen::Isometry3d::Identity();
+        corrected_pose_ = Eigen::Isometry3d::Identity();
+        current_correction_ = Eigen::Isometry3d::Identity();
+    }
+
     const CommandLineConfig cl_cfg_;
   
     CloudAccumulate* accu_; 

@@ -18,33 +18,7 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     ca_cfg_(ca_cfg),
     lcm_(lcm)
 {
-  pose_initialized_ = FALSE;
-  updated_correction_ = TRUE;
-  rejected_correction = TRUE;
-
-  valid_correction_ = FALSE;
-  force_reference_update_ = FALSE;
-
-  // Reference cloud update counters
-  updates_counter_ = 0;
-
-  // Count lines output file
-  online_results_line_ = 0;
-
-  clear_clouds_buffer_ = FALSE;
-
-  fov_overlap_ = -1.0;
-  octree_overlap_ = -1.0;
-  alignability_ = -1.0;
-
-  // Initialize reading with previous correction when "debug" mode
-  initialT_ = Eigen::Matrix4f::Identity(4,4);
-
-  local_ = Eigen::Isometry3d::Identity();
-  world_to_body_msg_ = Eigen::Isometry3d::Identity();
-  world_to_body_corr_first_ = Eigen::Isometry3d::Identity();
-  corrected_pose_ = Eigen::Isometry3d::Identity();
-  current_correction_ = Eigen::Isometry3d::Identity();
+    paramInit();
 
   // Set up frames and config:
   do {
@@ -216,8 +190,8 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
   // Populate SweepScan with current LidarScan data structure
   // 2. Get lidar pose
   // bot_frames_structure,from_frame,to_frame,utime,result
-  get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "body", msg->utime, body_to_lidar_);
-  get_trans_with_utime( botframes_, (ca_cfg_.lidar_channel).c_str(), "head", msg->utime, head_to_lidar_);
+  getTransWithMicroTime(botframes_, (ca_cfg_.lidar_channel).c_str(), "body", msg->utime, body_to_lidar_);
+  getTransWithMicroTime(botframes_, (ca_cfg_.lidar_channel).c_str(), "head", msg->utime, head_to_lidar_);
   // 3. Compute current pose of head in world reference frame
   Eigen::Isometry3d world_to_lidar_now = world_to_body_last * body_to_lidar_;
   world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
@@ -347,7 +321,7 @@ Eigen::Isometry3d AppLCM::getTransfParamAsIsometry3d(PM::TransformationParameter
   return pose_iso;
 }
 
-int AppLCM::get_trans_with_utime(BotFrames *bot_frames,
+int AppLCM::getTransWithMicroTime(BotFrames *bot_frames,
                                  const char *from_frame,
                                  const char *to_frame,
                                  const int64_t& utime,
