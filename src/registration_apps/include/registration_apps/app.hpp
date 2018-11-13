@@ -95,7 +95,7 @@ class App{
     std::thread worker_thread_;
     std::condition_variable worker_condition_;
     std::mutex worker_mutex_;
-    std::list<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> data_queue_;
+    std::list<pcl::PointCloud<pcl::PointXYZI>::Ptr> data_queue_;
     std::list<vector<LidarScan>> scans_queue_;
     std::mutex data_mutex_;
     std::mutex robot_state_mutex_;

@@ -218,7 +218,9 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
     const int max_queue_size = 100;
     {
       std::unique_lock<std::mutex> lock(data_mutex_);
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr data (new pcl::PointCloud<pcl::PointXYZRGB>(*cloud));
+      pcl::PointCloud<pcl::PointXYZI>::Ptr data(new pcl::PointCloud<pcl::PointXYZI>());
+
+      pcl::copyPointCloud(*cloud,*data);
       data_queue_.push_back(data);
       scans_queue_.push_back(lidar_scans_list_);
       if (data_queue_.size() > max_queue_size) {

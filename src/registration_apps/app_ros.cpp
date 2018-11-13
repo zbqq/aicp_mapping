@@ -8,17 +8,15 @@ namespace aicp {
 
 AppROS::AppROS(ros::NodeHandle &nh,
                const CommandLineConfig &cl_cfg,
-               const CloudAccumulateConfig &ca_cfg,
+               const ScanAccumulatorConfig &sa_cfg,
                const RegistrationParams &reg_params,
                const OverlapParams &overlap_params,
                const ClassificationParams &class_params,
                const string &exp_params,
                const string &bot_param_path) :
     App(cl_cfg, reg_params, overlap_params, class_params, exp_params),
-    nh_(nh), ca_cfg_(ca_cfg),
-    // LCM messages shouldn leave this place
-    // TODO remove this ASAP
-    lcm_(new lcm::LCM("udpm://239.255.76.67:7667?ttl=0"))
+    nh_(nh), accu_config_(sa_cfg),
+    accu_(nh, accu_config_)
 {
     paramInit();
 
@@ -26,16 +24,6 @@ AppROS::AppROS(ros::NodeHandle &nh,
     {
         pose_debug_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(cl_cfg_.output_channel,10);
     }
-    // TODO remove dependency on bot param, bot frames loaded from file
-    botparam_ = bot_param_new_from_file(bot_param_path.c_str());
-    botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
-
-    // Accumulator
-    accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
-
-    // Used only for: convertCloudProntoToPcl
-    pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
-
     // Storage
     sweep_scans_list_ = new AlignedSweepsCollection();
 
@@ -78,20 +66,8 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
     Eigen::Isometry3d world_to_lidar_now = world_to_body_last * body_to_lidar_;
     world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
 
-    // Convert the ROS msg into an LCM message
-    // TODO avoid this by re-writing the cloud accumulator for ROS
-    std::shared_ptr<bot_core::planar_lidar_t> lcm_lidar_msg;
-    lcm_lidar_msg->utime = lidar_msg->header.stamp.toNSec() / 1000;
-    lcm_lidar_msg->intensities = lidar_msg->intensities;
-    lcm_lidar_msg->nintensities = lidar_msg->intensities.size();
-    lcm_lidar_msg->nranges = lidar_msg->ranges.size();
-    lcm_lidar_msg->rad0 = lidar_msg->angle_min;
-    lcm_lidar_msg->radstep = lidar_msg->angle_increment;
-    lcm_lidar_msg->ranges = lidar_msg->ranges;
-
-
     // 4. Store in LidarScan current scan wrt lidar frame
-    LidarScan* current_scan = new LidarScan(lcm_lidar_msg->utime,
+    LidarScan* current_scan = new LidarScan(lidar_msg->header.stamp.toNSec() / 1000,
                                             lidar_msg->angle_min,
                                             lidar_msg->angle_increment,
                                             lidar_msg->ranges,
@@ -105,10 +81,10 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
     // Accumulate EITHER always OR only when transition from walking to standing happens (DEPRECATED)
     // Pyhton script convert_robot_behavior_type.py must be running.
     {
-      if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
-        cout << "[Main] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
+      if ( accu_.getCounter() % accu_config_.batch_size == 0 ) {
+        cout << "[Main] " << accu_.getCounter() << " of " << accu_config_.batch_size << " scans collected." << endl;
       }
-      accu_->processLidar(lcm_lidar_msg);
+      accu_.processLidar(lidar_msg);
       lidar_scans_list_.push_back(*current_scan);
     }
     else
@@ -116,26 +92,26 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
       {
         std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
         clear_clouds_buffer_ = FALSE;
-        cout << "[Main] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+        cout << "[Main] Cleaning cloud buffer of " << accu_.getCounter() << " scans." << endl;
       }
 
-      if ( accu_->getCounter() > 0 )
-        accu_->clearCloud();
+      if ( accu_.getCounter() > 0 )
+        accu_.clearCloud();
       if ( !lidar_scans_list_.empty() )
         lidar_scans_list_.clear();
     }
 
     delete current_scan;
 
-    if ( accu_->getFinished() ){ //finished accumulating?
-      std::cout << "[Main] Finished Collecting: " << accu_->getFinishedTime() << std::endl;
+    if ( accu_.getFinished() ){ //finished accumulating?
+      std::cout << "[Main] Finished Collecting: " << accu_.getFinishedTime() << std::endl;
 
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
+      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZI> ());
       // This class pc_vis is used only to convert an LCM point cloud into
       // a PCL point cloud
       // TODO remove the dependency on the accumulator!!
-      pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud);
-      // cloud = accu_->getCloud();
+      *cloud = accu_.getCloud();
+      // cloud = accu_.getCloud();
       cloud->width = cloud->points.size();
       cloud->height = 1;
       cout << "[Main] Processing cloud with " << cloud->points.size() << " points." << endl;
@@ -144,7 +120,7 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
       const int max_queue_size = 100;
       {
         std::unique_lock<std::mutex> lock(data_mutex_);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr data (new pcl::PointCloud<pcl::PointXYZRGB>(*cloud));
+        pcl::PointCloud<pcl::PointXYZI>::Ptr data (new pcl::PointCloud<pcl::PointXYZI>(*cloud));
         data_queue_.push_back(data);
         scans_queue_.push_back(lidar_scans_list_);
         if (data_queue_.size() > max_queue_size) {
@@ -156,7 +132,7 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
           scans_queue_.pop_front();
         }
         lidar_scans_list_.clear();
-        accu_->clearCloud();
+        accu_.clearCloud();
       }
       // Send notification to operator which is waiting for this condition variable
       worker_condition_.notify_one();

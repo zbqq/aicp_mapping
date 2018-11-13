@@ -26,10 +26,15 @@ include_directories(include)
 ############### registration executable
 add_executable(aicp-registration main.cpp)
 target_link_libraries(aicp-registration ${catkin_LIBRARIES}
-	boost_system yaml-cpp
-	aicpPointmatcherUtils aicpFilteringUtils
-	aicpCommonUtils aicpDrawingUtils aicpRegistration
-	aicpOverlap aicpClassification)
+                                        boost_system
+                                        yaml-cpp
+                                        aicpPointmatcherUtils
+                                        aicpFilteringUtils
+                                        aicpCommonUtils
+                                        aicpDrawingUtils
+                                        aicpRegistration
+                                        aicpOverlap
+                                        aicpClassification)
 
 add_library(registration_apps app.cpp
                               yaml_configurator.cpp)
@@ -48,5 +53,7 @@ target_link_libraries(registration_apps yaml-cpp
 add_executable(aicp-registration-lcm-online lcm_online_app.cpp  app_lcm.cpp)
 target_link_libraries(aicp-registration-lcm-online registration_apps)
 
-add_executable(aicp-registration-ros-online ros_online_app.cpp app.cpp app_ros.cpp)
+add_executable(aicp-registration-ros-online ros_online_app.cpp
+                                            app_ros.cpp
+                                            ros_laser_scan_accumulator.cpp)
 target_link_libraries(aicp-registration-ros-online registration_apps)

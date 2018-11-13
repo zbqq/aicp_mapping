@@ -19,23 +19,23 @@ class SweepScan
     SweepScan();
     ~SweepScan();
 
-    long long int getUtimeStart(){ return utime_start; };
-    long long int getUtimeEnd(){ return utime_end; };
-    int getNbPoints(){ return this_cloud_.size(); };
+    long long int getUtimeStart(){ return utime_start; }
+    long long int getUtimeEnd(){ return utime_end; }
+    int getNbPoints(){ return this_cloud_.size(); }
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr getCloud();
-    Eigen::Isometry3d getSensorPose(){ return world_to_last_scan; };
-    Eigen::Isometry3d getBodyPose(){ return world_to_body; };
-    std::vector<LidarScan>& getScans(){ return planar_scans; };
-    int getId(){ return cloud_id; };
-    void setId(int newId){ cloud_id = newId; };
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getCloud();
+    Eigen::Isometry3d getSensorPose(){ return world_to_last_scan; }
+    Eigen::Isometry3d getBodyPose(){ return world_to_body; }
+    std::vector<LidarScan>& getScans(){ return planar_scans; }
+    int getId(){ return cloud_id; }
+    void setId(int newId){ cloud_id = newId; }
 
-    int getItsReferenceId(){ return its_reference_id_; };
+    int getItsReferenceId(){ return its_reference_id_; }
 
-    bool isEmpty(){ return !initialized_; };
+    bool isEmpty(){ return !initialized_; }
 
-    void populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZRGB> &cloud, int id);
-    void populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZRGB> &cloud, int id, int refId, bool enRef);
+    void populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZI> &cloud, int id);
+    void populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZI> &cloud, int id, int refId, bool enRef);
     void resetSweepScan();
     bool setReference()
     {
@@ -48,7 +48,7 @@ class SweepScan
       enabled_reference_ = false;
     };
 
-    void addPointsToSweepScan(pcl::PointCloud<pcl::PointXYZRGB>& other_cloud);
+    void addPointsToSweepScan(pcl::PointCloud<pcl::PointXYZI>& other_cloud);
 
   private:
     bool initialized_;
@@ -65,7 +65,7 @@ class SweepScan
                              // (it represent the sweep utime)
 
     std::vector<LidarScan> planar_scans;
-    pcl::PointCloud<pcl::PointXYZRGB> this_cloud_;
+    pcl::PointCloud<pcl::PointXYZI> this_cloud_;
                  // Reference frame: local
 
     Eigen::Isometry3d relative_motion; // first_to_last_scan used to accumulate cloud

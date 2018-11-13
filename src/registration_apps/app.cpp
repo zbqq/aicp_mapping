@@ -75,7 +75,7 @@ void App::operator()() {
     worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
     // copy current workload from data queue to work queue
-    std::list<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> work_queue;
+    std::list<pcl::PointCloud<pcl::PointXYZI>::Ptr> work_queue;
     std::list<vector<LidarScan>> scans_queue;
     {
       std::unique_lock<std::mutex> lock(data_mutex_);
@@ -111,7 +111,7 @@ void App::operator()() {
         ss_ref << "/ref_";
         ss_ref << to_string(0);
         ss_ref << ".pcd";
-        pcd_writer_.write<pcl::PointXYZRGB> (ss_ref.str (), *cloud, false);
+        pcd_writer_.write<pcl::PointXYZI> (ss_ref.str (), *cloud, false);
       }
       else
       {
@@ -128,7 +128,7 @@ void App::operator()() {
         =           Set Input Clouds        =
         ===================================*/
         // Get current reference cloud
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref = sweep_scans_list_->getCurrentReference().getCloud();
+        pcl::PointCloud<pcl::PointXYZI>::Ptr ref = sweep_scans_list_->getCurrentReference().getCloud();
 
         Eigen::Isometry3d ref_pose, read_pose;
         ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
@@ -136,8 +136,8 @@ void App::operator()() {
 
         // Initialize clouds before sending to filters
         // (simulates correction integration)
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZI>);
         if (cl_cfg_.apply_correction && cl_cfg_.working_mode != "robot")
         {
           pcl::transformPointCloud (*cloud, *read_ptr, initialT_);
@@ -295,14 +295,14 @@ void App::operator()() {
           ss_tmp3 << "/ref_";
           ss_tmp3 << to_string(sweep_scans_list_->getCurrentReference().getId());
           ss_tmp3 << ".pcd";
-          pcd_writer_.write<pcl::PointXYZRGB> (ss_tmp3.str (), *sweep_scans_list_->getCurrentReference().getCloud(), false);
+          pcd_writer_.write<pcl::PointXYZI> (ss_tmp3.str (), *sweep_scans_list_->getCurrentReference().getCloud(), false);
 
           rejected_correction = TRUE;
         }
         else
         {
           bool enableRef = TRUE;
-          pcl::PointCloud<pcl::PointXYZRGB>::Ptr output (new pcl::PointCloud<pcl::PointXYZRGB>);
+          pcl::PointCloud<pcl::PointXYZI>::Ptr output (new pcl::PointCloud<pcl::PointXYZI>);
           pcl::transformPointCloud (*cloud, *output, Ttot);
           current_sweep->populateSweepScan(first_sweep_scans_list, *output, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
           sweep_scans_list_->addSweep(*current_sweep, Ttot);

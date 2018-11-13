@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations"
 
 find_package(catkin REQUIRED COMPONENTS
   bot_lcmgl octomap_utils octomap_lcmtypes pronto_vis concise_args cloud_accumulate cv_bridge
-  pointmatcher_ros pcl_ros bot_core_lcmtypes
+  pointmatcher_ros pcl_ros bot_core_lcmtypes laser_geometry
 )
 
 pkg_check_modules(yaml_cpp REQUIRED yaml-cpp)

@@ -24,13 +24,13 @@ SweepScan::~SweepScan()
 }
 
 // Called to initialize first reference cloud only
-void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZRGB> &cloud, int id)
+void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZI> &cloud, int id)
 {
   populateSweepScan(scans, cloud, id, -1, true);
   is_reference_ = true;
 }
 
-void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZRGB> &cloud, int id, int refId, bool enRef)
+void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZI> &cloud, int id, int refId, bool enRef)
 {
   cloud_id = id;
   this_cloud_ = cloud;
@@ -52,7 +52,7 @@ void SweepScan::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud
   initialized_ = true;
 }
 
-void SweepScan::addPointsToSweepScan(pcl::PointCloud<pcl::PointXYZRGB>& other_cloud)
+void SweepScan::addPointsToSweepScan(pcl::PointCloud<pcl::PointXYZI>& other_cloud)
 {
   this_cloud_ += other_cloud;
   this_cloud_.width = this_cloud_.points.size();
@@ -75,9 +75,9 @@ void SweepScan::resetSweepScan()
   relative_motion = Eigen::Isometry3d::Identity();
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr SweepScan::getCloud()
+pcl::PointCloud<pcl::PointXYZI>::Ptr SweepScan::getCloud()
 {
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr this_cloud_ptr;
+  pcl::PointCloud<pcl::PointXYZI>::Ptr this_cloud_ptr;
   this_cloud_ptr = this_cloud_.makeShared();
 
   return this_cloud_ptr;
