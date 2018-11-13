@@ -39,6 +39,9 @@ int main(int argc, char** argv){
     nh.getParam("min_range", ca_cfg.min_range);
     nh.getParam("max_range", ca_cfg.max_range);
 
+    std::string bot_param_path = "";
+    nh.getParam("bot_param_path", bot_param_path);
+
     aicp::YAMLConfigurator yaml_conf;
     if(!yaml_conf.parse(cl_cfg.configFile)){
         cerr << "ERROR: could not parse file " << cl_cfg.configFile << endl;
@@ -51,7 +54,8 @@ int main(int argc, char** argv){
                                                           yaml_conf.getRegistrationParams(),
                                                           yaml_conf.getOverlapParams(),
                                                           yaml_conf.getClassificationParams(),
-                                                          yaml_conf.getExperimentParams()));
+                                                          yaml_conf.getExperimentParams(),
+                                                          bot_param_path));
 
     ros::Subscriber lidar_sub = nh.subscribe(ca_cfg.lidar_channel, 100, &aicp::AppROS::lidarScanCallBack, my_app.get());
     ros::Subscriber pose_sub = nh.subscribe(cl_cfg.pose_body_channel, 100, &aicp::AppROS::robotPoseCallBack, my_app.get());

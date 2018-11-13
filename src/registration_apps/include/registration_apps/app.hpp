@@ -85,7 +85,7 @@ class App{
 
     const CommandLineConfig cl_cfg_;
   
-    CloudAccumulate* accu_; 
+
     std::unique_ptr<AbstractRegistrator> registr_;
     std::unique_ptr<AbstractOverlapper> overlapper_;
     std::unique_ptr<AbstractClassification> classifier_;

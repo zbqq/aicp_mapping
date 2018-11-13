@@ -29,6 +29,7 @@ private:
     boost::shared_ptr<lcm::LCM> lcm_;
     // Used for: convertCloudProntoToPcl
     pronto_vis* pc_vis_;
+    CloudAccumulate* accu_;
     CloudAccumulateConfig ca_cfg_;
     BotParam* botparam_;
     BotFrames* botframes_;
