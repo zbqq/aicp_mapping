@@ -146,29 +146,6 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     world_to_body_msg_utime_first_ = msg->utime;
   }
 
-//  /*
-//  // Visualization: move poses in Vicon reference frame to compare #########
-//  // Corrected pose
-//  Eigen::Isometry3d corr_to_vicon_first;
-//  corr_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
-
-//  Eigen::Isometry3d corr_to_vicon_pose;
-//  corr_to_vicon_pose = corr_to_vicon_first * corrected_pose_;
-//  // Estimated pose
-//  Eigen::Isometry3d pose_to_vicon_first;
-//  pose_to_vicon_first = world_to_frame_vicon_first_ * world_to_body_corr_first_.inverse();
-
-//  Eigen::Isometry3d pose_to_vicon_pose;
-//  pose_to_vicon_pose = pose_to_vicon_first * world_to_body_last;
-
-//  // To visualize pose_body and pose corrected wrt Vicon
-//  bot_core::pose_t msg_out_vic = getIsometry3dAsBotPose(pose_to_vicon_pose, msg->utime);
-//  lcm_->publish("POSE_BODY_VICON",&msg_out_vic);
-//  bot_core::pose_t msg_out_corr_vic = getIsometry3dAsBotPose(corr_to_vicon_pose, msg->utime);
-//  lcm_->publish("POSE_BODY_CORRECTED_VICON",&msg_out_corr_vic);
-//  // ############################################
-//  */
-
   pose_initialized_ = TRUE;
 }
 
