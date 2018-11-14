@@ -7,13 +7,20 @@ namespace aicp {
 
 LaserScanAccumulatorROS::LaserScanAccumulatorROS(ros::NodeHandle &nh,
                                                  const ScanAccumulatorConfig &config) :
-    nh_(nh)
+    nh_(nh), config_(config)
 {
-
+    lidar_sub_ = nh_.subscribe<sensor_msgs::LaserScan>(config_.lidar_topic,
+                                                       100,
+                                                       &LaserScanAccumulatorROS::processLidar,
+                                                       this);
 }
 
 void LaserScanAccumulatorROS::setConfig(const ScanAccumulatorConfig &config){
     config_ = config;
+    lidar_sub_ = nh_.subscribe<sensor_msgs::LaserScan>(config_.lidar_topic,
+                                                       100,
+                                                       &LaserScanAccumulatorROS::processLidar,
+                                                       this);
 }
 
 void LaserScanAccumulatorROS::clearCloud(){

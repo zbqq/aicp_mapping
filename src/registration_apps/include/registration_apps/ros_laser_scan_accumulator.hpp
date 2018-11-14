@@ -40,12 +40,13 @@ private:
     pcl::PCLPointCloud2 point_cloud_pcl_msg_;
     sensor_msgs::LaserScan scan_msg_;
     // implicitly discarding intensities from the scans
-    pcl::PointCloud<pcl::PointXYZI> point_cloud_;
-    pcl::PointCloud<pcl::PointXYZI> accumulated_point_cloud_;
+    PointCloud point_cloud_;
+    PointCloud accumulated_point_cloud_;
     uint64_t utime_;
 
     bool finished_ = false;
     uint16_t counter = 0;
     ros::NodeHandle& nh_;
+    ros::Subscriber lidar_sub_;
 };
 }
