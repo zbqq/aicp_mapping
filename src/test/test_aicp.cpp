@@ -7,7 +7,7 @@
 //  5. Writing result to file and console
 //  6. Compare file with expected result
 
-// Test data at: <HOME>/drc-testing-data/aicp-data
+// Test data at: <HOME>/drs-testing-data/aicp-data
 // Run: rosrun aicp aicp-test
 
 // Get path to AICP base
@@ -88,11 +88,11 @@ int main (int argc, char** argv)
   // Expected result file
   std::stringstream expected_file;
   expected_file << homedir;
-  expected_file << "/drc-testing-data/aicp-data/test_aicp_expected.txt";
+  expected_file << "/drs-testing-data/aicp-data/test_aicp_expected.txt";
   // Output file
   std::stringstream out_file;
   out_file << homedir;
-  out_file << "/drc-testing-data/aicp-data/test_aicp_output.txt";
+  out_file << "/drs-testing-data/aicp-data/test_aicp_output.txt";
   std::ofstream ofs;
   ofs.open(out_file.str().c_str(), std::ofstream::out | std::ofstream::trunc);
   ofs.close();
@@ -238,7 +238,7 @@ int main (int argc, char** argv)
   
     std::stringstream pcl_name;
     pcl_name << homedir;
-    pcl_name << "/drc-testing-data/aicp-data/cloud_";
+    pcl_name << "/drs-testing-data/aicp-data/cloud_";
     pcl_name << std::to_string(i);
     pcl_name << ".pcd";
 
