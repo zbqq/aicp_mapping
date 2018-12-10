@@ -1,7 +1,9 @@
 #pragma once
+
 #include "registration_apps/app.hpp"
 
 namespace aicp {
+
 class AppLCM : public App {
 public:
     AppLCM(boost::shared_ptr<lcm::LCM> &lcm,

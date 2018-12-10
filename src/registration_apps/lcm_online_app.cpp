@@ -1,6 +1,8 @@
-  /*===================================
-  =                AICP               =
-  ===================================*/
+  /*   __  ___  ____
+ / _\ (  )/ __)(  _ \
+/    \ )(( (__  ) __/
+\_/\_/(__)\___)(_*/
+
 // Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration
 // and localization failure prediction. The registration strategy is based on the libpointmatcher framework (Pomerleau et al., AR 2012).
 
@@ -11,12 +13,12 @@
 // ===============
 // Example Usage:
 // ===============
-// Help: aicp-registration-online -h
-// Run: aicp-registration-online -s debug -b 83 -a -v
+// Help: aicp-lcm-online -h
+// Run:  aicp-lcm-online -s debug -b 83 -a -v
 
-// Input: MULTISENSE_SCAN, POSE_BODY
-// Output: POSE_BODY_CORRECTED
-// Computes T_AICP (Nobili et al., ICRA 2017) and corrects the state estimate in POSE_BODY message.
+// Input (default): MULTISENSE_SCAN, POSE_BODY
+// Output (default): POSE_BODY_CORRECTED
+// Computes T_aicp (Nobili et al., ICRA 2017) and publishes POSE_BODY_CORRECTED usign T_aicp
 
 // =========
 // Details:
@@ -39,7 +41,6 @@
 #include <lcmtypes/bot_core/rigid_transform_t.hpp>
 #include <lcmtypes/bot_core/double_array_t.hpp>
 
-// thread
 // args
 #include <ConciseArgs>
 
@@ -54,68 +55,77 @@
 #include <pcl/io/pcd_io.h>
 
 #include "registration_apps/app_lcm.hpp"
-#include "aicp_common_utils/common.hpp"
 #include "registration_apps/yaml_configurator.hpp"
+#include "aicp_common_utils/common.hpp"
 
 using namespace std;
 
 int main(int argc, char **argv){
-  CommandLineConfig cl_cfg;
-  cl_cfg.configFile.append(CONFIG_LOC);
-  cl_cfg.configFile.append(PATH_SEPARATOR);
-  cl_cfg.configFile.append("aicp_config.yaml");
-  cl_cfg.working_mode = "robot";
-  cl_cfg.failure_prediction_mode = 0;
-  cl_cfg.verbose = FALSE;
-  cl_cfg.apply_correction = FALSE;
-  cl_cfg.pose_body_channel = "POSE_BODY";
-  cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
+    CommandLineConfig cl_cfg;
+    cl_cfg.configFile.append(CONFIG_LOC);
+    cl_cfg.configFile.append(PATH_SEPARATOR);
+    cl_cfg.configFile.append("aicp_config.yaml");
+    cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
+                                 //   or debug - apply previous transforms to POSE_BODY
+    cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
+    cl_cfg.apply_correction = FALSE;
 
-  CloudAccumulateConfig ca_cfg;
-  ca_cfg.batch_size = 240; // 240 is about 1 sweep
-  ca_cfg.min_range = 0.50; //1.85; // remove all the short range points
-  ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
-  ca_cfg.lidar_channel ="MULTISENSE_SCAN";
-  //ca_cfg.check_local_to_scan_valid = FALSE;
+    cl_cfg.pose_body_channel = "POSE_BODY";
+    cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
+    cl_cfg.verbose = FALSE; // enable visualization for debug
 
-  ConciseArgs parser(argc, argv, "aicp-registration-online");
-  parser.add(cl_cfg.configFile, "c", "config_file", "Config file location");
-  parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or Debug? (i.e. robot or debug)"); //Debug if I want to visualize moving frames in Director
-  parser.add(cl_cfg.failure_prediction_mode, "u", "failure_prediction_mode", "Use: Alignment Risk (0), Degeneracy (1), ICN (2)");
-  parser.add(cl_cfg.verbose, "v", "verbose", "Publish frames and clouds to LCM for debug");
-  parser.add(cl_cfg.apply_correction, "a", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
-  parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Kinematics-inertia pose estimate");
-  parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose");
-  parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
-  parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of scans per full 3D point cloud (at 5RPM)");
-  parser.add(ca_cfg.min_range, "m", "min_range", "Closest accepted lidar range");
-  parser.add(ca_cfg.max_range, "M", "max_range", "Furthest accepted lidar range");
-  parser.parse();
+    CloudAccumulateConfig ca_cfg;
+    ca_cfg.batch_size = 240; // 240 is about 1 sweep
+    ca_cfg.min_range = 0.50; // 1.85; // remove all the short range points
+    ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
+    ca_cfg.lidar_channel ="MULTISENSE_SCAN";
+    //ca_cfg.check_local_to_scan_valid = FALSE;
+
+    ConciseArgs parser(argc, argv, "aicp-lcm-online");
+    parser.add(cl_cfg.configFile, "c", "config_file", "AICP config file location");
+    parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or debug?");
+    parser.add(cl_cfg.failure_prediction_mode, "u", "failure_prediction_mode", "Alignment Risk for reference update (default: use time window)");
+    parser.add(cl_cfg.apply_correction, "a", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
+    parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Prior pose estimate");
+    parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose estimate");
+    parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of planar scans per 3D point cloud");
+    parser.add(ca_cfg.min_range, "m", "min_range", "Min accepted lidar range");
+    parser.add(ca_cfg.max_range, "M", "max_range", "Max accepted lidar range");
+    parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
+    parser.add(cl_cfg.verbose, "v", "verbose", "Enable visualization to LCM for debug");
+    parser.parse();
 
 
-  /*===================================
-  =            YAML Config            =
-  ===================================*/
-
-  aicp::YAMLConfigurator yaml_conf;
-  if(!yaml_conf.parse(cl_cfg.configFile)){
-      cerr << "ERROR: could not parse file " << cl_cfg.configFile << endl;
+    /*===================================
+    =            YAML Config            =
+    ===================================*/
+    aicp::YAMLConfigurator yaml_conf;
+    if(!yaml_conf.parse(cl_cfg.configFile)){
+      cerr << "ERROR: could not parse AICP config file." << cl_cfg.configFile << endl;
       return -1;
-  }
-  // I'd rather use std::shared_ptr but cloud accumulator prevents it
-  boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
-  if(!lcm->good()){
-    std::cerr <<"ERROR: lcm is not good()" <<std::endl;
-  }
-  aicp::AppLCM* app= new aicp::AppLCM(lcm,
-                          cl_cfg,
-                          ca_cfg,
-                          yaml_conf.getRegistrationParams(),
-                          yaml_conf.getOverlapParams(),
-                          yaml_conf.getClassificationParams(),
-                          yaml_conf.getExperimentParams());
+    }
 
-  while(0 == lcm->handle());
-  delete app;
-  return 0;
+    /*===================================
+    =             Create LCM            =
+    ===================================*/
+    // I'd rather use std::shared_ptr but cloud accumulator prevents it
+    boost::shared_ptr<lcm::LCM> lcm(new lcm::LCM);
+    if(!lcm->good()){
+    std::cerr <<"ERROR: lcm is not good." <<std::endl;
+    }
+
+    /*===================================
+    =              Start App            =
+    ===================================*/
+    aicp::AppLCM* app = new aicp::AppLCM(lcm,
+                                      cl_cfg,
+                                      ca_cfg,
+                                      yaml_conf.getRegistrationParams(),
+                                      yaml_conf.getOverlapParams(),
+                                      yaml_conf.getClassificationParams(),
+                                      yaml_conf.getExperimentParams());
+
+    while(0 == lcm->handle());
+    delete app;
+    return 0;
 }
