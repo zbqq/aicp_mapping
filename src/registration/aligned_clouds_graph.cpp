@@ -1,5 +1,7 @@
 #include "aicp_registration/aligned_clouds_graph.hpp"
 
+namespace aicp {
+
 AlignedCloudsGraph::AlignedCloudsGraph()
 { 
     initialized_ = false;
@@ -10,15 +12,18 @@ AlignedCloudsGraph::~AlignedCloudsGraph()
 { 
 }
 
-void AlignedCloudsGraph::initialize(AlignedCloud& reference)
+void AlignedCloudsGraph::initialize(AlignedCloudPtr& reference)
 {
     aligned_clouds.push_back(reference);
-    current_reference_ = 0;
+    current_reference_ = aligned_clouds.size()-1;
+
+    std::cerr << "n reference " << current_reference_ << std::endl;
+    std::cerr << "reference " << getCurrentReference().get() << std::endl;
 
     initialized_ = true;
 }
 
-bool AlignedCloudsGraph::addCloud(AlignedCloud& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id)
+bool AlignedCloudsGraph::addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id)
 {
     if(initialized_)
     {
@@ -26,4 +31,5 @@ bool AlignedCloudsGraph::addCloud(AlignedCloud& cloud, Eigen::Isometry3d relativ
         aligned_clouds.push_back(cloud);
     }
     return initialized_;
+}
 }

@@ -19,7 +19,7 @@ struct ScanAccumulatorConfig
 
 class LaserScanAccumulatorROS {
 public:
-    typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
+    typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 public:
     LaserScanAccumulatorROS(ros::NodeHandle& nh,
                             const ScanAccumulatorConfig& config = ScanAccumulatorConfig());

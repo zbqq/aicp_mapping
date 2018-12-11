@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(aicp)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated-declarations")
 
 find_package(VTK REQUIRED)
@@ -22,7 +25,22 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-include_directories(include)
+###################################
+## catkin specific configuration ##
+###################################
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES aicp
+  CATKIN_DEPENDS
+)
+
+###########
+## Build ##
+###########
+include_directories(
+  include
+)
+
 ############### registration executable
 add_executable(aicp-registration main.cpp)
 target_link_libraries(aicp-registration ${catkin_LIBRARIES}
@@ -44,16 +62,16 @@ target_link_libraries(registration_apps yaml-cpp
                                         aicpPointmatcherUtils
                                         aicpFilteringUtils
                                         aicpCommonUtils
-                                        #aicpDrawingUtils
+                                        aicpDrawingUtils
                                         aicpRegistration
                                         aicpOverlap
                                         aicpClassification)
 
 ############### online registration executable
-add_executable(aicp-registration-lcm-online lcm_online_app.cpp  app_lcm.cpp)
-target_link_libraries(aicp-registration-lcm-online registration_apps)
+add_executable(aicp-lcm-online lcm_online_app.cpp app_lcm.cpp visualizer_lcm.cpp)
+target_link_libraries(aicp-lcm-online registration_apps)
 
-add_executable(aicp-registration-ros-online ros_online_app.cpp
-                                            app_ros.cpp
-                                            ros_laser_scan_accumulator.cpp)
-target_link_libraries(aicp-registration-ros-online registration_apps)
+#add_executable(aicp-ros-online ros_online_app.cpp
+#                               app_ros.cpp
+#                               ros_laser_scan_accumulator.cpp)
+#target_link_libraries(aicp-ros-online registration_apps)

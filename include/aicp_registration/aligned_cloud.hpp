@@ -7,10 +7,14 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+namespace aicp {
+
 // Point cloud class
 class AlignedCloud
 {
-  public:
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+public:
     AlignedCloud(long long int utime,
                  pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                  Eigen::Isometry3d prior_pose);
@@ -24,7 +28,7 @@ class AlignedCloud
     // Getters
     long long int getUtime(){ return utime_; }
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr& getCloud(){ return cloud_; }
+    pcl::PointCloud<pcl::PointXYZ>::Ptr getCloud(){ return cloud_; }
     int getNbPoints(){ return cloud_->size(); }
 
     Eigen::Isometry3d getPriorPose(){ return world_to_cloud_prior_; }
@@ -38,7 +42,7 @@ class AlignedCloud
 
     bool isReference(){ return is_reference_; }
 
-  private:
+private:
     long long int utime_; // Cloud timestamp (microseconds)
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (global coordinates)
@@ -53,3 +57,4 @@ class AlignedCloud
     // if scan is the first reference cloud this field is set to -1
     int its_reference_id_;
 };
+}

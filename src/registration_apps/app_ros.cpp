@@ -106,7 +106,7 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
     if ( accu_.getFinished() ){ //finished accumulating?
       std::cout << "[Main] Finished Collecting: " << accu_.getFinishedTime() << std::endl;
 
-      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZI> ());
+      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ> ());
       // This class pc_vis is used only to convert an LCM point cloud into
       // a PCL point cloud
       // TODO remove the dependency on the accumulator!!
@@ -120,7 +120,7 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
       const int max_queue_size = 100;
       {
         std::unique_lock<std::mutex> lock(data_mutex_);
-        pcl::PointCloud<pcl::PointXYZI>::Ptr data (new pcl::PointCloud<pcl::PointXYZI>(*cloud));
+        pcl::PointCloud<pcl::PointXYZ>::Ptr data (new pcl::PointCloud<pcl::PointXYZ>(*cloud));
         data_queue_.push_back(data);
         scans_queue_.push_back(lidar_scans_list_);
         if (data_queue_.size() > max_queue_size) {

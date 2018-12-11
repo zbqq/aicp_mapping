@@ -1,5 +1,4 @@
 #include "registration_apps/app_lcm.hpp"
-#include "registration_apps/visualizer.hpp"
 
 #include <lcmtypes/bot_core/double_array_t.hpp>
 #include <bot_frames_cpp/bot_frames_cpp.hpp>
@@ -29,19 +28,23 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     } while (botparam_ == NULL);
     botframes_= bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 
+    // Data structure
+    aligned_clouds_graph_ = new AlignedCloudsGraph();
+    // Accumulator
+    accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
+    // Used for: convertCloudProntoToPcl
+    pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+    // Visualizer
+    lcm_vis_ = new LCMVisualizer( lcm_->getUnderlyingLCM() );
+
+    // Thread
     worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
 
     // Laser subsciber
     lcm_->subscribe(ca_cfg_.lidar_channel, &AppLCM::planarLidarHandler, this);
-
-    // Data structure
-    aligned_clouds_graph_ = new AlignedCloudsGraph();
-
-    // Accumulator
-    accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
-
-    // Used for: convertCloudProntoToPcl
-    pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+    // Pose subsciber
+    lcm_->subscribe(cl_cfg_.pose_body_channel, &AppLCM::poseInitHandler, this);
+    cout << "Initialization of robot pose...\n";
 
     // Create debug data folder
     data_directory_path_ << "/tmp/aicp_data";
@@ -51,10 +54,6 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     boost::filesystem::remove_all(path);
     if(boost::filesystem::create_directory(dir))
     cerr << "AICP debug data directory: " << path << endl;
-
-    // Pose subsciber
-    lcm_->subscribe(cl_cfg_.pose_body_channel, &AppLCM::poseInitHandler, this);
-    cout << "Initialization of robot pose...\n";
 
     // Instantiate objects
     registr_ = create_registrator(reg_params_);
@@ -67,7 +66,7 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     Eigen::Isometry3d world_to_body;
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     {
-        // Update world to body transform (from kinematics msg)
+        // Latest world -> body (pose prior)
         world_to_body_msg_ = getPoseAsIsometry3d(msg);
 //        world_to_body_msg_utime_ = msg->utime;
         world_to_body = world_to_body_msg_;
@@ -75,7 +74,7 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
     bot_core::pose_t msg_out;
 
-    // Compute and publish correction at same frequency as input pose (if "debug" mode)
+    // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
     {
         // Apply correction if available (identity otherwise)
@@ -83,7 +82,7 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
         corrected_pose_ = current_correction_ * world_to_body;  // world -> reference =
                                                                 // body -> reference * world -> body
 
-        // To correct robot drift publish CORRECTED_POSE
+        // Publish CORRECTED_POSE
         msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
         lcm_->publish(cl_cfg_.output_channel,&msg_out);
 
@@ -133,14 +132,14 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
 //    vis.publishCloudToLCM(lcm_, getCurrentCloud(), 5020, "Reading Aligned");
 
-    // Publish current overlap
+    // Publish OVERLAP
     bot_core::double_array_t msg_overlap;
     msg_overlap.utime = msg->utime;
     msg_overlap.num_values = 1;
     msg_overlap.values.push_back(octree_overlap_);
     lcm_->publish("OVERLAP",&msg_overlap);
 
-    // Publish current alignability
+    // Publish ALIGNABILITY
     bot_core::double_array_t msg_al;
     msg_al.utime = msg->utime;
     msg_al.num_values = 1;
@@ -149,14 +148,14 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
 
     if (!risk_prediction_.isZero() && !other_predictions_.empty())
     {
-        // Publish current alignment risk
+        // Publish ALIGNMENT_RISK
         bot_core::double_array_t msg_risk;
         msg_risk.utime = msg->utime;
         msg_risk.num_values = 1;
         msg_risk.values.push_back(risk_prediction_(0,0));
         lcm_->publish("ALIGNMENT_RISK",&msg_risk);
 
-        // Publish current degeneracy
+        // Publish DEGENERACY
         bot_core::double_array_t msg_degen;
         msg_degen.utime = msg->utime;
         msg_degen.num_values = 1;
@@ -177,11 +176,11 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
                                 const bot_core::planar_lidar_t* msg)
 {
     if (!pose_initialized_){
-        cout << "[Main] Pose estimate not initialized, waiting...\n";
+        cout << "[App LCM] Pose estimate not initialized, waiting for pose prior...\n";
         return;
     }
 
-    // Get current robot pose
+    // Latest world -> body (pose prior)
     Eigen::Isometry3d world_to_body;
     {
         std::unique_lock<std::mutex> lock(robot_state_mutex_);
@@ -200,11 +199,11 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
 //                                            msg->ranges,msg->intensities,world_to_head_,head_to_lidar_,
 //                                            world_to_body_last);
 
-    // Accumulate planar scans to 3D point cloud (projected to body frame)
+    // Accumulate planar scans to 3D point cloud (global frame)
     if (!clear_clouds_buffer_)
     {
         if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
-            cout << "[Main] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
+            cout << "[App LCM] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
         }
         accu_->processLidar(msg);
 //        lidar_scans_list_.push_back(*current_scan);
@@ -214,7 +213,7 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
         {
             std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
             clear_clouds_buffer_ = FALSE;
-            cout << "[Main] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+            cout << "[App LCM] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
         }
 
         if ( accu_->getCounter() > 0 )
@@ -226,33 +225,37 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
 //    delete current_scan;
 
     if ( accu_->getFinished() ){ //finished accumulating?
-        std::cout << "[Main] Finished Collecting: " << accu_->getFinishedTime() << std::endl;
+        std::cout << "[App LCM] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
 
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
-        pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud);
-        // cloud = accu_->getCloud();
-        cloud->width = cloud->points.size();
-        cloud->height = 1;
-        cout << "[Main] Processing cloud with " << cloud->points.size() << " points." << endl;
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_pronto (new pcl::PointCloud<pcl::PointXYZRGB> ());
+        pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud_pronto);
+        // cloud_pronto = accu_->getCloud();
+        cloud_pronto->width = cloud_pronto->points.size();
+        cloud_pronto->height = 1;
+        cout << "[App LCM] Processing cloud with " << cloud_pronto->points.size() << " points." << endl;
 
         // Push this cloud onto the work queue (mutex safe)
         const int max_queue_size = 100;
         {
             std::unique_lock<std::mutex> lock(data_mutex_);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr data(new pcl::PointCloud<pcl::PointXYZ>());
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-            pcl::copyPointCloud(*cloud,*data);
-//            data_queue_.push_back(data);
+            pcl::copyPointCloud(*cloud_pronto,*cloud);
+//            data_queue_.push_back(cloud);
 
-            AlignedCloud* current_cloud = new AlignedCloud(msg->utime,
-                                                           data,
-                                                           world_to_body);
-            cloud_queue_.push_back(*current_cloud);
+//            AlignedCloud* current_cloud = new AlignedCloud(msg->utime,
+//                                                           cloud,
+//                                                           world_to_body);
+            AlignedCloudPtr current_cloud (new AlignedCloud(msg->utime,
+                                                                 cloud,
+                                                                 world_to_body));
+            // Stack current cloud into queue
+            cloud_queue_.push_back(current_cloud);
 
 //            scans_queue_.push_back(lidar_scans_list_);
             if (cloud_queue_.size() > max_queue_size) {
-                cout << "[Main] WARNING: dropping " <<
-                        (cloud_queue_.size()-max_queue_size) << " scans" << endl;
+                cout << "[App LCM] WARNING: dropping " <<
+                        (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
             }
             while (cloud_queue_.size() > max_queue_size) {
 //                data_queue_.pop_front();
@@ -261,6 +264,10 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
 //            lidar_scans_list_.clear();
             accu_->clearCloud();
         }
+        // Visualization (publish last reference and aligned reading)
+//        publishCloud(reference_vis_, 5000, "Reference");
+//        publishCloud(last_reading_vis_, 5010, "Reading");
+
         // Send notification to operator()() which is waiting for this condition variable
         worker_condition_.notify_one();
     }
@@ -303,29 +310,29 @@ Eigen::Isometry3d AppLCM::getBodyAsIsometry3d(const bot_core::rigid_transform_t*
     return pose_iso;
 }
 
-Eigen::Isometry3d AppLCM::getTransfParamAsIsometry3d(PM::TransformationParameters T)
-{
-    Eigen::Isometry3d pose_iso;
-    pose_iso.setIdentity();
+//Eigen::Isometry3d AppLCM::getTransfParamAsIsometry3d(PM::TransformationParameters T)
+//{
+//    Eigen::Isometry3d pose_iso;
+//    pose_iso.setIdentity();
 
-    Eigen::Matrix3f rot;
-    rot << T.block(0,0,3,3);
-    Eigen::Quaternionf quat(rot);
-    Eigen::Quaterniond quatd;
-    quatd = quat.cast <double> ();
+//    Eigen::Matrix3f rot;
+//    rot << T.block(0,0,3,3);
+//    Eigen::Quaternionf quat(rot);
+//    Eigen::Quaterniond quatd;
+//    quatd = quat.cast <double> ();
 
-    Eigen::Vector3f transl;
-    transl << T(0,3), T(1,3), T(2,3);
-    Eigen::Vector3d transld;
-    transld = transl.cast <double> ();
+//    Eigen::Vector3f transl;
+//    transl << T(0,3), T(1,3), T(2,3);
+//    Eigen::Vector3d transld;
+//    transld = transl.cast <double> ();
 
-    pose_iso.translation() << transld;
-    Eigen::Quaterniond quatE = Eigen::Quaterniond(quatd.w(), quatd.x(),
-                                                  quatd.y(), quatd.z());
-    pose_iso.rotate(quatE);
+//    pose_iso.translation() << transld;
+//    Eigen::Quaterniond quatE = Eigen::Quaterniond(quatd.w(), quatd.x(),
+//                                                  quatd.y(), quatd.z());
+//    pose_iso.rotate(quatE);
 
-    return pose_iso;
-}
+//    return pose_iso;
+//}
 
 int AppLCM::getTransWithMicroTime(BotFrames *bot_frames,
                                  const char *from_frame,

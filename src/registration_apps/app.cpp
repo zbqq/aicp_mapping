@@ -28,56 +28,57 @@ void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
                          Eigen::Matrix4f &T,
                          vector<float>& failure_prediction_factors)
 {
-  /*===================================
-  =              AICP Core            =
-  ===================================*/
-  string configNameAICP;
-  configNameAICP.append(FILTERS_CONFIG_LOC);
-  configNameAICP.append("/icp_autotuned.yaml");
+    /*===================================
+    =              AICP Core            =
+    ===================================*/
+    string configNameAICP;
+    configNameAICP.append(FILTERS_CONFIG_LOC);
+    configNameAICP.append("/icp_autotuned.yaml");
 
-  // Auto-tune ICP chain (quantile for the outlier filter)
-  float current_ratio = octree_overlap_/100.0;
-  if (current_ratio < 0.25)
-    current_ratio = 0.25;
-  else if (current_ratio > 0.70)
-    current_ratio = 0.70;
+    // Auto-tune ICP chain (quantile for the outlier filter)
+    float current_ratio = octree_overlap_/100.0;
+    if (current_ratio < 0.25)
+        current_ratio = 0.25;
+    else if (current_ratio > 0.70)
+        current_ratio = 0.70;
 
-  replaceRatioConfigFile(reg_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
-  registr_->updateConfigParams(configNameAICP);
+    replaceRatioConfigFile(reg_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
+    registr_->updateConfigParams(configNameAICP);
 
-  /*===================================
-  =          Register Clouds          =
-  ===================================*/
-  registr_->registerClouds(reference, reading, T, failure_prediction_factors);
-  if (!failure_prediction_factors.empty())
-  {
-    cout << "[Main] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
-    cout << "[Main] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
-  }
+    /*===================================
+    =          Register Clouds          =
+    ===================================*/
+    registr_->registerClouds(reference, reading, T, failure_prediction_factors);
+    if (!failure_prediction_factors.empty())
+    {
+        cout << "[App] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
+        cout << "[App] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
+    }
 
-  cout << "==============================" << endl
-       << "[Main] Computed 3D Transform:" << endl
-       << "==============================" << endl
-       << T << endl;
+    cout << "==============================" << endl
+         << "[App] Computed 3D Transform:" << endl
+         << "==============================" << endl
+         << T << endl;
 
-  T =  T * initialT_;
+    T =  T * initialT_;
 
-  cout << "==============================" << endl
-       << "[Main] Corrected Reading Pose:" << endl
-       << "==============================" << endl
-       << T << endl;
+    cout << "==============================" << endl
+         << "[App] Corrected Reading Pose:" << endl
+         << "==============================" << endl
+         << T << endl;
 }
 
 void App::operator()() {
   running_ = true;
   while (running_) {
     std::unique_lock<std::mutex> lock(worker_mutex_);
+    // Wait for notification from planarLidarHandler
     worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
-    // copy current workload from data queue to work queue
+    // Copy current workload from cloud queue to work queue
 //    std::list<pcl::PointCloud<pcl::PointXYZ>::Ptr> work_queue;
 //    std::list<vector<LidarScan>> scans_queue;
-    std::list<AlignedCloud> work_queue;
+    std::list<AlignedCloudPtr> work_queue;
     {
       std::unique_lock<std::mutex> lock(data_mutex_);
       while (!cloud_queue_.empty()) {
@@ -85,22 +86,39 @@ void App::operator()() {
         cloud_queue_.pop_front();
 //        scans_queue.push_back(scans_queue_.front());
 //        scans_queue_.pop_front();
+
+//        last_reading_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
       }
     }
 
-    // process workload
+    // Process workload
     for (auto cloud : work_queue) {
       // For storing current cloud
 //      SweepScan* current_sweep = new SweepScan();
 //      vector<LidarScan> first_sweep_scans_list = scans_queue.front();
 //      scans_queue.pop_front();
 
-      // first point cloud
+      // First point cloud (becomes first reference)
       if(aligned_clouds_graph_->isEmpty())
       {
 //        current_sweep->populateSweepScan(first_sweep_scans_list, *cloud, sweep_scans_list_->getNbClouds());
 //        sweep_scans_list_->initializeCollection(*current_sweep);
+          cloud->setReference();
           aligned_clouds_graph_->initialize(cloud);
+          reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
+
+          if (cl_cfg_.verbose)
+          {
+              // DEBUG: Save first reference cloud to file
+              stringstream first_ref;
+              first_ref << data_directory_path_.str();
+              first_ref << "/ref_";
+              first_ref << to_string(0);
+              first_ref << ".pcd";
+              pcd_writer_.write<pcl::PointXYZ> (first_ref.str (),
+                                                *(aligned_clouds_graph_->getLastCloud()->getCloud()),
+                                                false);
+          }
 
         //if (cl_cfg_.verbose)
         //{
@@ -108,13 +126,8 @@ void App::operator()() {
         //  drawPointCloudCollections(lcm_, 0, local_, *cloud, 1);
         //}
 
-        // To file
-        stringstream ss_ref;
-        ss_ref << data_directory_path_.str();
-        ss_ref << "/ref_";
-        ss_ref << to_string(0);
-        ss_ref << ".pcd";
-        pcd_writer_.write<pcl::PointXYZ> (ss_ref.str (), *(cloud.getCloud()), false);
+        cout << "HERE WE ARE!" << endl;
+        cout << "Verbose: " << cl_cfg_.verbose << endl;
       }
       else
       {

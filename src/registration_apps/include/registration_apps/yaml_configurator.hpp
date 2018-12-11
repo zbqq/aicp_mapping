@@ -7,6 +7,7 @@
 #include "aicp_classification/common.hpp"
 
 namespace aicp {
+
 class YAMLConfigurator {
 public:
     YAMLConfigurator(){
@@ -16,7 +17,6 @@ public:
 
     const RegistrationParams& getRegistrationParams();
     const OverlapParams& getOverlapParams();
-
     const ClassificationParams& getClassificationParams();
 
     const std::string& getExperimentParams();
@@ -31,6 +31,5 @@ private:
     OverlapParams overlap_params;
     ClassificationParams classification_params;
     std::string experiments_param;
-
 };
 }

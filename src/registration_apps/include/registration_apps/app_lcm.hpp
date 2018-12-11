@@ -1,6 +1,7 @@
 #pragma once
 
 #include "registration_apps/app.hpp"
+#include "registration_apps/visualizer_lcm.hpp"
 
 namespace aicp {
 
@@ -27,6 +28,7 @@ public:
     Eigen::Isometry3d getPoseAsIsometry3d(const bot_core::pose_t* pose);
     Eigen::Isometry3d getBodyAsIsometry3d(const bot_core::rigid_transform_t* pose);
     Eigen::Isometry3d getTransfParamAsIsometry3d(PM::TransformationParameters T);
+
 private:
     boost::shared_ptr<lcm::LCM> lcm_;
     // Used for: convertCloudProntoToPcl
@@ -35,6 +37,7 @@ private:
     CloudAccumulateConfig ca_cfg_;
     BotParam* botparam_;
     BotFrames* botframes_;
+    LCMVisualizer* lcm_vis_;
 
     int getTransWithMicroTime(BotFrames *bot_frames,
                              const char *from_frame,

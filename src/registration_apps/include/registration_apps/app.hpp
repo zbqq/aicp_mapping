@@ -99,7 +99,7 @@ protected:
     std::condition_variable worker_condition_;
     std::mutex worker_mutex_;
 //    std::list<pcl::PointCloud<pcl::PointXYZ>::Ptr> data_queue_;
-    std::list<AlignedCloud> cloud_queue_;
+    std::list<AlignedCloudPtr> cloud_queue_;
     std::mutex data_mutex_;
     std::mutex robot_state_mutex_;
     std::mutex robot_behavior_mutex_;
@@ -150,22 +150,17 @@ protected:
     // Reference cloud update counters
     int updates_counter_;
 
-    // Write to file
+    // DEBUG: Write to file
     pcl::PCDWriter pcd_writer_;
+    // Visualization
+    pcl::PointCloud<pcl::PointXYZ>::Ptr reference_vis_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr last_reading_vis_;
 
     // Init handlers
     void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading,
                         Eigen::Matrix4f &T, vector<float>& failure_prediction_factors);
 
     // Getters
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr getReference()
-//    {
-//        return sweep_scans_list_->getCurrentReference().getCloud();
-//    };
 
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr getCurrentCloud()
-//    {
-//        return sweep_scans_list_->getCurrentCloud().getCloud();
-//    };
 };
 } // namespace aicp

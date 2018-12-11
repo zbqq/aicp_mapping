@@ -1,18 +1,22 @@
 #include "aicp_registration/aligned_cloud.hpp"
 
+namespace aicp {
+
 AlignedCloud::AlignedCloud(long long int utime,
                            pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                            Eigen::Isometry3d prior_pose)
 { 
-  utime_ = utime;
-  cloud_ = cloud;
+    utime_ = utime;
+    cloud_ = cloud;
 
-  world_to_cloud_prior_ = prior_pose;
-  cloud_to_reference_ = Eigen::Isometry3d::Identity();
-  world_to_cloud_corrected_ = Eigen::Isometry3d::Identity();
 
-  is_reference_ = true; // default true as first reference cloud does not get updated
-  its_reference_id_ = -1;
+
+    world_to_cloud_prior_ = prior_pose;
+    cloud_to_reference_ = Eigen::Isometry3d::Identity();
+    world_to_cloud_corrected_ = Eigen::Isometry3d::Identity();
+
+    is_reference_ = false;  // default false
+    its_reference_id_ = -1; // default -1 (indicates no alignment performed)
 }
 
 AlignedCloud::~AlignedCloud()
@@ -25,10 +29,11 @@ void AlignedCloud::updateCloud(Eigen::Isometry3d correction,
                                bool is_reference,
                                int its_reference_id)
 {
-  cloud_to_reference_ = correction;
-  world_to_cloud_prior_ = corrected_pose;
-  is_reference_ = is_reference;
-  its_reference_id_ = its_reference_id;
+    cloud_to_reference_ = correction;
+    world_to_cloud_prior_ = corrected_pose;
+    is_reference_ = is_reference;
+    its_reference_id_ = its_reference_id;
+}
 }
 
 //void AlignedCloud::populateSweepScan(std::vector<LidarScan>& scans, pcl::PointCloud<pcl::PointXYZ> &cloud, int id, int refId, bool enRef)

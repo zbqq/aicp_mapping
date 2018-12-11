@@ -5,6 +5,7 @@
 using namespace std;
 
 namespace aicp {
+
     bool YAMLConfigurator::parse(const std::string& path){
         yn_ = YAML::LoadFile(path);
         if(yn_.IsNull()){
@@ -169,8 +170,8 @@ namespace aicp {
         cout << "[Main] Enable Lcm Visualization: "          << registration_params.enableLcmVisualization        << endl;
 
         if(registration_params.type.compare("Pointmatcher") == 0) {
-          cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;
-          cout << "[Pointmatcher] Print Registration Statistics: "   << registration_params.pointmatcher.printOutputStatistics << endl;
+            cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;
+            cout << "[Pointmatcher] Print Registration Statistics: "   << registration_params.pointmatcher.printOutputStatistics << endl;
         }
         else if(registration_params.type.compare("GICP") == 0) {
         }
@@ -178,23 +179,22 @@ namespace aicp {
         cout << "[Main] Overlap Type: "                   << overlap_params.type                             << endl;
 
         if(overlap_params.type.compare("OctreeBased") == 0) {
-          cout << "[OctreeBased] Octomap Resolution: "    << overlap_params.octree_based.octomapResolution   << endl;
+            cout << "[OctreeBased] Octomap Resolution: "    << overlap_params.octree_based.octomapResolution   << endl;
         }
 
         cout << "[Main] Classification Type: "       << classification_params.type                    << endl;
 
         if(classification_params.type.compare("SVM") == 0) {
-          cout << "[SVM] Acceptance Threshold: "    << classification_params.svm.threshold           << endl;
-          cout << "[SVM] Training File: "           << classification_params.svm.trainingFile        << endl;
-          cout << "[SVM] Testing File: "            << classification_params.svm.testingFile         << endl;
-          cout << "[SVM] Saving Model To: "         << classification_params.svm.saveFile            << endl;
-          cout << "[SVM] Saving Probs To: "         << classification_params.svm.saveProbs           << endl;
-          cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
+              cout << "[SVM] Acceptance Threshold: "    << classification_params.svm.threshold           << endl;
+              cout << "[SVM] Training File: "           << classification_params.svm.trainingFile        << endl;
+              cout << "[SVM] Testing File: "            << classification_params.svm.testingFile         << endl;
+              cout << "[SVM] Saving Model To: "         << classification_params.svm.saveFile            << endl;
+              cout << "[SVM] Saving Probs To: "         << classification_params.svm.saveProbs           << endl;
+              cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
         }
 
         cout << "[Main] Experiments Type: "               << experiments_param                               << endl;
         cout << "============================" << endl;
     }
-
 }
 

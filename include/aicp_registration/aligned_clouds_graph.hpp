@@ -9,43 +9,38 @@
 
 #include "aligned_cloud.hpp"
 
+namespace aicp {
+
+typedef std::shared_ptr<AlignedCloud> AlignedCloudPtr;
+
 // Graph of aligned clouds
 class AlignedCloudsGraph
 {
-  public:
+public:
     AlignedCloudsGraph();
     ~AlignedCloudsGraph();
 
-    void initialize(AlignedCloud& reference); // global coordinates
-    bool addCloud(AlignedCloud& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id);
+    void initialize(AlignedCloudPtr& reference); // global coordinates
 
-//    void updateReference(int index){ current_reference_ = aligned_clouds.at(index).getId(); };
+    //    void updateReference(int index){ current_reference_ = aligned_clouds.at(index).getId(); };
 
-    bool isEmpty(){ return !initialized_; };
+    bool isEmpty(){ return !initialized_; }
 
     // Getters clouds
-    int getNbClouds(){ return aligned_clouds.size(); };
+    int getNbClouds(){ return aligned_clouds.size(); }
 
-    AlignedCloud& getLastCloud(){ return aligned_clouds.back(); };
-    AlignedCloud& getCloudAt(int index){ return aligned_clouds.at(index); };
-    std::vector<AlignedCloud>& getClouds(){ return aligned_clouds; };
+    AlignedCloudPtr getLastCloud(){ return aligned_clouds.back(); }
+    AlignedCloudPtr getCloudAt(int index){ return aligned_clouds.at(index); }
+    std::vector<AlignedCloudPtr> getClouds(){ return aligned_clouds; }
 
-//    Eigen::Isometry3d getLastPose(); // global cloud_to_world pose (aligned)
-//    Eigen::Isometry3d getPoseAt();   // global cloud_to_world pose (aligned)
+    AlignedCloudPtr getCurrentReference(){ return aligned_clouds.at(current_reference_); }
+    int getCurrentReferenceId(){ return current_reference_; }
+bool addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id);
 
-//    Eigen::Isometry3d getLastRelativePose(); // global cloud_to_reference pose (aligned)
-//    Eigen::Isometry3d getRelativePoseAt();   // global cloud_to_reference pose (aligned)
-
-    AlignedCloud& getCurrentReference(){ return aligned_clouds.at(current_reference_); };
-    int getCurrentReferenceId(){ return current_reference_; };
-
-
-  private:
+private:
     bool initialized_;
     int current_reference_;
 
-    std::vector<AlignedCloud> aligned_clouds;  // Clouds in global reference frame (aligned)
-
-//    Eigen::Isometry3d reference_to_current_cloud; // Current pose with respect to reference cloud
-//                                                  // constraint after drift correction
+    std::vector<AlignedCloudPtr> aligned_clouds;  // Clouds in global reference frame (aligned)
 };
+}
