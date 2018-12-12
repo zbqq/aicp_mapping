@@ -17,9 +17,6 @@ void AlignedCloudsGraph::initialize(AlignedCloudPtr& reference)
     aligned_clouds.push_back(reference);
     current_reference_ = aligned_clouds.size()-1;
 
-    std::cerr << "n reference " << current_reference_ << std::endl;
-    std::cerr << "reference " << getCurrentReference().get() << std::endl;
-
     initialized_ = true;
 }
 

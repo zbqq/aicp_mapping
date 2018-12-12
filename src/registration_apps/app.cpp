@@ -25,8 +25,7 @@ App::App(const CommandLineConfig& cl_cfg,
 
 void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
                          pcl::PointCloud<pcl::PointXYZ>& reading,
-                         Eigen::Matrix4f &T,
-                         vector<float>& failure_prediction_factors)
+                         Eigen::Matrix4f &T)
 {
     /*===================================
     =              AICP Core            =
@@ -48,316 +47,342 @@ void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
     /*===================================
     =          Register Clouds          =
     ===================================*/
-    registr_->registerClouds(reference, reading, T, failure_prediction_factors);
-    if (!failure_prediction_factors.empty())
-    {
-        cout << "[App] Degeneracy (degenerate if ~ 0): " << failure_prediction_factors.at(0) << " %" << endl;
-        cout << "[App] ICN (degenerate if ~ 0): " << failure_prediction_factors.at(1) << endl;
-    }
+    registr_->registerClouds(reference, reading, T);
 
-    cout << "==============================" << endl
-         << "[App] Computed 3D Transform:" << endl
-         << "==============================" << endl
+    cout << "========================" << endl
+         << "[AICP Core] Correction:" << endl
+         << "========================" << endl
          << T << endl;
 
-    T =  T * initialT_;
+//    T =  T * initialT_;
 
-    cout << "==============================" << endl
-         << "[App] Corrected Reading Pose:" << endl
-         << "==============================" << endl
-         << T << endl;
+//    cout << "============================" << endl
+//         << "[AICP Core] Corrected Pose:" << endl
+//         << "============================" << endl
+//         << T << endl;
 }
 
 void App::operator()() {
-  running_ = true;
-  while (running_) {
-    std::unique_lock<std::mutex> lock(worker_mutex_);
-    // Wait for notification from planarLidarHandler
-    worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
+    running_ = true;
+    while (running_) {
+        std::unique_lock<std::mutex> lock(worker_mutex_);
+        // Wait for notification from planarLidarHandler
+        worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
-    // Copy current workload from cloud queue to work queue
-//    std::list<pcl::PointCloud<pcl::PointXYZ>::Ptr> work_queue;
-//    std::list<vector<LidarScan>> scans_queue;
-    std::list<AlignedCloudPtr> work_queue;
-    {
-      std::unique_lock<std::mutex> lock(data_mutex_);
-      while (!cloud_queue_.empty()) {
-        work_queue.push_back(cloud_queue_.front());
-        cloud_queue_.pop_front();
-//        scans_queue.push_back(scans_queue_.front());
-//        scans_queue_.pop_front();
+        // Copy current workload from cloud queue to work queue
+        //    std::list<pcl::PointCloud<pcl::PointXYZ>::Ptr> work_queue;
+        //    std::list<vector<LidarScan>> scans_queue;
+        std::list<AlignedCloudPtr> work_queue;
+        {
+            std::unique_lock<std::mutex> lock(data_mutex_);
+            while (!cloud_queue_.empty()) {
+                work_queue.push_back(cloud_queue_.front());
+                cloud_queue_.pop_front();
+                //        scans_queue.push_back(scans_queue_.front());
+                //        scans_queue_.pop_front();
+            }
+        }
 
-//        last_reading_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
-      }
+        // Process workload
+        for (auto cloud : work_queue) {
+            // For storing current cloud
+            //      SweepScan* current_sweep = new SweepScan();
+            //      vector<LidarScan> first_sweep_scans_list = scans_queue.front();
+            //      scans_queue.pop_front();
+
+            // First point cloud (becomes first reference)
+            if(aligned_clouds_graph_->isEmpty())
+            {
+                //        current_sweep->populateSweepScan(first_sweep_scans_list, *cloud, sweep_scans_list_->getNbClouds());
+                //        sweep_scans_list_->initializeCollection(*current_sweep);
+                // Initialize graph
+                cloud->setReference();
+                aligned_clouds_graph_->initialize(cloud);
+
+                if (cl_cfg_.verbose)
+                {
+                    // Publish first reference cloud
+                    reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
+                    vis_->publishCloud(reference_vis_, 0, "First Reference");
+
+                    // DEBUG: Save first reference cloud to file
+                    stringstream first_ref;
+                    first_ref << data_directory_path_.str();
+                    first_ref << "/reference_";
+                    first_ref << to_string(0);
+                    first_ref << ".pcd";
+                    pcd_writer_.write<pcl::PointXYZ> (first_ref.str (),
+                                                      *(aligned_clouds_graph_->getLastCloud()->getCloud()),
+                                                      false);
+                }
+            }
+            else
+            {
+                TimingUtils::tic();
+
+                if (cl_cfg_.verbose)
+                {
+                    // Publish original reading cloud
+                    last_reading_vis_ = cloud->getCloud();
+                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading");
+                }
+
+                /*===================================
+                =           Set Input Clouds        =
+                ===================================*/
+                // Get current reference cloud
+                pcl::PointCloud<pcl::PointXYZ>::Ptr reference = aligned_clouds_graph_->getCurrentReference()->getCloud();
+
+                Eigen::Isometry3d ref_pose, read_pose;
+                ref_pose = aligned_clouds_graph_->getCurrentReference()->getCorrectedPose();
+                read_pose = cloud->getPriorPose();
+
+                cout << "size before: " << cloud->getCloud()->size() << endl;
+                cout << "prior pose before: " << cloud->getPriorPose().translation() << endl;
+                cout << "corr pose before: " << cloud->getCorrectedPose().translation() << endl;
+                cout << "correction before: " << cloud->getCorrection().translation() << endl;
+
+                // Initialize clouds before sending to filters
+                // (simulates correction integration only if "debug" mode)
+                pcl::PointCloud<pcl::PointXYZ>::Ptr reading (new pcl::PointCloud<pcl::PointXYZ>);
+                if (cl_cfg_.working_mode == "robot")
+                    *reading = *(cloud->getCloud());
+                else
+                {
+                    pcl::transformPointCloud (*(cloud->getCloud()), *reading, initialT_);
+                    Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
+                    read_pose = initialT_iso * read_pose;
+                    // update AlignedCloud with integrated prior pose
+                    cloud->setPriorPose(read_pose);
+                }
+
+                if (cl_cfg_.verbose)
+                {
+                    // Publish initialized reading cloud
+                    vis_->publishCloud(reading, 5010, "Initialized Reading");
+                    // Publish current reference cloud
+                    vis_->publishCloud(reference, 5020, "Current Reference");
+                }
+
+
+                cout << "size before 2: " << cloud->getCloud()->size() << endl;
+                cout << "prior pose before 2: " << cloud->getPriorPose().translation() << endl;
+                cout << "corr pose before 2: " << cloud->getCorrectedPose().translation() << endl;
+                cout << "correction before 2: " << cloud->getCorrection().translation() << endl;
+
+                /*===================================
+                =        Filter Input Clouds        =
+                ===================================*/
+
+                pcl::PointCloud<pcl::PointXYZ> overlap_reference;
+                pcl::PointCloud<pcl::PointXYZ> overlap_reading;
+                if (cl_cfg_.failure_prediction_mode)
+                {
+                    // ------------------
+                    // FOV-based Overlap
+                    // ------------------
+                    fov_overlap_ = overlapFilter(*reference, *reading,
+                                                 ref_pose, read_pose,
+                                                 reg_params_.sensorRange , reg_params_.sensorAngularView,
+                                                 overlap_reference, overlap_reading);
+                    cout << "====================================" << endl
+                         << "[Main] FOV-based Overlap: " << fov_overlap_ << " %" << endl
+                         << "====================================" << endl;
+                }
+
+                // ------------------------------------
+                // Pre-filtering: 1) down-sampling
+                //                2) planes extraction
+                // ------------------------------------
+                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+                regionGrowingUniformPlaneSegmentationFilter(reference, ref_prefiltered);
+                pcl::PointCloud<pcl::PointXYZ>::Ptr read_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+                regionGrowingUniformPlaneSegmentationFilter(reading, read_prefiltered);
+
+                if (cl_cfg_.verbose)
+                {
+                    stringstream filtered_ref;
+                    filtered_ref << data_directory_path_.str();
+                    filtered_ref << "/reference_prefiltered.pcd";
+                    pcd_writer_.write<pcl::PointXYZ> (filtered_ref.str (), *ref_prefiltered, false);
+                    stringstream filtered_read;
+                    filtered_read << data_directory_path_.str();
+                    filtered_read << "/reading_prefiltered.pcd";
+                    pcd_writer_.write<pcl::PointXYZ> (filtered_read.str (), *read_prefiltered, false);
+                }
+
+                // ---------------------
+                // Octree-based Overlap
+                // ---------------------
+                ColorOcTree* ref_tree;
+                ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
+
+                // 1) create octree from reference cloud (wrt robot's point of view)
+                // 2) add the reading cloud and compute overlap
+                ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
+                                                       ref_pose, read_pose,
+                                                       read_tree);
+                octree_overlap_ = overlapper_->getOverlap();
+
+                cout << "====================================" << endl
+                     << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
+                     << "====================================" << endl;
+
+                if (cl_cfg_.verbose)
+                {
+                    // TO DO: useOctomap is disabled/commented out in Director
+                    // (director/src/python/director/startup.py) -> WHY?
+                    // Publish reference octree
+                    vis_->publishOctree(ref_tree, "OCTOMAP_REF");
+                    // Publish reading octree
+                    vis_->publishOctree(read_tree, "OCTOMAP");
+                }
+
+                if (cl_cfg_.failure_prediction_mode)
+                {
+                    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr matched_planes_reference (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+                    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr matched_planes_reading (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+                    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+                    // -------------
+                    // Alignability
+                    // -------------
+                    // Alignability computed on points belonging to the region of overlap (overlap_points_A, overlap_points_B)
+                    alignability_ = alignabilityFilter(overlap_reference, overlap_reading,
+                                                       ref_pose, read_pose,
+                                                       matched_planes_reference, matched_planes_reading, eigenvectors);
+                    cout << "====================================" << endl
+                         << "[Main] Alignability: " << alignability_ << " % (degenerate if ~ 0)" << endl
+                         << "====================================" << endl;
+
+                    /*===================================
+                    =           Classification          =
+                    ===================================*/
+                    // ---------------
+                    // Alignment Risk
+                    // ---------------
+                    MatrixXd testing_data(1, 2);
+                    testing_data << (float)octree_overlap_, (float)alignability_;
+
+                    classifier_->test(testing_data, &risk_prediction_);
+                    cout << "====================================" << endl
+                         << "[Main] Alignment Risk: " << risk_prediction_ << " (0-1)" << endl
+                         << "====================================" << endl;
+
+                    if (cl_cfg_.verbose)
+                    {
+                        // Publish matched planes reference cloud
+                        vis_->publishCloud(matched_planes_reference, 9, "Matches Reference");
+                        // Publish matched planes reading cloud
+                        vis_->publishCloud(matched_planes_reading, 11, "Matches Reading");
+                        // Publish eigenvectors alignability
+                        eigenvectors->points.resize(4);
+                        vis_->publishCloud(eigenvectors, 13, "Eigenvectors Alignability");
+                    }
+                }
+
+                /*===================================
+                =          Register Clouds          =
+                ===================================*/
+                Eigen::Matrix4f correction = Eigen::Matrix4f::Identity(4,4);
+
+                this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
+
+                cout << "aligned_clouds_graph_->getNbClouds(): " << aligned_clouds_graph_->getNbClouds() << endl;
+
+                int update_frequency = 50;
+                if((!cl_cfg_.failure_prediction_mode &&
+                    (aligned_clouds_graph_->getNbClouds() + 1) % update_frequency == 0))// ||
+                   //(cl_cfg_.failure_prediction_mode && risk_prediction_(0,0) > class_params_.svm.threshold))
+                {
+                    cout << "BLA" << endl;
+//                }
+//                if(risk_prediction_(0,0) > class_params_.svm.threshold)
+//                {
+//                    cout << "====================================" << endl
+//                         << "[Main] REFERENCE UPDATE" << endl
+//                         << "====================================" << endl;
+//                    // Reference Update Statistics
+//                    updates_counter_ ++;
+
+//                    int current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
+//                    // Updating reference with current reading (non-aligned)
+//                    if(sweep_scans_list_->getCloud(current_cloud_id).setReference())
+//                    {
+//                        sweep_scans_list_->getCloud(current_cloud_id).disableReference();
+//                        cout << "SET REFERENCE aligned: " << current_cloud_id << endl;
+//                    }
+//                    else
+//                    {
+//                        current_sweep->populateSweepScan(first_sweep_scans_list, *read_ptr, sweep_scans_list_->getNbClouds(), -1, 1);
+//                        sweep_scans_list_->addSweep(*current_sweep, initialT_);
+//                        current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
+//                        cout << "SET REFERENCE original: " << current_cloud_id << endl;
+//                    }
+
+//                    sweep_scans_list_->getCloud(current_cloud_id).setReference();
+//                    sweep_scans_list_->updateReference(current_cloud_id);
+
+//                    // To file
+//                    stringstream ss_tmp3;
+//                    ss_tmp3 << data_directory_path_.str();
+//                    ss_tmp3 << "/ref_";
+//                    ss_tmp3 << to_string(sweep_scans_list_->getCurrentReference().getId());
+//                    ss_tmp3 << ".pcd";
+//                    pcd_writer_.write<pcl::PointXYZ> (ss_tmp3.str (), *sweep_scans_list_->getCurrentReference().getCloud(), false);
+
+//                    rejected_correction = TRUE;
+                }
+                else
+                {
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr output (new pcl::PointCloud<pcl::PointXYZ>);
+                    pcl::transformPointCloud (*reading, *output, correction);
+                    Eigen::Isometry3d correction_iso = fromMatrix4fToIsometry3d(correction);
+                    cloud->updateCloud(output, correction_iso, false, aligned_clouds_graph_->getCurrentReferenceId());
+
+                    initialT_ = correction * initialT_;
+
+                    Eigen::Isometry3d corr_pose = correction_iso * read_pose;
+                    cout << "size after: " << cloud->getCloud()->size() << endl;
+                    cout << "prior pose after: " << cloud->getPriorPose().translation() << endl;
+                    cout << "corr pose after: " << cloud->getCorrectedPose().translation() << endl;
+                    cout << "corr pose after 2: " << corr_pose.translation() << endl;
+                    cout << "corr pose after 3: " << initialT_ << endl;
+                    cout << "correction after: " << cloud->getCorrection().translation() << endl;
+//                    current_sweep->populateSweepScan(first_sweep_scans_list, *output, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
+//                    sweep_scans_list_->addSweep(*current_sweep, Ttot);
+
+//                    current_correction_ = getTransfParamAsIsometry3d(Ttot);
+//                    updated_correction_ = TRUE;
+
+                    if (cl_cfg_.verbose)
+                    {
+                        // Publish aligned reading cloud
+                        vis_->publishCloud(output, 5030, "Aligned Reading");
+                        // Publish aligned reading cloud
+                        last_reading_vis_ = cloud->getCloud();
+                        vis_->publishCloud(last_reading_vis_, 5040, "Aligned Reading 2");
+                    }
+                }
+
+                TimingUtils::toc();
+
+//                // DEBUG
+//                cout << "============================" << endl
+//                     << "[Main] Statistics:" << endl
+//                     << "============================" << endl;
+//                cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
+//                cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
+//                cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
+//                cout << "Updates: " << updates_counter_ << endl;
+            }
+
+            //if (cl_cfg_.verbose)
+            //  drawPointCloudCollections(lcm_, 5030, local_, *sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
+
+//            current_sweep->~SweepScan();
+
+            cout << "--------------------------------------------------------------------------------------" << endl;
+        }
     }
-
-    // Process workload
-    for (auto cloud : work_queue) {
-      // For storing current cloud
-//      SweepScan* current_sweep = new SweepScan();
-//      vector<LidarScan> first_sweep_scans_list = scans_queue.front();
-//      scans_queue.pop_front();
-
-      // First point cloud (becomes first reference)
-      if(aligned_clouds_graph_->isEmpty())
-      {
-//        current_sweep->populateSweepScan(first_sweep_scans_list, *cloud, sweep_scans_list_->getNbClouds());
-//        sweep_scans_list_->initializeCollection(*current_sweep);
-          cloud->setReference();
-          aligned_clouds_graph_->initialize(cloud);
-          reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
-
-          if (cl_cfg_.verbose)
-          {
-              // DEBUG: Save first reference cloud to file
-              stringstream first_ref;
-              first_ref << data_directory_path_.str();
-              first_ref << "/ref_";
-              first_ref << to_string(0);
-              first_ref << ".pcd";
-              pcd_writer_.write<pcl::PointXYZ> (first_ref.str (),
-                                                *(aligned_clouds_graph_->getLastCloud()->getCloud()),
-                                                false);
-          }
-
-        //if (cl_cfg_.verbose)
-        //{
-        //  // To director first reference cloud (Point Cloud 0, Frame 0)
-        //  drawPointCloudCollections(lcm_, 0, local_, *cloud, 1);
-        //}
-
-        cout << "HERE WE ARE!" << endl;
-        cout << "Verbose: " << cl_cfg_.verbose << endl;
-      }
-      else
-      {
-//        TimingUtils::tic();
-
-//        // TODO move to LCM implementation
-//        //if (cl_cfg_.verbose)
-//        //{
-//        //  // Publish clouds in Director
-//        //  drawPointCloudCollections(lcm_, 5000, local_, *cloud, 1, "Reading Original");
-//        //}
-
-//        /*===================================
-//        =           Set Input Clouds        =
-//        ===================================*/
-//        // Get current reference cloud
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr ref = sweep_scans_list_->getCurrentReference().getCloud();
-
-//        // To file
-//        stringstream ss_ref;
-//        ss_ref << data_directory_path_.str();
-//        ss_ref << "/from_get_";
-//        ss_ref << to_string(0);
-//        ss_ref << ".pcd";
-//        pcd_writer_.write<pcl::PointXYZ> (ss_ref.str (), *ref, false);
-
-//        Eigen::Isometry3d ref_pose, read_pose;
-//        ref_pose = sweep_scans_list_->getCurrentReference().getBodyPose();
-//        read_pose = first_sweep_scans_list.back().getBodyPose();
-
-//        // Initialize clouds before sending to filters
-//        // (simulates correction integration)
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-//        if (cl_cfg_.apply_correction && cl_cfg_.working_mode != "robot")
-//        {
-//          pcl::transformPointCloud (*cloud, *read_ptr, initialT_);
-//          Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
-//          read_pose = initialT_iso * read_pose;
-//        }
-//        else
-//          *read_ptr = *cloud;
-
-//        ref_ptr = ref;
-//        // TODO move to LCM implementation
-//        // if (cl_cfg_.verbose)
-//        // {
-//        //   // Publish clouds in Director
-//        //   drawPointCloudCollections(lcm_, 5010, local_, *read_ptr, 1, "Reading Initialized");
-//        //   drawPointCloudCollections(lcm_, 5020, local_, *ref_ptr, 1, "Reference");
-//        // }
-
-//        /*===================================
-//        =        Filter Input Clouds        =
-//        ===================================*/
-
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr ref_xyz_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr read_xyz_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-//        copyPointCloud(*ref_ptr, *ref_xyz_ptr);
-//        copyPointCloud(*read_ptr, *read_xyz_ptr);
-
-//        pcl::PointCloud<pcl::PointXYZ> overlap_points_A;
-//        pcl::PointCloud<pcl::PointXYZ> overlap_points_B;
-//        pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudA_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-//        pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloudB_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-//        pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-
-//        // ------------------
-//        // FOV-based Overlap
-//        // ------------------
-//        fov_overlap_ = overlapFilter(*ref_xyz_ptr, *read_xyz_ptr,
-//                                     ref_pose, read_pose,
-//                                     reg_params_.sensorRange , reg_params_.sensorAngularView,
-//                                     overlap_points_A, overlap_points_B);
-//        cout << "====================================" << endl
-//             << "[Main] FOV-based Overlap: " << fov_overlap_ << " %" << endl
-//             << "====================================" << endl;
-
-//        // ------------------------------------
-//        // Pre-filtering: 1) down-sampling
-//        //                2) planes extraction
-//        // ------------------------------------
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr ref_xyz_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-//        regionGrowingUniformPlaneSegmentationFilter(ref_xyz_ptr, ref_xyz_prefiltered);
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr read_xyz_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-//        regionGrowingUniformPlaneSegmentationFilter(read_xyz_ptr, read_xyz_prefiltered);
-
-//        stringstream ss_tmp1;
-//        ss_tmp1 << data_directory_path_.str();
-//        ss_tmp1 << "/point_cloud_A_prefiltered.pcd";
-//        pcd_writer_.write<pcl::PointXYZ> (ss_tmp1.str (), *ref_xyz_prefiltered, false);
-//        stringstream ss_tmp2;
-//        ss_tmp2 << data_directory_path_.str();
-//        ss_tmp2 << "/point_cloud_B_prefiltered.pcd";
-//        pcd_writer_.write<pcl::PointXYZ> (ss_tmp2.str (), *read_xyz_prefiltered, false);
-
-//        // ---------------------
-//        // Octree-based Overlap
-//        // ---------------------
-//        ColorOcTree* ref_tree;
-//        ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
-
-//        // Create octree from reference cloud (wrt robot point of view),
-//        // add the reading cloud and compute overlap
-//        ref_tree = overlapper_->computeOverlap(*ref_xyz_prefiltered, *read_xyz_prefiltered,
-//                                               ref_pose, read_pose,
-//                                               read_tree);
-//        octree_overlap_ = overlapper_->getOverlap();
-
-//        cout << "====================================" << endl
-//             << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
-//             << "====================================" << endl;
-
-//        // -------------
-//        // Alignability
-//        // -------------
-//        // Alignability computed on points belonging to the region of overlap (overlap_points_A, overlap_points_B)
-//        alignability_ = alignabilityFilter(overlap_points_A, overlap_points_B,
-//                                           ref_pose, read_pose,
-//                                           cloudA_matched_planes, cloudB_matched_planes, eigenvectors);
-//        cout << "[Main] Alignability (degenerate if ~ 0): " << alignability_ << " %" << endl;
-
-//        /*===================================
-//        =           Classification          =
-//        ===================================*/
-//        // ---------------
-//        // Alignment Risk
-//        // ---------------
-//        MatrixXd testing_data(1, 2);
-//        testing_data << (float)octree_overlap_, (float)alignability_;
-
-//        classifier_->test(testing_data, &risk_prediction_);
-//        std::cout << "[Main] Alignment Risk Prediction (0-1): " << risk_prediction_ << std::endl;
-
-//        if (cl_cfg_.verbose)
-//        {
-//          /*===================================
-//          =     Visualize Octree Overlap      =
-//          ===================================*/
-////          publishOctreeToLCM(lcm_, ref_tree, "OCTOMAP_REF");
-////          publishOctreeToLCM(lcm_, read_tree, "OCTOMAP");
-//          /*===================================
-//          =      Visualize Alignability       =
-//          ===================================*/
-////          drawPointCloudNormalsCollections(lcm_, 9, local_, *cloudA_matched_planes, 0, "Matches A");
-////          drawPointCloudNormalsCollections(lcm_, 11, local_, *cloudB_matched_planes, 0, "Matches B");
-////          eigenvectors->points.resize(4);
-////          drawPointCloudNormalsCollections(lcm_, 13, local_, *eigenvectors, 0, "Alignability Eigenvectors");
-//        }
-
-//        /*===================================
-//        =          Register Clouds          =
-//        ===================================*/
-//        Eigen::Matrix4f Ttot = Eigen::Matrix4f::Identity(4,4);
-
-//        this->doRegistration(*ref_xyz_prefiltered, *read_xyz_prefiltered,
-//                             Ttot, other_predictions_);
-
-//        if((cl_cfg_.failure_prediction_mode == 0 && risk_prediction_(0,0) > class_params_.svm.threshold) ||
-//           (cl_cfg_.failure_prediction_mode == 1 && other_predictions_.at(0) < 0.05))
-//        {
-//            cout << "====================================" << endl
-//                 << "[Main] REFERENCE UPDATE" << endl
-//                 << "====================================" << endl;
-//          // Reference Update Statistics
-//          updates_counter_ ++;
-
-//          int current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
-//          // Updating reference with current reading (non-aligned)
-//          if(sweep_scans_list_->getCloud(current_cloud_id).setReference())
-//          {
-//            sweep_scans_list_->getCloud(current_cloud_id).disableReference();
-//            cout << "SET REFERENCE aligned: " << current_cloud_id << endl;
-//          }
-//          else
-//          {
-//            current_sweep->populateSweepScan(first_sweep_scans_list, *read_ptr, sweep_scans_list_->getNbClouds(), -1, 1);
-//            sweep_scans_list_->addSweep(*current_sweep, initialT_);
-//            current_cloud_id = sweep_scans_list_->getCurrentCloud().getId();
-//            cout << "SET REFERENCE original: " << current_cloud_id << endl;
-//          }
-
-//          sweep_scans_list_->getCloud(current_cloud_id).setReference();
-//          sweep_scans_list_->updateReference(current_cloud_id);
-
-//          // To file
-//          stringstream ss_tmp3;
-//          ss_tmp3 << data_directory_path_.str();
-//          ss_tmp3 << "/ref_";
-//          ss_tmp3 << to_string(sweep_scans_list_->getCurrentReference().getId());
-//          ss_tmp3 << ".pcd";
-//          pcd_writer_.write<pcl::PointXYZ> (ss_tmp3.str (), *sweep_scans_list_->getCurrentReference().getCloud(), false);
-
-//          rejected_correction = TRUE;
-//        }
-//        else
-//        {
-//          bool enableRef = TRUE;
-//          pcl::PointCloud<pcl::PointXYZ>::Ptr output (new pcl::PointCloud<pcl::PointXYZ>);
-//          pcl::transformPointCloud (*cloud, *output, Ttot);
-//          current_sweep->populateSweepScan(first_sweep_scans_list, *output, sweep_scans_list_->getNbClouds(), sweep_scans_list_->getCurrentReference().getId(), enableRef);
-//          sweep_scans_list_->addSweep(*current_sweep, Ttot);
-
-//          current_correction_ = getTransfParamAsIsometry3d(Ttot);
-//          updated_correction_ = TRUE;
-
-//          initialT_ = Ttot;
-//        }
-
-//        TimingUtils::toc();
-
-//        // DEBUG
-//        cout << "============================" << endl
-//             << "[Main] Statistics:" << endl
-//             << "============================" << endl;
-//        cout << "REFERENCE: " << sweep_scans_list_->getCurrentReference().getId() << endl;
-//        cout << "Cloud ID: " << sweep_scans_list_->getCurrentCloud().getId() << endl;
-//        cout << "Number Clouds: " << sweep_scans_list_->getNbClouds() << endl;
-//        cout << "Updates: " << updates_counter_ << endl;
-      }
-
-//      //if (cl_cfg_.verbose)
-//      //  drawPointCloudCollections(lcm_, 5030, local_, *sweep_scans_list_->getCurrentCloud().getCloud(), 1, "Reading Aligned");
-
-//      current_sweep->~SweepScan();
-
-//      cout << "--------------------------------------------------------------------------------------" << endl;
-    }
-  }
 }
-
-
 } // namespace aicp

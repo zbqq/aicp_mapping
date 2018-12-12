@@ -21,6 +21,8 @@
 #include "aicp_overlap/abstract_overlapper.hpp"
 #include "aicp_classification/abstract_classification.hpp"
 
+#include "registration_apps/visualizer.hpp"
+
 #include <pointmatcher/PointMatcher.h>
 
 struct CommandLineConfig
@@ -29,7 +31,7 @@ struct CommandLineConfig
     string pose_body_channel;
     string output_channel;
     string working_mode;
-    int failure_prediction_mode;
+    bool failure_prediction_mode;
     bool verbose;
     bool apply_correction;
 };
@@ -107,6 +109,8 @@ protected:
 
     // Data structure
     AlignedCloudsGraph* aligned_clouds_graph_;
+    // Visualizer
+    Visualizer* vis_;
 
     Eigen::Matrix4f initialT_;
 
@@ -138,8 +142,7 @@ protected:
     // Alignability
     float alignability_;
     // Alignment Risk
-    Eigen::MatrixXd risk_prediction_; // ours
-    std::vector<float> other_predictions_; // state of the art
+    Eigen::MatrixXd risk_prediction_;
 
     // Correction variables
     bool valid_correction_;
@@ -156,11 +159,7 @@ protected:
     pcl::PointCloud<pcl::PointXYZ>::Ptr reference_vis_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr last_reading_vis_;
 
-    // Init handlers
-    void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading,
-                        Eigen::Matrix4f &T, vector<float>& failure_prediction_factors);
-
-    // Getters
-
+    // AICP core
+    void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading, Eigen::Matrix4f &T);
 };
 } // namespace aicp

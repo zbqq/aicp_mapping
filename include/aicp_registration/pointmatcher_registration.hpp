@@ -28,9 +28,9 @@ class PointmatcherRegistration : public AbstractRegistrator {
     explicit PointmatcherRegistration(const RegistrationParams& params);
     ~PointmatcherRegistration();
 
-    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors);
-    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors);
-    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors);
+    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform);
+    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform);
+    virtual void registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform);
 
     void applyConfig();
     PM::TransformationParameters applyInitialization();
@@ -59,7 +59,7 @@ class PointmatcherRegistration : public AbstractRegistrator {
   private:
     RegistrationParams params_;
 
-    void registerClouds(Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors);
+    void registerClouds(Eigen::Matrix4f &final_transform);
 
     PM::ICP icp_;
   

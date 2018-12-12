@@ -21,6 +21,7 @@ public:
     ~AlignedCloudsGraph();
 
     void initialize(AlignedCloudPtr& reference); // global coordinates
+    bool addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id);
 
     //    void updateReference(int index){ current_reference_ = aligned_clouds.at(index).getId(); };
 
@@ -35,7 +36,6 @@ public:
 
     AlignedCloudPtr getCurrentReference(){ return aligned_clouds.at(current_reference_); }
     int getCurrentReferenceId(){ return current_reference_; }
-bool addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id);
 
 private:
     bool initialized_;

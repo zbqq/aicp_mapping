@@ -20,8 +20,8 @@ public:
                  Eigen::Isometry3d prior_pose);
     ~AlignedCloud();
 
-    void updateCloud(Eigen::Isometry3d correction,
-                     Eigen::Isometry3d corrected_pose,
+    void updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                     Eigen::Isometry3d correction,
                      bool is_reference,
                      int its_reference_id);
 
@@ -39,6 +39,12 @@ public:
 
     // Setters
     void setReference(){ is_reference_ = true; }
+
+    void setPriorPose(Eigen::Isometry3d pose_prior)
+    {
+        world_to_cloud_prior_ = pose_prior;
+        world_to_cloud_corrected_ = cloud_to_reference_ * world_to_cloud_prior_;
+    }
 
     bool isReference(){ return is_reference_; }
 

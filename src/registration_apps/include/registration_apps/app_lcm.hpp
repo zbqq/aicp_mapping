@@ -1,7 +1,6 @@
 #pragma once
 
 #include "registration_apps/app.hpp"
-#include "registration_apps/visualizer_lcm.hpp"
 
 namespace aicp {
 
@@ -37,7 +36,6 @@ private:
     CloudAccumulateConfig ca_cfg_;
     BotParam* botparam_;
     BotFrames* botframes_;
-    LCMVisualizer* lcm_vis_;
 
     int getTransWithMicroTime(BotFrames *bot_frames,
                              const char *from_frame,

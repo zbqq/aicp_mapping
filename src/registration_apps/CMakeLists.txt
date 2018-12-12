@@ -42,17 +42,17 @@ include_directories(
 )
 
 ############### registration executable
-add_executable(aicp-registration main.cpp)
-target_link_libraries(aicp-registration ${catkin_LIBRARIES}
-                                        boost_system
-                                        yaml-cpp
-                                        aicpPointmatcherUtils
-                                        aicpFilteringUtils
-                                        aicpCommonUtils
-                                        aicpDrawingUtils
-                                        aicpRegistration
-                                        aicpOverlap
-                                        aicpClassification)
+#add_executable(aicp-registration main.cpp)
+#target_link_libraries(aicp-registration ${catkin_LIBRARIES}
+#                                        boost_system
+#                                        yaml-cpp
+#                                        aicpPointmatcherUtils
+#                                        aicpFilteringUtils
+#                                        aicpCommonUtils
+#                                        aicpDrawingUtils
+#                                        aicpRegistration
+#                                        aicpOverlap
+#                                        aicpClassification)
 
 add_library(registration_apps app.cpp
                               yaml_configurator.cpp)

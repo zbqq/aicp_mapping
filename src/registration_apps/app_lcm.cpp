@@ -7,6 +7,8 @@
 #include "aicp_overlap/overlap.hpp"
 #include "aicp_classification/classification.hpp"
 
+#include "registration_apps/visualizer_lcm.hpp"
+
 namespace aicp {
 
 AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
@@ -33,9 +35,9 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     // Accumulator
     accu_ = new CloudAccumulate(lcm_, ca_cfg_, botparam_, botframes_);
     // Used for: convertCloudProntoToPcl
-    pc_vis_ = new pronto_vis( lcm_->getUnderlyingLCM() );
+    pc_vis_ = new pronto_vis(lcm_->getUnderlyingLCM());
     // Visualizer
-    lcm_vis_ = new LCMVisualizer( lcm_->getUnderlyingLCM() );
+    vis_ = new LCMVisualizer(lcm_);
 
     // Thread
     worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
@@ -146,7 +148,7 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     msg_al.values.push_back(alignability_);
     lcm_->publish("ALIGNABILITY",&msg_al);
 
-    if (!risk_prediction_.isZero() && !other_predictions_.empty())
+    if (!risk_prediction_.isZero())
     {
         // Publish ALIGNMENT_RISK
         bot_core::double_array_t msg_risk;
@@ -154,13 +156,6 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
         msg_risk.num_values = 1;
         msg_risk.values.push_back(risk_prediction_(0,0));
         lcm_->publish("ALIGNMENT_RISK",&msg_risk);
-
-        // Publish DEGENERACY
-        bot_core::double_array_t msg_degen;
-        msg_degen.utime = msg->utime;
-        msg_degen.num_values = 1;
-        msg_degen.values.push_back(other_predictions_.at(0));
-        lcm_->publish("DEGENERACY",&msg_degen);
     }
 
 //    if ( !pose_initialized_ ){
