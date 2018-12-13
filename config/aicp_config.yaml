@@ -1,6 +1,6 @@
 AICP: {
   Registration: {
-    type: "Pointmatcher", # GICP, Kaess
+    type: "Pointmatcher",
     sensorRange: 30.0,         # in meters
     sensorAngularView: 270.0,  # in degrees
     loadPosesFrom: "", # "file" (ground truth poses), "pcd", "" is from log if available
@@ -39,13 +39,5 @@ AICP: {
       saveProbs: "${DRS_BASE}/../aicp/data/classification/probs_opencv3.txt",
       modelLocation: "${DRS_BASE}/../aicp/data/models/svm_opencv3.xml",
     },
-  },
-  Experiments: {
-    type: "Online", # "",
-                     # "Validation" saves: idA, idB, alignability, degeneracy,
-                     # "Compare" saves: idA, idB, fov_overlap, octree_overlap,
-                     #                  alignability, align_risk, degeneracy, ICN
-                     # "Online" saves: line_id, time_stamp, octree_overlap,
-                     #                 alignability, align_risk, degeneracy, ICN
   }
 }

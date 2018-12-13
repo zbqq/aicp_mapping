@@ -127,15 +127,7 @@ namespace aicp {
             }
           }
         }
-        YAML::Node experimentsNode = yn_["AICP"]["Experiments"];
-        for(YAML::const_iterator it=experimentsNode.begin();it != experimentsNode.end();++it) {
 
-          const string key = it->first.as<string>();
-
-          if(key.compare("type") == 0) {
-            experiments_param = it->second.as<string>();
-          }
-        }
         return true;
     }
 
@@ -148,10 +140,6 @@ namespace aicp {
 
     const ClassificationParams& YAMLConfigurator::getClassificationParams() {
         return classification_params;
-    }
-
-    const std::string& YAMLConfigurator::getExperimentParams(){
-        return experiments_param;
     }
 
     void YAMLConfigurator::printParams() {
@@ -193,7 +181,6 @@ namespace aicp {
               cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
         }
 
-        cout << "[Main] Experiments Type: "               << experiments_param                               << endl;
         cout << "============================" << endl;
     }
 }

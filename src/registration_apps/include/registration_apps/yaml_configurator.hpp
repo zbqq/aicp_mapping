@@ -19,8 +19,6 @@ public:
     const OverlapParams& getOverlapParams();
     const ClassificationParams& getClassificationParams();
 
-    const std::string& getExperimentParams();
-
     void printParams();
 
 private:

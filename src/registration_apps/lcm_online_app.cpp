@@ -68,7 +68,7 @@ int main(int argc, char **argv){
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                  //   or debug - apply previous transforms to POSE_BODY
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
-    cl_cfg.apply_correction = FALSE;
+    cl_cfg.reference_update_frequency = 5;
 
     cl_cfg.pose_body_channel = "POSE_BODY";
     cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
@@ -84,8 +84,8 @@ int main(int argc, char **argv){
     ConciseArgs parser(argc, argv, "aicp-lcm-online");
     parser.add(cl_cfg.configFile, "c", "config_file", "AICP config file location");
     parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or debug?");
-    parser.add(cl_cfg.failure_prediction_mode, "u", "failure_prediction_mode", "Alignment Risk for reference update (default: use time window)");
-    parser.add(cl_cfg.apply_correction, "a", "apply_correction", "Initialize ICP with corrected pose? (during debug)");
+    parser.add(cl_cfg.failure_prediction_mode, "ar", "failure_prediction_mode", "Alignment Risk for reference update");
+    parser.add(cl_cfg.reference_update_frequency, "f", "reference_update_frequency", "Reference update frequency (number of clouds)");
     parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Prior pose estimate");
     parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose estimate");
     parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of planar scans per 3D point cloud");
@@ -104,6 +104,7 @@ int main(int argc, char **argv){
       cerr << "ERROR: could not parse AICP config file." << cl_cfg.configFile << endl;
       return -1;
     }
+    yaml_conf.printParams();
 
     /*===================================
     =             Create LCM            =
@@ -122,8 +123,7 @@ int main(int argc, char **argv){
                                       ca_cfg,
                                       yaml_conf.getRegistrationParams(),
                                       yaml_conf.getOverlapParams(),
-                                      yaml_conf.getClassificationParams(),
-                                      yaml_conf.getExperimentParams());
+                                      yaml_conf.getClassificationParams());
 
     while(0 == lcm->handle());
     delete app;

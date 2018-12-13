@@ -15,7 +15,6 @@ int main(int argc, char** argv){
     cl_cfg.working_mode = "robot";
     cl_cfg.failure_prediction_mode = 0;
     cl_cfg.verbose = FALSE;
-    cl_cfg.apply_correction = FALSE;
     cl_cfg.pose_body_channel = "POSE_BODY";
     cl_cfg.output_channel = "POSE_BODY_CORRECTED"; // Create new channel...
 
@@ -23,7 +22,6 @@ int main(int argc, char** argv){
     nh.getParam("working_mode", cl_cfg.working_mode);
     nh.getParam("failure_prediction_mode", cl_cfg.failure_prediction_mode);
     nh.getParam("verbose", cl_cfg.verbose);
-    nh.getParam("apply_correction", cl_cfg.apply_correction);
     nh.getParam("pose_body_channel", cl_cfg.pose_body_channel);
     nh.getParam("output_channel", cl_cfg.output_channel);
 
@@ -56,7 +54,6 @@ int main(int argc, char** argv){
                                                           yaml_conf.getRegistrationParams(),
                                                           yaml_conf.getOverlapParams(),
                                                           yaml_conf.getClassificationParams(),
-                                                          yaml_conf.getExperimentParams(),
                                                           bot_param_path));
 
     ros::Subscriber lidar_sub = nh.subscribe(sa_cfg.lidar_topic, 100, &aicp::AppROS::lidarScanCallBack, my_app.get());
