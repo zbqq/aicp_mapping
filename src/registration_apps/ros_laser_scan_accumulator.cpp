@@ -66,7 +66,7 @@ void LaserScanAccumulatorROS::processLidar(const sensor_msgs::LaserScan::ConstPt
                                                 config_.max_range,
                                                 laser_geometry::channel_option::Intensity);
       pcl_conversions::toPCL(point_cloud_ros_msg_, point_cloud_pcl_msg_);
-      pcl::fromPCLPointCloud2<pcl::PointXYZI>(point_cloud_pcl_msg_,point_cloud_);
+      pcl::fromPCLPointCloud2<pcl::PointXYZ>(point_cloud_pcl_msg_,point_cloud_);
       accumulated_point_cloud_ += point_cloud_;
 
       if(++counter >= config_.batch_size){

@@ -20,13 +20,10 @@ void AlignedCloudsGraph::initialize(AlignedCloudPtr& reference)
     initialized_ = true;
 }
 
-bool AlignedCloudsGraph::addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id)
+bool AlignedCloudsGraph::addCloud(AlignedCloudPtr& cloud)
 {
-    if(initialized_)
-    {
+    aligned_clouds.push_back(cloud);
 
-        aligned_clouds.push_back(cloud);
-    }
     return initialized_;
 }
 }

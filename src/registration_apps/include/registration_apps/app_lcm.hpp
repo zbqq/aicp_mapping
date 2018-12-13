@@ -11,16 +11,15 @@ public:
            CloudAccumulateConfig ca_cfg,
            RegistrationParams reg_params,
            OverlapParams overlap_params,
-           ClassificationParams class_params,
-           string exp_params);
+           ClassificationParams class_params);
 
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
                             const std::string& channel,
                             const bot_core::planar_lidar_t* msg);
 
-    void poseInitHandler(const lcm::ReceiveBuffer* rbuf,
-                         const std::string& channel,
-                         const  bot_core::pose_t* msg);
+    void robotPoseHandler(const lcm::ReceiveBuffer* rbuf,
+                          const std::string& channel,
+                          const  bot_core::pose_t* msg);
 
     // Tool functions
     bot_core::pose_t getIsometry3dAsBotPose(Eigen::Isometry3d pose, int64_t utime);

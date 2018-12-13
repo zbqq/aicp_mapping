@@ -21,6 +21,8 @@ public:
     ~AlignedCloud();
 
     void updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                     bool is_reference);
+    void updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                      Eigen::Isometry3d correction,
                      bool is_reference,
                      int its_reference_id);

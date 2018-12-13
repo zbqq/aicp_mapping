@@ -16,11 +16,9 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
                CloudAccumulateConfig ca_cfg,
                RegistrationParams reg_params,
                OverlapParams overlap_params,
-               ClassificationParams class_params,
-               string exp_params) :
-    App(cl_cfg, reg_params, overlap_params, class_params, exp_params),
-    ca_cfg_(ca_cfg),
-    lcm_(lcm)
+               ClassificationParams class_params) :
+    App(cl_cfg, reg_params, overlap_params, class_params),
+    ca_cfg_(ca_cfg), lcm_(lcm)
 {
     paramInit();
 
@@ -45,8 +43,10 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     // Laser subsciber
     lcm_->subscribe(ca_cfg_.lidar_channel, &AppLCM::planarLidarHandler, this);
     // Pose subsciber
-    lcm_->subscribe(cl_cfg_.pose_body_channel, &AppLCM::poseInitHandler, this);
-    cout << "Initialization of robot pose...\n";
+    lcm_->subscribe(cl_cfg_.pose_body_channel, &AppLCM::robotPoseHandler, this);
+    cout << "============================" << endl
+         << "Start..." << endl
+         << "============================" << endl;
 
     // Create debug data folder
     data_directory_path_ << "/tmp/aicp_data";
@@ -55,7 +55,7 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     if(boost::filesystem::exists(path))
     boost::filesystem::remove_all(path);
     if(boost::filesystem::create_directory(dir))
-    cerr << "AICP debug data directory: " << path << endl;
+    cerr << "Create AICP debug data directory: " << path << endl;
 
     // Instantiate objects
     registr_ = create_registrator(reg_params_);
@@ -63,14 +63,13 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     classifier_ = create_classifier(class_params_);
 }
 
-void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
+void AppLCM::robotPoseHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){
 
     Eigen::Isometry3d world_to_body;
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     {
         // Latest world -> body (pose prior)
         world_to_body_msg_ = getPoseAsIsometry3d(msg);
-//        world_to_body_msg_utime_ = msg->utime;
         world_to_body = world_to_body_msg_;
     }
 
@@ -81,87 +80,49 @@ void AppLCM::poseInitHandler(const lcm::ReceiveBuffer* rbuf, const std::string& 
     {
         // Apply correction if available (identity otherwise)
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
-        corrected_pose_ = current_correction_ * world_to_body;  // world -> reference =
-                                                                // body -> reference * world -> body
+        corrected_pose_ = total_correction_ * world_to_body;  // world -> reference =
+                                                              // body -> reference * world -> body
 
         // Publish CORRECTED_POSE
         msg_out = getIsometry3dAsBotPose(corrected_pose_, msg->utime);
         lcm_->publish(cl_cfg_.output_channel,&msg_out);
 
-        if (updated_correction_ || rejected_correction)
+        if (updated_correction_)
         {
-//            if (exp_params_ == "Online" && !risk_prediction_.isZero() && !other_predictions_.empty())
-//            {
-//                stringstream ss;
-//                ss << data_directory_path_.str();
-//                ss << "/online_results.txt";
-//                online_results_line_++;
-//                Eigen::MatrixXf line_elements(1,6);
-//                float tstamp_to_sec = (msg->utime - world_to_body_msg_utime_first_)/1000000.0;
-//                line_elements << tstamp_to_sec, octree_overlap_, alignability_, risk_prediction_.cast<float>(),
-//                        other_predictions_.at(0), other_predictions_.at(1); // degeneracy and ICN respectively
-//                writeLineToFile(line_elements, ss.str(), online_results_line_);
-//            }
-
-            if (updated_correction_)
             {
-                {
-                    std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-                    clear_clouds_buffer_ = TRUE;
-                }
+                std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+                clear_clouds_buffer_ = TRUE;
             }
-
             updated_correction_ = FALSE;
-//            rejected_correction = FALSE;
         }
     }
-//    // Publish clouds LCM (debug)
-//    aicp::Visualizer vis;
-//    // To file
-//    stringstream ss_ref;
-//    ss_ref << data_directory_path_.str();
-//    ss_ref << "/refxxxx_";
-//    ss_ref << to_string(0);
-//    ss_ref << ".pcd";
-//    try {
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr get_ref = getReference();
-//      vis.publishCloudToLCM(lcm_, get_ref, 5010, "Reference");      // vector::at throws an out-of-range
 
-////        pcd_writer_.write<pcl::PointXYZ> (ss_ref.str (), *get_ref, false);
-//    }
-//    catch (const std::out_of_range& oor) {
-//    }
-
-//    vis.publishCloudToLCM(lcm_, getCurrentCloud(), 5020, "Reading Aligned");
-
-    // Publish OVERLAP
-    bot_core::double_array_t msg_overlap;
-    msg_overlap.utime = msg->utime;
-    msg_overlap.num_values = 1;
-    msg_overlap.values.push_back(octree_overlap_);
-    lcm_->publish("OVERLAP",&msg_overlap);
-
-    // Publish ALIGNABILITY
-    bot_core::double_array_t msg_al;
-    msg_al.utime = msg->utime;
-    msg_al.num_values = 1;
-    msg_al.values.push_back(alignability_);
-    lcm_->publish("ALIGNABILITY",&msg_al);
-
-    if (!risk_prediction_.isZero())
+    if (cl_cfg_.verbose)
     {
-        // Publish ALIGNMENT_RISK
-        bot_core::double_array_t msg_risk;
-        msg_risk.utime = msg->utime;
-        msg_risk.num_values = 1;
-        msg_risk.values.push_back(risk_prediction_(0,0));
-        lcm_->publish("ALIGNMENT_RISK",&msg_risk);
-    }
+        // Publish OVERLAP
+        bot_core::double_array_t msg_overlap;
+        msg_overlap.utime = msg->utime;
+        msg_overlap.num_values = 1;
+        msg_overlap.values.push_back(octree_overlap_);
+        lcm_->publish("OVERLAP",&msg_overlap);
 
-//    if ( !pose_initialized_ ){
-//        world_to_body_corr_first_ = corrected_pose_;
-//        world_to_body_msg_utime_first_ = msg->utime;
-//    }
+        // Publish ALIGNABILITY
+        bot_core::double_array_t msg_al;
+        msg_al.utime = msg->utime;
+        msg_al.num_values = 1;
+        msg_al.values.push_back(alignability_);
+        lcm_->publish("ALIGNABILITY",&msg_al);
+
+        if (!risk_prediction_.isZero())
+        {
+            // Publish ALIGNMENT_RISK
+            bot_core::double_array_t msg_risk;
+            msg_risk.utime = msg->utime;
+            msg_risk.num_values = 1;
+            msg_risk.values.push_back(risk_prediction_(0,0));
+            lcm_->publish("ALIGNMENT_RISK",&msg_risk);
+        }
+    }
 
     pose_initialized_ = TRUE;
 }
@@ -181,18 +142,6 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
         std::unique_lock<std::mutex> lock(robot_state_mutex_);
         world_to_body = world_to_body_msg_;
     }
-    // Populate AlignedCloud data structure
-    // 2. Get lidar pose
-    // bot_frames_structure,from_frame,to_frame,utime,result
-//    getTransWithMicroTime(botframes_, (ca_cfg_.lidar_channel).c_str(), "body", msg->utime, body_to_lidar_);
-//    getTransWithMicroTime(botframes_, (ca_cfg_.lidar_channel).c_str(), "head", msg->utime, head_to_lidar_);
-    // 3. Compute current pose of head in world reference frame
-//    Eigen::Isometry3d world_to_lidar = world_to_body * body_to_lidar_;
-//    world_to_head_ = world_to_lidar * head_to_lidar_.inverse();
-    // 4. Store in LidarScan current scan wrt lidar frame
-//    AlignedCloud current_cloud = new AlignedCloud(msg->utime,msg->rad0,msg->radstep,
-//                                            msg->ranges,msg->intensities,world_to_head_,head_to_lidar_,
-//                                            world_to_body_last);
 
     // Accumulate planar scans to 3D point cloud (global frame)
     if (!clear_clouds_buffer_)
@@ -201,7 +150,6 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
             cout << "[App LCM] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
         }
         accu_->processLidar(msg);
-//        lidar_scans_list_.push_back(*current_scan);
     }
     else
     {
@@ -213,11 +161,7 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
 
         if ( accu_->getCounter() > 0 )
             accu_->clearCloud();
-//        if ( !lidar_scans_list_.empty() )
-//            lidar_scans_list_.clear();
     }
-
-//    delete current_scan;
 
     if ( accu_->getFinished() ){ //finished accumulating?
         std::cout << "[App LCM] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
@@ -236,32 +180,23 @@ void AppLCM::planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
             pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
             pcl::copyPointCloud(*cloud_pronto,*cloud);
-//            data_queue_.push_back(cloud);
 
-//            AlignedCloud* current_cloud = new AlignedCloud(msg->utime,
-//                                                           cloud,
-//                                                           world_to_body);
+            // Populate AlignedCloud data structure
             AlignedCloudPtr current_cloud (new AlignedCloud(msg->utime,
-                                                                 cloud,
-                                                                 world_to_body));
+                                                            cloud,
+                                                            world_to_body));
             // Stack current cloud into queue
             cloud_queue_.push_back(current_cloud);
 
-//            scans_queue_.push_back(lidar_scans_list_);
             if (cloud_queue_.size() > max_queue_size) {
                 cout << "[App LCM] WARNING: dropping " <<
                         (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
             }
             while (cloud_queue_.size() > max_queue_size) {
-//                data_queue_.pop_front();
                 cloud_queue_.pop_front();
             }
-//            lidar_scans_list_.clear();
             accu_->clearCloud();
         }
-        // Visualization (publish last reference and aligned reading)
-//        publishCloud(reference_vis_, 5000, "Reference");
-//        publishCloud(last_reading_vis_, 5010, "Reading");
 
         // Send notification to operator()() which is waiting for this condition variable
         worker_condition_.notify_one();

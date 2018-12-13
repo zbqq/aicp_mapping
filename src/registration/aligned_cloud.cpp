@@ -21,7 +21,11 @@ AlignedCloud::~AlignedCloud()
 { 
 }
 
-// Called to update poses after alignment
+void AlignedCloud::updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                               bool is_reference)
+{
+    updateCloud(cloud, cloud_to_reference_, is_reference, its_reference_id_);
+}
 void AlignedCloud::updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                Eigen::Isometry3d correction,
                                bool is_reference,

@@ -20,22 +20,27 @@ public:
     AlignedCloudsGraph();
     ~AlignedCloudsGraph();
 
-    void initialize(AlignedCloudPtr& reference); // global coordinates
-    bool addCloud(AlignedCloudPtr& cloud, Eigen::Isometry3d relative_pose, Eigen::Isometry3d pose, int reference_id);
+    void initialize(AlignedCloudPtr& reference);
+    bool addCloud(AlignedCloudPtr& cloud);
 
-    //    void updateReference(int index){ current_reference_ = aligned_clouds.at(index).getId(); };
+    void updateReference(int index)
+    {
+        aligned_clouds.at(index)->setReference();
+        current_reference_ = index;
+    }
 
     bool isEmpty(){ return !initialized_; }
 
     // Getters clouds
     int getNbClouds(){ return aligned_clouds.size(); }
 
-    AlignedCloudPtr getLastCloud(){ return aligned_clouds.back(); }
     AlignedCloudPtr getCloudAt(int index){ return aligned_clouds.at(index); }
     std::vector<AlignedCloudPtr> getClouds(){ return aligned_clouds; }
 
     AlignedCloudPtr getCurrentReference(){ return aligned_clouds.at(current_reference_); }
     int getCurrentReferenceId(){ return current_reference_; }
+    AlignedCloudPtr getLastCloud(){ return aligned_clouds.back(); }
+    int getLastCloudId(){ return aligned_clouds.size()-1; }
 
 private:
     bool initialized_;
