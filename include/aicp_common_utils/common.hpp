@@ -34,12 +34,12 @@
 #endif
 
 #ifdef PROJECT_LOC
-  const std::string FILTERS_CONFIG_LOC = PROJECT_LOC + PATH_SEPARATOR + std::string("filters_config");
+  const std::string FILTERS_CONFIG_LOC = PROJECT_LOC + PATH_SEPARATOR + std::string("config/icp");
 #else
   #ifndef RPG_BASE
     #define RPG_BASE getenv("RPG_BASE")
   #endif
-  const std::string FILTERS_CONFIG_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp") + PATH_SEPARATOR + std::string("filters_config");
+  const std::string FILTERS_CONFIG_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp") + PATH_SEPARATOR + std::string("config/icp");
 #endif
 
 #ifdef PROJECT_LOC

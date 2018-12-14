@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+  <!-- Run AICP (command line configuration) -->
+  <node pkg="aicp" type="aicp_ros_online" name="aicp_ros_online" output="screen">
+
+    <!-- Debug mode or robot -->
+    <param name="working_mode"               value="debug" />
+
+    <!-- Reference update policy -->
+    <param name="failure_prediction_mode"    value="false" />
+    <param name="reference_update_frequency" value="5" />
+    
+    <!-- 3D point cloud characteristics -->
+    <param name="batch_size"                 value="80" />
+  	
+  	<!-- Visualize and store -->
+    <param name="verbose"                    value="true" />
+
+  </node>
+
+</launch>
