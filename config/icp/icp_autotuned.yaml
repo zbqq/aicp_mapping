@@ -32,7 +32,7 @@ matcher:
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
-      ratio: 0.307794
+      ratio: 0.558339
 
 errorMinimizer:
   # simalpha: Degeneracy and ICN state: DISABLED!
