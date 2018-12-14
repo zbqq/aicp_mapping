@@ -73,8 +73,8 @@ add_executable(aicp-lcm-online lcm_online_app.cpp
                                visualizer_lcm.cpp)
 target_link_libraries(aicp-lcm-online registration_apps)
 
-add_executable(aicp-ros-online ros_online_app.cpp
+add_executable(aicp_ros_online ros_online_app.cpp
                                app_ros.cpp
-                               ros_laser_scan_accumulator.cpp
+                               velodyne_accumulator.cpp
                                visualizer_ros.cpp)
-target_link_libraries(aicp-ros-online registration_apps)
+target_link_libraries(aicp_ros_online registration_apps)

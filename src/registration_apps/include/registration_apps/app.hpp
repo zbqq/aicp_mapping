@@ -27,7 +27,7 @@
 
 struct CommandLineConfig
 {
-    string configFile;
+    string config_file;
     string pose_body_channel;
     string output_channel;
     string working_mode;

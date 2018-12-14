@@ -10,19 +10,20 @@ namespace aicp {
 
 AppROS::AppROS(ros::NodeHandle &nh,
                const CommandLineConfig &cl_cfg,
-               const ScanAccumulatorConfig &sa_cfg,
+               const VelodyneAccumulatorConfig &va_cfg,
                const RegistrationParams &reg_params,
                const OverlapParams &overlap_params,
                const ClassificationParams &class_params,
                const string &bot_param_path) :
     App(cl_cfg, reg_params, overlap_params, class_params),
-    nh_(nh), accu_config_(sa_cfg),
-    accu_(nh, accu_config_)
+    nh_(nh), accu_config_(va_cfg)
 {
     paramInit();
 
     // Data structure
     aligned_clouds_graph_ = new AlignedCloudsGraph();
+    // Accumulator
+//    accu_ = new VelodyneAccumulatorROS(nh_, accu_config_);
     // Visualizer
     vis_ = new ROSVisualizer();
 
@@ -42,7 +43,14 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Pose publisher
     if (cl_cfg_.working_mode == "debug")
     {
-        pose_debug_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(cl_cfg_.output_channel,10);
+        corrected_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(cl_cfg_.output_channel,10);
+    }
+    // Verbose publishers
+    if (cl_cfg_.verbose)
+    {
+        overlap_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/overlap",10);
+        alignability_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignability",10);
+        risk_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignment_risk",10);
     }
 
     // Instantiate objects
@@ -51,13 +59,13 @@ AppROS::AppROS(ros::NodeHandle &nh,
     classifier_ = create_classifier(class_params_);
 }
 
-void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg)
+void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
 {
     Eigen::Isometry3d world_to_body;
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     {
         // Latest world -> body (pose prior)
-        getPoseAsIsometry3d(pose_msg, world_to_body_msg_);
+        getPoseAsIsometry3d(pose_msg_in, world_to_body_msg_);
         //      world_to_body_msg_utime_ = pose_msg->header.stamp.toNSec() / 1000;
         world_to_body = world_to_body_msg_;
     }
@@ -65,18 +73,18 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
     {
-        geometry_msgs::PoseStamped msg_out;
+        geometry_msgs::PoseStamped pose_msg_out;
 
         // Apply correction if available (identity otherwise)
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
         corrected_pose_ = total_correction_ * world_to_body; // world -> reference =
                                                              // body -> reference * world -> body
 
-        // Publish CORRECTED POSE
+        // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
-        tf::poseTFToMsg(temp_tf_pose_, msg_out.pose);
-        msg_out.header.stamp = pose_msg->header.stamp;
-        pose_debug_pub_.publish(msg_out);
+        tf::poseTFToMsg(temp_tf_pose_, pose_msg_out.pose);
+        pose_msg_out.header = pose_msg_in->header;
+        corrected_pose_pub_.publish(pose_msg_out);
 
         if (updated_correction_)
         {
@@ -88,48 +96,31 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         }
     }
 
-    // TODO convert these messages to ROS
-    /*
-    // Publish current overlap
-    bot_core::double_array_t msg_overlap;
-    msg_overlap.utime = msg->utime;
-    msg_overlap.num_values = 1;
-    msg_overlap.values.push_back(octree_overlap_);
-    lcm_->publish("OVERLAP",&msg_overlap);
-
-    // Publish current alignability
-    bot_core::double_array_t msg_al;
-    msg_al.utime = msg->utime;
-    msg_al.num_values = 1;
-    msg_al.values.push_back(alignability_);
-    lcm_->publish("ALIGNABILITY",&msg_al);
-
-    if (!risk_prediction_.isZero() && !other_predictions_.empty())
+    if (cl_cfg_.verbose)
     {
-      // Publish current alignment risk
-      bot_core::double_array_t msg_risk;
-      msg_risk.utime = msg->utime;
-      msg_risk.num_values = 1;
-      msg_risk.values.push_back(risk_prediction_(0,0));
-      lcm_->publish("ALIGNMENT_RISK",&msg_risk);
+        // Publish /aicp/overlap
+        std_msgs::Float32 overlap_msg;
+        overlap_msg.data = octree_overlap_;
+        overlap_pub_.publish(overlap_msg);
 
-      // Publish current degeneracy
-      bot_core::double_array_t msg_degen;
-      msg_degen.utime = msg->utime;
-      msg_degen.num_values = 1;
-      msg_degen.values.push_back(other_predictions_.at(0));
-      lcm_->publish("DEGENERACY",&msg_degen);
+        // Publish /aicp/alignability
+        std_msgs::Float32 alignability_msg;
+        alignability_msg.data = alignability_;
+        alignability_pub_.publish(alignability_msg);
+
+        if (!risk_prediction_.isZero())
+        {
+            // Publish /aicp/alignment_risk
+            std_msgs::Float32 risk_msg;
+            risk_msg.data = risk_prediction_(0,0);
+            risk_pub_.publish(risk_msg);
+        }
     }
-*/
-//    if ( !pose_initialized_ ){
-//        world_to_body_corr_first_ = corrected_pose_;
-//        world_to_body_msg_utime_first_ = pose_msg->header.stamp.toNSec() / 1000;
-//    }
 
     pose_initialized_ = TRUE;
 }
 
-void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg){
+void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in){
     if (!pose_initialized_){
         cout << "[App LCM] Pose estimate not initialized, waiting for pose prior...\n";
         return;
@@ -142,6 +133,66 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
         world_to_body = world_to_body_msg_;
     }
 
+    // Accumulate planar scans to 3D point cloud (global frame)
+    if (!clear_clouds_buffer_)
+    {
+        //        if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
+        //            cout << "[App LCM] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
+        //        }
+        //        accu_->processLidar(msg);
+    }
+    else
+    {
+        //        {
+        //            std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+        //            clear_clouds_buffer_ = FALSE;
+        //            cout << "[App LCM] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+        //        }
+
+        //        if ( accu_->getCounter() > 0 )
+        //            accu_->clearCloud();
+        //    }
+
+        //    if ( accu_->getFinished() ){ //finished accumulating?
+        //        std::cout << "[App LCM] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
+
+        //        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_pronto (new pcl::PointCloud<pcl::PointXYZRGB> ());
+        //        pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud_pronto);
+        //        // cloud_pronto = accu_->getCloud();
+        //        cloud_pronto->width = cloud_pronto->points.size();
+        //        cloud_pronto->height = 1;
+        //        cout << "[App LCM] Processing cloud with " << cloud_pronto->points.size() << " points." << endl;
+
+        //        // Push this cloud onto the work queue (mutex safe)
+        //        const int max_queue_size = 100;
+        //        {
+        //            std::unique_lock<std::mutex> lock(data_mutex_);
+        //            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        //            pcl::copyPointCloud(*cloud_pronto,*cloud);
+
+        //            // Populate AlignedCloud data structure
+        //            AlignedCloudPtr current_cloud (new AlignedCloud(msg->utime,
+        //                                                            cloud,
+        //                                                            world_to_body));
+        //            // Stack current cloud into queue
+        //            cloud_queue_.push_back(current_cloud);
+
+        //            if (cloud_queue_.size() > max_queue_size) {
+        //                cout << "[App LCM] WARNING: dropping " <<
+        //                        (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
+        //            }
+        //            while (cloud_queue_.size() > max_queue_size) {
+        //                cloud_queue_.pop_front();
+        //            }
+        //            accu_->clearCloud();
+    }
+
+    // Send notification to operator()() which is waiting for this condition variable
+    worker_condition_.notify_one();
+}
+
+// DEPRECATED: TO REMOVE
 //    // TODO retrieve these from somewhere (TF?)
 //    body_to_lidar_ = Eigen::Isometry3d::Identity();
 //    head_to_lidar_ = Eigen::Isometry3d::Identity();
@@ -221,8 +272,6 @@ void AppROS::lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr &lidar_msg
 //        worker_condition_.notify_one();
 //    }
 
-}
-
 void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
                                  Eigen::Isometry3d& eigen_pose)
 {
@@ -230,14 +279,8 @@ void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedC
     tf::transformTFToEigen(temp_tf_pose_, eigen_pose);
 }
 
-
-
-
-
-void AppROS::run(){
+void AppROS::run()
+{
     worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
-
-
 }
-
-}
+} // namespace aicp

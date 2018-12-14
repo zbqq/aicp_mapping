@@ -3,18 +3,20 @@
 /    \ )(( (__  ) __/
 \_/\_/(__)\___)(_*/
 
-// Auto-tuned Iterative Closest Point (AICP) is a module for non-incremental point cloud registration
-// and localization failure prediction. The registration strategy is based on the libpointmatcher framework (Pomerleau et al., AR 2012).
+// Auto-tuned Iterative Closest Point (AICP) is a module for point cloud registration (Nobili et al., ICRA 2017)
+// and localization failure prediction (Nobili et al., ICRA 2018). The registration strategy is based on
+// the libpointmatcher framework (Pomerleau et al., AR 2012).
 
-// AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas humanoid robots,
-// as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform. The framework supports Lightweight Communications
-// and Marshalling (LCM) integration for real-time message transfering.
+// AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas
+// humanoid robots, as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform.
+// The framework supports Lightweight Communications and Marshalling (LCM) integration for real-time
+// message transfering.
 
 // ===============
 // Example Usage:
 // ===============
-// Help: aicp-lcm-online -h
-// Run:  aicp-lcm-online -s debug -b 83 -a -v
+// Help: rosrun aicp aicp-lcm-online -h
+// Run:  rosrun aicp aicp-lcm-online -s debug -b 80 -ar -f 5 -v
 
 // Input (default): MULTISENSE_SCAN, POSE_BODY
 // Output (default): POSE_BODY_CORRECTED
@@ -26,10 +28,11 @@
 // The algorithm:
 // 1. accumulates planar laser scans on a thread and generates 3D point clouds with -b scans
 // 2. stores the first cloud as the reference cloud
-// 3. before alignment, overlap and alignability parameters --> risk of alignment (Nobili et al., ICRA 2018, submitted) are computed
+// 3. before alignment, overlap and alignability parameters --> risk of alignment are computed
 // 4. the reference cloud gets updated with latest accumulated cloud if (risk of alignment > threshold)
-// 5. aligns each new point cloud to the current reference cloud
-// 6. publishes a corrected body pose
+// 5. or with latest accumulated and aligned cloud every # clouds if windowed update is enabled (e.g -f 5)
+// 6. aligns each new point cloud to the current reference cloud
+// 7. publishes a corrected body pose
 
 #include <sstream>  // stringstream
 #include <map>
@@ -62,11 +65,11 @@ using namespace std;
 
 int main(int argc, char **argv){
     CommandLineConfig cl_cfg;
-    cl_cfg.configFile.append(CONFIG_LOC);
-    cl_cfg.configFile.append(PATH_SEPARATOR);
-    cl_cfg.configFile.append("aicp_config.yaml");
+    cl_cfg.config_file.append(CONFIG_LOC);
+    cl_cfg.config_file.append(PATH_SEPARATOR);
+    cl_cfg.config_file.append("aicp_config.yaml");
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
-                                 //   or debug - apply previous transforms to POSE_BODY
+                                   // or debug - apply previous transforms to POSE_BODY
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
     cl_cfg.reference_update_frequency = 5;
 
@@ -75,24 +78,26 @@ int main(int argc, char **argv){
     cl_cfg.verbose = FALSE; // enable visualization for debug
 
     CloudAccumulateConfig ca_cfg;
-    ca_cfg.batch_size = 240; // 240 is about 1 sweep
+    ca_cfg.batch_size = 80; // 240 is about 1 sweep at 5RPM // 80 is about 1 sweep at 15RPM
     ca_cfg.min_range = 0.50; // 1.85; // remove all the short range points
     ca_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
     ca_cfg.lidar_channel ="MULTISENSE_SCAN";
     //ca_cfg.check_local_to_scan_valid = FALSE;
 
     ConciseArgs parser(argc, argv, "aicp-lcm-online");
-    parser.add(cl_cfg.configFile, "c", "config_file", "AICP config file location");
+    parser.add(cl_cfg.config_file, "c", "config_file", "AICP config file location");
     parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or debug?");
     parser.add(cl_cfg.failure_prediction_mode, "ar", "failure_prediction_mode", "Alignment Risk for reference update");
     parser.add(cl_cfg.reference_update_frequency, "f", "reference_update_frequency", "Reference update frequency (number of clouds)");
+
     parser.add(cl_cfg.pose_body_channel, "pc", "pose_body_channel", "Prior pose estimate");
     parser.add(cl_cfg.output_channel, "oc", "output_channel", "Corrected pose estimate");
+    parser.add(cl_cfg.verbose, "v", "verbose", "Enable visualization to LCM for debug");
+
     parser.add(ca_cfg.batch_size, "b", "batch_size", "Number of planar scans per 3D point cloud");
     parser.add(ca_cfg.min_range, "m", "min_range", "Min accepted lidar range");
     parser.add(ca_cfg.max_range, "M", "max_range", "Max accepted lidar range");
     parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
-    parser.add(cl_cfg.verbose, "v", "verbose", "Enable visualization to LCM for debug");
     parser.parse();
 
 
@@ -100,8 +105,8 @@ int main(int argc, char **argv){
     =            YAML Config            =
     ===================================*/
     aicp::YAMLConfigurator yaml_conf;
-    if(!yaml_conf.parse(cl_cfg.configFile)){
-      cerr << "ERROR: could not parse AICP config file." << cl_cfg.configFile << endl;
+    if(!yaml_conf.parse(cl_cfg.config_file)){
+      cerr << "ERROR: could not parse AICP config file." << cl_cfg.config_file << endl;
       return -1;
     }
     yaml_conf.printParams();
@@ -119,11 +124,11 @@ int main(int argc, char **argv){
     =              Start App            =
     ===================================*/
     aicp::AppLCM* app = new aicp::AppLCM(lcm,
-                                      cl_cfg,
-                                      ca_cfg,
-                                      yaml_conf.getRegistrationParams(),
-                                      yaml_conf.getOverlapParams(),
-                                      yaml_conf.getClassificationParams());
+                                         cl_cfg,
+                                         ca_cfg,
+                                         yaml_conf.getRegistrationParams(),
+                                         yaml_conf.getOverlapParams(),
+                                         yaml_conf.getClassificationParams());
 
     while(0 == lcm->handle());
     delete app;

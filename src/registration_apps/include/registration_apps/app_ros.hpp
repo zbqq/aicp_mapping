@@ -1,12 +1,13 @@
 #pragma once
 
 #include <ros/node_handle.h>
-#include <sensor_msgs/LaserScan.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_listener.h>
+#include <std_msgs/Float32.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include "registration_apps/app.hpp"
-#include "registration_apps/ros_laser_scan_accumulator.hpp"
+#include "registration_apps/velodyne_accumulator.hpp"
 #include "registration_apps/visualizer_ros.hpp"
 
 namespace aicp {
@@ -14,7 +15,7 @@ class AppROS : public App {
 public:
     AppROS(ros::NodeHandle& nh,
            const CommandLineConfig& cl_cfg,
-           const ScanAccumulatorConfig& sa_cfg,
+           const VelodyneAccumulatorConfig& va_cfg,
            const RegistrationParams& reg_params,
            const OverlapParams& overlap_params,
            const ClassificationParams& class_params,
@@ -22,8 +23,8 @@ public:
     ~AppROS(){
     }
 
-    void lidarScanCallBack(const sensor_msgs::LaserScan::ConstPtr& lidar_msg);
-    void robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose_msg);
+    void velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in);
+    void robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose_msg_in);
     void run();
 
 private:
@@ -34,13 +35,13 @@ private:
     Eigen::Isometry3d temp_eigen_transf_;
     tf::Pose temp_tf_pose_;
 
-    ros::Publisher pose_debug_pub_;
+    ros::Publisher corrected_pose_pub_;
     ros::Publisher overlap_pub_;
+    ros::Publisher alignability_pub_;
     ros::Publisher risk_pub_;
-    ros::Publisher align_pub_;
 
-    LaserScanAccumulatorROS accu_;
-    ScanAccumulatorConfig accu_config_;
+//    VelodyneAccumulatorROS accu_;
+    VelodyneAccumulatorConfig accu_config_;
 
     // Tool functions
     void getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
