@@ -13,12 +13,14 @@ public:
 //    ~Visualizer();
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                              int channel,
-                              string name) = 0;
+                              int param,
+                              string name,
+                              int64_t utime = -1) = 0;
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
-                              int channel,
-                              string name) = 0;
+                              int param,
+                              string name,
+                              int64_t utime = -1) = 0;
 
     virtual void publishOctree(octomap::ColorOcTree*& octree,
                                string channel_name) = 0;

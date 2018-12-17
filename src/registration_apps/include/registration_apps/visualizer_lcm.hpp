@@ -14,11 +14,13 @@ public:
 
     // Publish cloud lcm
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                      int channel,
-                      string name);
+                      int param, // channel
+                      string name,
+                      int64_t utime);
     void publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
-                      int channel,
-                      string name);
+                      int param, // channel
+                      string name,
+                      int64_t utime);
 
     // Publish octree lcm
     void publishOctree(octomap::ColorOcTree*& octree,

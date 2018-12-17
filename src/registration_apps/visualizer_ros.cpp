@@ -1,34 +1,44 @@
 #include "registration_apps/visualizer_ros.hpp"
 
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <sensor_msgs/PointCloud2.h>
+
 using namespace std;
 
 namespace aicp {
 
-//LCMVisualizer::LCMVisualizer(boost::shared_ptr<lcm::LCM>& lcm) : lcm_(lcm)
-//{}
-
-ROSVisualizer::ROSVisualizer()
+ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
 {}
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                 int channel,
-                                 string name)
+                                 int param, // buffer size
+                                 string name,
+                                 int64_t utime = -1)
 {
-//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-//    pcl::copyPointCloud(*cloud, *rgb_cloud);
-//    drawPointCloudCollections(lcm_, channel, global_, *rgb_cloud, 1, name);
+    cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(name, param);
+
+    int secs = utime * 1E-6;
+    int nsecs = (utime - (secs * 1E6)) * 1E3;
+
+    sensor_msgs::PointCloud2 output;
+    pcl::toROSMsg(*cloud, output);
+    output.header.stamp = ros::Time(secs, nsecs);
+    output.header.frame_id = "odom";
+    cloud_pub_.publish(output);
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
-                                 int channel,
-                                 string name)
+                                 int param, // buffer size
+                                 string name,
+                                 int64_t utime = -1)
 {
-//    drawPointCloudNormalsCollections(lcm_, channel, global_, *cloud, 0, name);
+    // to be implemented
 }
 
 void ROSVisualizer::publishOctree(octomap::ColorOcTree*& octree,
                                   string channel_name)
 {
-//    publishOctreeToLCM(lcm_, octree, channel_name);
+    // publishOctree to be implemented.
 }
 }

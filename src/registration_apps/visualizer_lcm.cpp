@@ -9,7 +9,8 @@ LCMVisualizer::LCMVisualizer(boost::shared_ptr<lcm::LCM>& lcm) : lcm_(lcm)
 
 void LCMVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                  int channel,
-                                 string name)
+                                 string name,
+                                 int64_t utime = -1)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::copyPointCloud(*cloud, *rgb_cloud);
@@ -18,7 +19,8 @@ void LCMVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
 
 void LCMVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
                                  int channel,
-                                 string name)
+                                 string name,
+                                 int64_t utime = -1)
 {
     drawPointCloudNormalsCollections(lcm_, channel, global_, *cloud, 0, name);
 }

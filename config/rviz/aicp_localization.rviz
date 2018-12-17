@@ -7,7 +7,8 @@ Panels:
         - /Global Options1
         - /Grid1
         - /Original Point Cloud1
-        - /Accumulated Point Cloud1
+        - /Reading Point Cloud1
+        - /Reference Point Cloud1
       Splitter Ratio: 0.5
     Tree Height: 776
   - Class: rviz/Selection
@@ -143,7 +144,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 217
@@ -160,6 +161,36 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 1000
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 205
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Reading Point Cloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.00999999978
+      Style: Flat Squares
+      Topic: /aicp/original_reading
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -171,7 +202,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: RGB8
+      Color Transformer: ""
       Decay Time: 1000
       Enabled: true
       Invert Rainbow: false
@@ -179,14 +210,14 @@ Visualization Manager:
       Max Intensity: 4096
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: Accumulated Point Cloud
-      Position Transformer: XYZ
+      Name: Reference Point Cloud
+      Position Transformer: ""
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.00999999978
       Style: Flat Squares
-      Topic: /lidar_slam/pointclouds
+      Topic: /aicp/current_reference
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -223,18 +254,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.82365179
-        Y: -1.05674314
-        Z: 2.35757828
+        X: 21.451807
+        Y: -8.78952599
+        Z: 6.92206812
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.590399086
+      Pitch: 1.22479665
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.89539099
+      Yaw: 4.77540493
     Saved: ~
 Window Geometry:
   Displays:
@@ -252,5 +283,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1855
-  X: 3039
-  Y: 161
+  X: 322
+  Y: 88
