@@ -23,9 +23,13 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Data structure
     aligned_clouds_graph_ = new AlignedCloudsGraph();
     // Accumulator
-//    accu_ = new VelodyneAccumulatorROS(nh_, accu_config_);
+    accu_ = new VelodyneAccumulatorROS(nh_, accu_config_);
     // Visualizer
-    vis_ = new ROSVisualizer();
+    vis_ = new ROSVisualizer(nh_);
+
+    // Init pose to identity
+    world_to_body_ = Eigen::Isometry3d::Identity();
+    world_to_body_previous_ = Eigen::Isometry3d::Identity();
 
     cout << "============================" << endl
          << "Start..." << endl
@@ -61,13 +65,11 @@ AppROS::AppROS(ros::NodeHandle &nh,
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
 {
-    Eigen::Isometry3d world_to_body;
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     {
         // Latest world -> body (pose prior)
         getPoseAsIsometry3d(pose_msg_in, world_to_body_msg_);
-        //      world_to_body_msg_utime_ = pose_msg->header.stamp.toNSec() / 1000;
-        world_to_body = world_to_body_msg_;
+        world_to_body_ = world_to_body_msg_;
     }
 
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
@@ -77,8 +79,8 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
         // Apply correction if available (identity otherwise)
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
-        corrected_pose_ = total_correction_ * world_to_body; // world -> reference =
-                                                             // body -> reference * world -> body
+        corrected_pose_ = total_correction_ * world_to_body_; // world -> reference =
+                                                              // body -> reference * world -> body
 
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
@@ -86,8 +88,9 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         pose_msg_out.header = pose_msg_in->header;
         corrected_pose_pub_.publish(pose_msg_out);
 
-        if (updated_correction_)
+        if ( updated_correction_ )
         {
+
             {
                 std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
                 clear_clouds_buffer_ = TRUE;
@@ -122,74 +125,80 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
 void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in){
     if (!pose_initialized_){
-        cout << "[App LCM] Pose estimate not initialized, waiting for pose prior...\n";
+        cout << "[App ROS] Pose estimate not initialized, waiting for pose prior...\n";
         return;
     }
 
-    // Latest world -> body (pose prior)
-    Eigen::Isometry3d world_to_body;
-    {
-        std::unique_lock<std::mutex> lock(robot_state_mutex_);
-        world_to_body = world_to_body_msg_;
-    }
+//    // Latest world -> body (pose prior)
+//    {
+//        std::unique_lock<std::mutex> lock(robot_state_mutex_);
+//        world_to_body_ = world_to_body_msg_;
+//    }
 
     // Accumulate planar scans to 3D point cloud (global frame)
-    if (!clear_clouds_buffer_)
+    if (!clear_clouds_buffer_ )
     {
-        //        if ( accu_->getCounter() % ca_cfg_.batch_size == 0 ) {
-        //            cout << "[App LCM] " << accu_->getCounter() << " of " << ca_cfg_.batch_size << " scans collected." << endl;
-        //        }
-        //        accu_->processLidar(msg);
+        accu_->processLidar(laser_msg_in);
+//        cout << "[App ROS] " << accu_->getCounter() + 1 << " of " << accu_config_.batch_size << " scans collected." << endl;
     }
     else
     {
-        //        {
-        //            std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-        //            clear_clouds_buffer_ = FALSE;
-        //            cout << "[App LCM] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
-        //        }
+        {
+            std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
+            clear_clouds_buffer_ = FALSE;
+//            cout << "[App ROS] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
+        }
 
-        //        if ( accu_->getCounter() > 0 )
-        //            accu_->clearCloud();
-        //    }
-
-        //    if ( accu_->getFinished() ){ //finished accumulating?
-        //        std::cout << "[App LCM] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
-
-        //        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_pronto (new pcl::PointCloud<pcl::PointXYZRGB> ());
-        //        pc_vis_->convertCloudProntoToPcl(*accu_->getCloud(), *cloud_pronto);
-        //        // cloud_pronto = accu_->getCloud();
-        //        cloud_pronto->width = cloud_pronto->points.size();
-        //        cloud_pronto->height = 1;
-        //        cout << "[App LCM] Processing cloud with " << cloud_pronto->points.size() << " points." << endl;
-
-        //        // Push this cloud onto the work queue (mutex safe)
-        //        const int max_queue_size = 100;
-        //        {
-        //            std::unique_lock<std::mutex> lock(data_mutex_);
-        //            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
-
-        //            pcl::copyPointCloud(*cloud_pronto,*cloud);
-
-        //            // Populate AlignedCloud data structure
-        //            AlignedCloudPtr current_cloud (new AlignedCloud(msg->utime,
-        //                                                            cloud,
-        //                                                            world_to_body));
-        //            // Stack current cloud into queue
-        //            cloud_queue_.push_back(current_cloud);
-
-        //            if (cloud_queue_.size() > max_queue_size) {
-        //                cout << "[App LCM] WARNING: dropping " <<
-        //                        (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
-        //            }
-        //            while (cloud_queue_.size() > max_queue_size) {
-        //                cloud_queue_.pop_front();
-        //            }
-        //            accu_->clearCloud();
+        if ( accu_->getCounter() > 0 )
+            accu_->clearCloud();
     }
 
-    // Send notification to operator()() which is waiting for this condition variable
-    worker_condition_.notify_one();
+    // Ensure robot moves between accumulated clouds
+    Eigen::Isometry3d relative_motion = world_to_body_previous_.inverse() * world_to_body_;
+    double dist = relative_motion.translation().norm();
+    double rpy[3];
+    quat_to_euler(Eigen::Quaterniond(relative_motion.rotation()), rpy[0], rpy[1], rpy[2]);
+
+    if ( accu_->getFinished() )//finished accumulating?
+    {
+        if ((dist > 1.0) || fabs(rpy[2]) > (10.0 * M_PI / 180.0)) // TODO add condition on pitch and roll
+        {
+            std::cout << "[App ROS] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
+
+            pcl::PointCloud<pcl::PointXYZ>::Ptr accumulated_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
+            *accumulated_cloud = accu_->getCloud();
+            cout << "[App ROS] Processing cloud with " << accumulated_cloud->points.size() << " points." << endl;
+
+//            vis_->publishCloud(accumulated_cloud, 10, "/aicp/accumulated_cloud", accu_->getFinishedTime());
+
+            // Push this cloud onto the work queue (mutex safe)
+            const int max_queue_size = 100;
+            {
+                std::unique_lock<std::mutex> lock(data_mutex_);
+
+                // Populate AlignedCloud data structure
+                AlignedCloudPtr current_cloud (new AlignedCloud(accu_->getFinishedTime(),
+                                                                accumulated_cloud,
+                                                                world_to_body_));
+                world_to_body_previous_ = world_to_body_;
+
+                // Stack current cloud into queue
+                cloud_queue_.push_back(current_cloud);
+
+                if (cloud_queue_.size() > max_queue_size) {
+                    cout << "[App ROS] WARNING: dropping " <<
+                            (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
+                }
+                while (cloud_queue_.size() > max_queue_size) {
+                    cloud_queue_.pop_front();
+                }
+            }
+        }
+        accu_->clearCloud();
+
+        // Send notification to operator()() which is waiting for this condition variable
+        worker_condition_.notify_one();
+    }
 }
 
 // DEPRECATED: TO REMOVE

@@ -31,8 +31,9 @@ private:
     ros::NodeHandle& nh_;
     tf::TransformListener body_to_lidar_listener_;
 
-    tf::StampedTransform temp_tf_transf_;
-    Eigen::Isometry3d temp_eigen_transf_;
+//    tf::StampedTransform temp_tf_transf_;
+    Eigen::Isometry3d world_to_body_;
+    Eigen::Isometry3d world_to_body_previous_;
     tf::Pose temp_tf_pose_;
 
     ros::Publisher corrected_pose_pub_;
@@ -40,7 +41,7 @@ private:
     ros::Publisher alignability_pub_;
     ros::Publisher risk_pub_;
 
-//    VelodyneAccumulatorROS accu_;
+    VelodyneAccumulatorROS* accu_;
     VelodyneAccumulatorConfig accu_config_;
 
     // Tool functions

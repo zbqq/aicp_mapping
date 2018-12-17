@@ -59,3 +59,14 @@ Eigen::VectorXf get_random_gaussian_variable(float mean, float std_deviation, in
 
   return rand_variables;
 }
+
+// http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1301
+void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw) {
+  const double q0 = q.w();
+  const double q1 = q.x();
+  const double q2 = q.y();
+  const double q3 = q.z();
+  roll = atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2));
+  pitch = asin(2*(q0*q2-q3*q1));
+  yaw = atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3));
+}

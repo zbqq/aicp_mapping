@@ -86,7 +86,8 @@ void App::operator()() {
                 {
                     // Publish first reference cloud
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
-                    vis_->publishCloud(reference_vis_, 0, "First Reference");
+//                    vis_->publishCloud(reference_vis_, 0, "First Reference");
+                    vis_->publishCloud(reference_vis_, 10, "/aicp/accumulated_clouds", cloud->getUtime());
 
                     // Save first reference cloud to file
                     stringstream first_ref;
@@ -107,7 +108,9 @@ void App::operator()() {
                 {
                     // Publish original reading cloud
                     last_reading_vis_ = cloud->getCloud();
-                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading");
+//                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading");
+                    vis_->publishCloud(last_reading_vis_, 10, "/aicp/accumulated_clouds", cloud->getUtime());
+
                 }
 
                 /*===================================
@@ -137,9 +140,10 @@ void App::operator()() {
                 if (cl_cfg_.verbose)
                 {
                     // Publish initialized reading cloud
-                    vis_->publishCloud(reading, 5010, "Initialized Reading");
+//                    vis_->publishCloud(reading, 5010, "Initialized Reading");
                     // Publish current reference cloud
-                    vis_->publishCloud(reference, 5020, "Current Reference");
+//                    vis_->publishCloud(reference, 5020, "Current Reference");
+                    vis_->publishCloud(reference, 10, "/aicp/current_reference", cloud->getUtime());
                 }
 
                 /*===================================
@@ -244,12 +248,12 @@ void App::operator()() {
                     if (cl_cfg_.verbose)
                     {
                         // Publish matched planes reference cloud
-                        vis_->publishCloud(matched_planes_reference, 9, "Matches Reference");
+//                        vis_->publishCloud(matched_planes_reference, 9, "Matches Reference");
                         // Publish matched planes reading cloud
-                        vis_->publishCloud(matched_planes_reading, 11, "Matches Reading");
+//                        vis_->publishCloud(matched_planes_reading, 11, "Matches Reading");
                         // Publish eigenvectors alignability
                         eigenvectors->points.resize(4);
-                        vis_->publishCloud(eigenvectors, 13, "Eigenvectors Alignability");
+//                        vis_->publishCloud(eigenvectors, 13, "Eigenvectors Alignability");
                     }
                 }
 
@@ -302,7 +306,7 @@ void App::operator()() {
                 {
                     // Publish aligned reading cloud
                     last_reading_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
-                    vis_->publishCloud(last_reading_vis_, 5030, "Aligned Reading");
+//                    vis_->publishCloud(last_reading_vis_, 5030, "Aligned Reading");
 
                     // Save aligned reading cloud to file
                     stringstream aligned_read;
