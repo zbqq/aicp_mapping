@@ -14,7 +14,7 @@ namespace aicp {
 
 struct VelodyneAccumulatorConfig
 {
-    int batch_size = 80;
+    int batch_size = 10;
     double max_range = 30;
     double min_range = 0.5;
     std::string lidar_topic = "/velodyne/point_cloud_filtered";

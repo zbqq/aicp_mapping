@@ -15,7 +15,7 @@ class AlignedCloud
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 public:
-    AlignedCloud(long long int utime,
+    AlignedCloud(int64_t utime,
                  pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                  Eigen::Isometry3d prior_pose);
     ~AlignedCloud();
@@ -28,7 +28,7 @@ public:
                      int its_reference_id);
 
     // Getters
-    long long int getUtime(){ return utime_; }
+    int64_t getUtime(){ return utime_; }
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr getCloud(){ return cloud_; }
     int getNbPoints(){ return cloud_->size(); }
@@ -51,7 +51,7 @@ public:
     bool isReference(){ return is_reference_; }
 
 private:
-    long long int utime_; // Cloud timestamp (microseconds)
+    int64_t utime_; // Cloud timestamp (microseconds)
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (global coordinates)
 

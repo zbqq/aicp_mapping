@@ -217,7 +217,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.00999999978
       Style: Flat Squares
-      Topic: /aicp/current_reference
+      Topic: /lidar_slam/pointClouds
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true

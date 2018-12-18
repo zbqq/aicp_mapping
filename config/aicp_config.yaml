@@ -1,8 +1,8 @@
 AICP: {
   Registration: {
     type: "Pointmatcher",
-    sensorRange: 30.0,         # in meters
-    sensorAngularView: 270.0,  # in degrees
+    sensorRange: 100.0,         # in meters
+    sensorAngularView: 360.0,  # in degrees
     loadPosesFrom: "", # "file" (ground truth poses), "pcd", "" is from log if available
     initialTransform: "", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be

@@ -4,11 +4,13 @@
 
 #include "registration_apps/visualizer.hpp"
 
+
 namespace aicp {
 
 class ROSVisualizer : public Visualizer
 {
 public:
+
     ROSVisualizer(ros::NodeHandle& nh);
 //    ~ROSVisualizer();
 
@@ -29,5 +31,8 @@ public:
 private:
     ros::NodeHandle& nh_;
     ros::Publisher cloud_pub_;
+    // Duplicates the list in collections renderer. assumed to be 3xN colors
+       std::vector < double > colors_;
+
 };
 }

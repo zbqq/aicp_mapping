@@ -143,7 +143,7 @@ void App::operator()() {
 //                    vis_->publishCloud(reading, 5010, "Initialized Reading");
                     // Publish current reference cloud
 //                    vis_->publishCloud(reference, 5020, "Current Reference");
-                    vis_->publishCloud(reference, 10, "/aicp/current_reference", cloud->getUtime());
+                    vis_->publishCloud(reference, 10, "/lidar_slam/pointClouds", cloud->getUtime());
                 }
 
                 /*===================================
