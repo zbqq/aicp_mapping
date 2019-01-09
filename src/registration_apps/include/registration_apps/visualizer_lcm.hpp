@@ -26,6 +26,12 @@ public:
     void publishOctree(octomap::ColorOcTree*& octree,
                        string channel_name);
 
+    // Publish corrected pose lcm
+    void publishPose(Eigen::Isometry3d pose_,
+                     int param,
+                     string name,
+                     int64_t utime);
+
 private:
     boost::shared_ptr<lcm::LCM> lcm_;
 };

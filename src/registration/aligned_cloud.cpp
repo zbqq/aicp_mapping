@@ -2,7 +2,7 @@
 
 namespace aicp {
 
-AlignedCloud::AlignedCloud(long long int utime,
+AlignedCloud::AlignedCloud(int64_t utime,
                            pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                            Eigen::Isometry3d prior_pose)
 { 

@@ -136,7 +136,7 @@ protected:
     bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d total_correction_;
-
+    std::vector<Isometry3d> poseNodes_;
     // Reference cloud update counters
     int updates_counter_;
 
@@ -145,7 +145,7 @@ protected:
     // Visualization
     pcl::PointCloud<pcl::PointXYZ>::Ptr reference_vis_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr last_reading_vis_;
-
+    //Eigen::Isometry3d ref_pose_vis_;
     // AICP core
     void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading, Eigen::Matrix4f &T);
 };

@@ -82,6 +82,8 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         corrected_pose_ = total_correction_ * world_to_body_; // world -> reference =
                                                               // body -> reference * world -> body
 
+
+
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
         tf::poseTFToMsg(temp_tf_pose_, pose_msg_out.pose);

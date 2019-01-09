@@ -86,9 +86,14 @@ void App::operator()() {
                 {
                     // Publish first reference cloud
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
-//                    vis_->publishCloud(reference_vis_, 0, "First Reference");
-                    vis_->publishCloud(reference_vis_, 10, "/aicp/accumulated_clouds", cloud->getUtime());
+//                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
+                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
 
+                    //
+                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                      cloud->getUtime());
+                    //poseNodes_.push_back(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose());
+                    //cout << "the size of the pose vector is " << poseNodes_.size() << "\n";
                     // Save first reference cloud to file
                     stringstream first_ref;
                     first_ref << data_directory_path_.str();
@@ -109,7 +114,7 @@ void App::operator()() {
                     // Publish original reading cloud
                     last_reading_vis_ = cloud->getCloud();
 //                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading");
-                    vis_->publishCloud(last_reading_vis_, 10, "/aicp/accumulated_clouds", cloud->getUtime());
+//                    vis_->publishCloud(last_reading_vis_, 10, "/aicp/original_reading", cloud->getUtime());
 
                 }
 
@@ -143,7 +148,16 @@ void App::operator()() {
 //                    vis_->publishCloud(reading, 5010, "Initialized Reading");
                     // Publish current reference cloud
 //                    vis_->publishCloud(reference, 5020, "Current Reference");
-                    vis_->publishCloud(reference, 10, "/lidar_slam/pointClouds", cloud->getUtime());
+                    vis_->publishCloud(reference, 0, "", cloud->getUtime());
+                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                      cloud->getUtime());
+//                    cout << "the size of the pose vector is " << poseNodes_.size() << "\n";
+//                   for (size_t i=0;i<poseNodes_.size();i++){
+//                       cout << " the pose vector is " << poseNodes_[i].translation() << "\n";
+
+//                   }
+
+
                 }
 
                 /*===================================
@@ -307,6 +321,7 @@ void App::operator()() {
                     // Publish aligned reading cloud
                     last_reading_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
 //                    vis_->publishCloud(last_reading_vis_, 5030, "Aligned Reading");
+//                    vis_->publishCloud(last_reading_vis_, 1, "", cloud->getUtime());
 
                     // Save aligned reading cloud to file
                     stringstream aligned_read;

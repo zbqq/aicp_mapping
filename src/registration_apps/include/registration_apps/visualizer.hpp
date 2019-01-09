@@ -25,6 +25,11 @@ public:
     virtual void publishOctree(octomap::ColorOcTree*& octree,
                                string channel_name) = 0;
 
+    virtual void publishPose(Eigen::Isometry3d pose_,
+                             int param,
+                             string name,
+                             int64_t utime = -1) = 0;
+
 protected:
     // Set global reference frame to zero origin
     Eigen::Isometry3d global_ = Eigen::Isometry3d::Identity();

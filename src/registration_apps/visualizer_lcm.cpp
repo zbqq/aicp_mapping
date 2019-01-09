@@ -30,4 +30,13 @@ void LCMVisualizer::publishOctree(octomap::ColorOcTree*& octree,
 {
     publishOctreeToLCM(lcm_, octree, channel_name);
 }
+
+void LCMVisualizer::publishPose(Isometry3d pose_,
+                                int param,
+                                string name,
+                                int64_t utime = -1)
+{
+    // TO DO: fix this part
+}
+
 }

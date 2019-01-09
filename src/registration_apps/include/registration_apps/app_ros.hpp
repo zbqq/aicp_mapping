@@ -44,6 +44,8 @@ private:
     VelodyneAccumulatorROS* accu_;
     VelodyneAccumulatorConfig accu_config_;
 
+    std::vector<Isometry3d> poseNodes_; // pushback the corrected poses into this vector
+
     // Tool functions
     void getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
                              Eigen::Isometry3d& eigen_pose);
