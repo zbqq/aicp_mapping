@@ -13,7 +13,7 @@ namespace aicp {
 ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
 {
     cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_cloud", 10);
-    pose_pub_ = nh_.advertise<nav_msgs::Path>("/lidar_slam/poses",100); // The topic name may require to change
+    pose_pub_ = nh_.advertise<nav_msgs::Path>("/aicp/poses",100);
     colors_ = {
          51/255.0, 160/255.0, 44/255.0,  //0
          166/255.0, 206/255.0, 227/255.0,
@@ -43,8 +43,6 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
          0.5, 0.5, 1.0,
          0.5, 1.0, 0.5,
          0.5, 0.5, 1.0};
-    //std::cout << "size of colors_ is : " << colors_.size()/3 << "\n";
-
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -77,24 +75,24 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     //utime has been checked and is correct;
     //cloud is called and it is correct
     output.header.stamp = ros::Time(secs, nsecs);
-    output.header.frame_id = "odom";
+    output.header.frame_id = "map";
     cloud_pub_.publish(output);
 }
 
 void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){
 
     nav_msgs::Path path_msg;
-    posePath_.push_back(pose);
+    path_.push_back(pose);
     int secs = utime*1E-6;
     int nsecs = (utime - (secs*1E6))*1E3;
     path_msg.header.stamp = ros::Time(secs, nsecs);
-    path_msg.header.frame_id = "odom";
+    path_msg.header.frame_id = "map";
 
-    for (size_t i = 0; i < posePath_.size(); ++i){
+    for (size_t i = 0; i < path_.size(); ++i){
         geometry_msgs::PoseStamped m;
         m.header.stamp = ros::Time(secs, nsecs);
-        m.header.frame_id = "odom";
-        tf::poseEigenToMsg(posePath_[i], m.pose);
+        m.header.frame_id = "map";
+        tf::poseEigenToMsg(path_[i], m.pose);
         path_msg.poses.push_back(m);
     }
 

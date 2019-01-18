@@ -88,12 +88,9 @@ void App::operator()() {
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
 //                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
-
-                    //
                     vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                       cloud->getUtime());
-                    //poseNodes_.push_back(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose());
-                    //cout << "the size of the pose vector is " << poseNodes_.size() << "\n";
+
                     // Save first reference cloud to file
                     stringstream first_ref;
                     first_ref << data_directory_path_.str();
@@ -151,13 +148,6 @@ void App::operator()() {
                     vis_->publishCloud(reference, 0, "", cloud->getUtime());
                     vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                       cloud->getUtime());
-//                    cout << "the size of the pose vector is " << poseNodes_.size() << "\n";
-//                   for (size_t i=0;i<poseNodes_.size();i++){
-//                       cout << " the pose vector is " << poseNodes_[i].translation() << "\n";
-
-//                   }
-
-
                 }
 
                 /*===================================

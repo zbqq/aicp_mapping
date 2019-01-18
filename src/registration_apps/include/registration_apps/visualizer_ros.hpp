@@ -43,9 +43,9 @@ private:
     ros::Publisher cloud_pub_;
     ros::Publisher pose_pub_;
     // Duplicates the list in collections renderer. assumed to be 3xN colors
-       std::vector < double > colors_;
+    std::vector<double> colors_;
     // Path (vector of poses)
-    std::vector< Isometry3d > posePath_;
+    std::vector<Eigen::Isometry3d> path_;
 
 
 };
