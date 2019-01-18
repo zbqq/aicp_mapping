@@ -72,6 +72,10 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         world_to_body_ = world_to_body_msg_;
     }
 
+    if (!pose_initialized_){
+        world_to_body_previous_ = world_to_body_;
+    }
+
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
     {
@@ -163,7 +167,10 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 
     if ( accu_->getFinished() )//finished accumulating?
     {
-        if ((dist > 1.0) || fabs(rpy[2]) > (10.0 * M_PI / 180.0)) // TODO add condition on pitch and roll
+        if ((dist > 1.0) ||
+            fabs(rpy[0]) > (10.0 * M_PI / 180.0) || // condition on roll
+            fabs(rpy[1]) > (10.0 * M_PI / 180.0) || // condition on pitch
+            fabs(rpy[2]) > (10.0 * M_PI / 180.0))   // condition on yaw
         {
             std::cout << "[App ROS] Finished collecting time: " << accu_->getFinishedTime() << std::endl;
 
@@ -202,86 +209,6 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
         worker_condition_.notify_one();
     }
 }
-
-// DEPRECATED: TO REMOVE
-//    // TODO retrieve these from somewhere (TF?)
-//    body_to_lidar_ = Eigen::Isometry3d::Identity();
-//    head_to_lidar_ = Eigen::Isometry3d::Identity();
-
-//    Eigen::Isometry3d world_to_lidar_now = world_to_body_last * body_to_lidar_;
-//    world_to_head_now_ = world_to_lidar_now * head_to_lidar_.inverse();
-
-//    // 4. Store in LidarScan current scan wrt lidar frame
-//    LidarScan* current_scan = new LidarScan(lidar_msg->header.stamp.toNSec() / 1000,
-//                                            lidar_msg->angle_min,
-//                                            lidar_msg->angle_increment,
-//                                            lidar_msg->ranges,
-//                                            lidar_msg->intensities,
-//                                            world_to_head_now_,
-//                                            head_to_lidar_,
-//                                            world_to_body_last);
-
-//    // Accumulate current scan in point cloud (projection to default reference "body")
-//    if (!clear_clouds_buffer_)
-//        // Accumulate EITHER always OR only when transition from walking to standing happens (DEPRECATED)
-//        // Pyhton script convert_robot_behavior_type.py must be running.
-//    {
-//        if ( accu_.getCounter() % accu_config_.batch_size == 0 ) {
-//            cout << "[Main] " << accu_.getCounter() << " of " << accu_config_.batch_size << " scans collected." << endl;
-//        }
-//        accu_.processLidar(lidar_msg);
-//        lidar_scans_list_.push_back(*current_scan);
-//    }
-//    else
-//    {
-//        {
-//            std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-//            clear_clouds_buffer_ = FALSE;
-//            cout << "[Main] Cleaning cloud buffer of " << accu_.getCounter() << " scans." << endl;
-//        }
-
-//        if ( accu_.getCounter() > 0 )
-//            accu_.clearCloud();
-//        if ( !lidar_scans_list_.empty() )
-//            lidar_scans_list_.clear();
-//    }
-
-//    delete current_scan;
-
-//    if ( accu_.getFinished() ){ //finished accumulating?
-//        std::cout << "[Main] Finished Collecting: " << accu_.getFinishedTime() << std::endl;
-
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ> ());
-//        // This class pc_vis is used only to convert an LCM point cloud into
-//        // a PCL point cloud
-//        // TODO remove the dependency on the accumulator!!
-//        *cloud = accu_.getCloud();
-//        // cloud = accu_.getCloud();
-//        cloud->width = cloud->points.size();
-//        cloud->height = 1;
-//        cout << "[Main] Processing cloud with " << cloud->points.size() << " points." << endl;
-
-//        // Push this cloud onto the work queue (mutex safe)
-//        const int max_queue_size = 100;
-//        {
-//            std::unique_lock<std::mutex> lock(data_mutex_);
-//            pcl::PointCloud<pcl::PointXYZ>::Ptr data (new pcl::PointCloud<pcl::PointXYZ>(*cloud));
-//            data_queue_.push_back(data);
-//            scans_queue_.push_back(lidar_scans_list_);
-//            if (data_queue_.size() > max_queue_size) {
-//                cout << "[Main] WARNING: dropping " <<
-//                        (data_queue_.size()-max_queue_size) << " scans" << endl;
-//            }
-//            while (data_queue_.size() > max_queue_size) {
-//                data_queue_.pop_front();
-//                scans_queue_.pop_front();
-//            }
-//            lidar_scans_list_.clear();
-//            accu_.clearCloud();
-//        }
-//        // Send notification to operator which is waiting for this condition variable
-//        worker_condition_.notify_one();
-//    }
 
 void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
                                  Eigen::Isometry3d& eigen_pose)
