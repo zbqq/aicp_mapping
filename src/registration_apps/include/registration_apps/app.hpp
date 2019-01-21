@@ -139,6 +139,8 @@ protected:
     std::vector<Isometry3d> poseNodes_;
     // Reference cloud update counters
     int updates_counter_;
+    // Current reference pre-filtered
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered;
 
     // DEBUG: Write to file
     pcl::PCDWriter pcd_writer_;

@@ -18,7 +18,6 @@ App::App(const CommandLineConfig& cl_cfg,
     cl_cfg_(cl_cfg), reg_params_(reg_params),
     overlap_params_(overlap_params), class_params_(class_params)
 {
-
 }
 
 void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
@@ -78,8 +77,11 @@ void App::operator()() {
                 /*===================================
                 =            First Cloud            =
                 ===================================*/
+                // Pre-filter first cloud
+                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+                regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
+                cloud->updateCloud(ref_prefiltered, TRUE);
                 // Initialize graph
-                cloud->setReference();
                 aligned_clouds_graph_->initialize(cloud);
 
                 if (cl_cfg_.verbose)
@@ -110,7 +112,7 @@ void App::operator()() {
                 {
                     // Publish original reading cloud
                     last_reading_vis_ = cloud->getCloud();
-//                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading");
+//                    vis_->publishCloud(last_reading_vis_, 5000, "Original Reading"); // TODO: update to unique template LCM - ROS
 //                    vis_->publishCloud(last_reading_vis_, 10, "/aicp/original_reading", cloud->getUtime());
 
                 }
@@ -119,7 +121,7 @@ void App::operator()() {
                 =          Set Input Clouds         =
                 ===================================*/
                 // Get current reference cloud
-                pcl::PointCloud<pcl::PointXYZ>::Ptr reference = aligned_clouds_graph_->getCurrentReference()->getCloud();
+                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered = aligned_clouds_graph_->getCurrentReference()->getCloud();
 
                 Eigen::Isometry3d ref_pose, read_pose;
                 ref_pose = aligned_clouds_graph_->getCurrentReference()->getCorrectedPose();
@@ -142,10 +144,10 @@ void App::operator()() {
                 if (cl_cfg_.verbose)
                 {
                     // Publish initialized reading cloud
-//                    vis_->publishCloud(reading, 5010, "Initialized Reading");
+//                    vis_->publishCloud(reading, 5010, "Initialized Reading"); // TODO: update to unique template LCM - ROS
                     // Publish current reference cloud
 //                    vis_->publishCloud(reference, 5020, "Current Reference");
-                    vis_->publishCloud(reference, 0, "", cloud->getUtime());
+                    vis_->publishCloud(ref_prefiltered, 0, "", cloud->getUtime());
                     vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                       cloud->getUtime());
                 }
@@ -154,28 +156,10 @@ void App::operator()() {
                 =        Filter Input Clouds        =
                 ===================================*/
 
-                pcl::PointCloud<pcl::PointXYZ> overlap_reference;
-                pcl::PointCloud<pcl::PointXYZ> overlap_reading;
-                if (cl_cfg_.failure_prediction_mode)
-                {
-                    // ------------------
-                    // FOV-based Overlap
-                    // ------------------
-                    fov_overlap_ = overlapFilter(*reference, *reading,
-                                                 ref_pose, read_pose,
-                                                 reg_params_.sensorRange , reg_params_.sensorAngularView,
-                                                 overlap_reference, overlap_reading);
-                    cout << "====================================" << endl
-                         << "[Main] FOV-based Overlap: " << fov_overlap_ << " %" << endl
-                         << "====================================" << endl;
-                }
-
                 // ------------------------------------
                 // Pre-filtering: 1) down-sampling
                 //                2) planes extraction
                 // ------------------------------------
-                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-                regionGrowingUniformPlaneSegmentationFilter(reference, ref_prefiltered);
                 pcl::PointCloud<pcl::PointXYZ>::Ptr read_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
                 regionGrowingUniformPlaneSegmentationFilter(reading, read_prefiltered);
 
@@ -191,6 +175,23 @@ void App::operator()() {
                     filtered_read << "/reading_prefiltered.pcd";
                     pcd_writer_.write<pcl::PointXYZ> (filtered_read.str (), *read_prefiltered, false);
                 }
+
+                pcl::PointCloud<pcl::PointXYZ> overlap_reference;
+                pcl::PointCloud<pcl::PointXYZ> overlap_reading;
+                if (cl_cfg_.failure_prediction_mode)
+                {
+                    // ------------------
+                    // FOV-based Overlap
+                    // ------------------
+                    fov_overlap_ = overlapFilter(*ref_prefiltered, *read_prefiltered,
+                                                 ref_pose, read_pose,
+                                                 reg_params_.sensorRange , reg_params_.sensorAngularView,
+                                                 overlap_reference, overlap_reading);
+                    cout << "====================================" << endl
+                         << "[Main] FOV-based Overlap: " << fov_overlap_ << " %" << endl
+                         << "====================================" << endl;
+                }
+
 
                 // ---------------------
                 // Octree-based Overlap
@@ -272,9 +273,9 @@ void App::operator()() {
                 {
                     this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
 
-                    pcl::transformPointCloud (*reading, *output, correction);
+                    pcl::transformPointCloud (*read_prefiltered, *output, correction);
                     Eigen::Isometry3d correction_iso = fromMatrix4fToIsometry3d(correction);
-                    // update AlignedCloud with corrected pose and cloud after alignment
+                    // update AlignedCloud with corrected pose and (prefiltered) cloud after alignment
                     cloud->updateCloud(output, correction_iso, false, aligned_clouds_graph_->getCurrentReferenceId());
                     // add AlignedCloud to graph
                     aligned_clouds_graph_->addCloud(cloud);
@@ -292,7 +293,7 @@ void App::operator()() {
                 {
                     // Case: risk_prediction_(0,0) > class_params_.svm.threshold
                     // rely on prior pose for one step (alignment not performed!)
-                    cloud->updateCloud(reading, true);
+                    cloud->updateCloud(read_prefiltered, true);
                     // add AlignedCloud to graph
                     aligned_clouds_graph_->addCloud(cloud);
                     aligned_clouds_graph_->updateReference(aligned_clouds_graph_->getNbClouds()-1);
@@ -310,7 +311,7 @@ void App::operator()() {
                 {
                     // Publish aligned reading cloud
                     last_reading_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
-//                    vis_->publishCloud(last_reading_vis_, 5030, "Aligned Reading");
+//                    vis_->publishCloud(last_reading_vis_, 5030, "Aligned Reading"); // TODO: update to unique template LCM - ROS
 //                    vis_->publishCloud(last_reading_vis_, 1, "", cloud->getUtime());
 
                     // Save aligned reading cloud to file

@@ -15,7 +15,7 @@
   <!--include file="$(find aicp)/launch/aicp.launch"> </include-->
  
   <!-- Run AICP -->
-  <node pkg="rosbag" type="play" name="log" output="screen" args="--clock -s150 --pause --rate 0.5 /home/milad/Desktop/anymal_2018-08-13-15-26-49.bag">
+  <node pkg="rosbag" type="play" name="log" output="screen" args="--clock -s 150 --pause /home/snobili/logs/anymal/2018-08-13-fire-college/anymal_2018-08-13-15-26-49.bag">
   </node>
  
 

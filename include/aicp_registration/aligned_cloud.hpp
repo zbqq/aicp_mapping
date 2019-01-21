@@ -53,7 +53,7 @@ public:
 private:
     int64_t utime_; // Cloud timestamp (microseconds)
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (global coordinates)
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (pre-filtered and global coordinates)
 
     Eigen::Isometry3d world_to_cloud_prior_;         // cloud pose prior:     world -> cloud (global coordinates)
     Eigen::Isometry3d cloud_to_reference_;           // relative transform:   cloud -> reference (global coordinates)

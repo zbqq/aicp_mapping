@@ -2,7 +2,7 @@
 
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/point_cloud.h>
+#include <pcl/point_cloud.h>
 
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
@@ -39,6 +39,9 @@ public:
 
     const PointCloud& getCloud();
     void clearCloud();
+
+    // filters
+    void cropMinMaxFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
 
 private:
     tf::TransformListener listener_;

@@ -13,7 +13,7 @@
     <param name="reference_update_frequency" value="5" />
     
     <!-- 3D point cloud characteristics -->
-    <param name="batch_size"                 value="10" />
+    <param name="batch_size"                 value="7" />
   	
   	<!-- Visualize and store -->
     <param name="verbose"                    value="true" />
