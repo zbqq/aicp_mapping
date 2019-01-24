@@ -22,6 +22,9 @@ public:
                               string name,
                               int64_t utime = -1) = 0;
 
+    virtual void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                            int64_t utime) = 0;
+
     virtual void publishOctree(octomap::ColorOcTree*& octree,
                                string channel_name) = 0;
 

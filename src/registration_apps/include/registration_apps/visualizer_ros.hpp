@@ -20,7 +20,7 @@ public:
     ROSVisualizer(ros::NodeHandle& nh);
 //    ~ROSVisualizer();
 
-    // Publish cloud ros
+    // Publish cloud
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                       int param, // channel name
                       string name,
@@ -30,7 +30,11 @@ public:
                       string name,
                       int64_t utime);
 
-    // Publish octree ros
+    // Publish map
+    void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                    int64_t utime);
+
+    // Publish octree
     void publishOctree(octomap::ColorOcTree*& octree,
                        string channel_name);
 
@@ -41,6 +45,7 @@ public:
 private:
     ros::NodeHandle& nh_;
     ros::Publisher cloud_pub_;
+    ros::Publisher map_pub_;
     ros::Publisher pose_pub_;
     // Duplicates the list in collections renderer. assumed to be 3xN colors
     std::vector<double> colors_;

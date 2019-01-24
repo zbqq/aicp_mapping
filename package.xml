@@ -10,6 +10,7 @@
   <license>TODO</license>
   <buildtool_depend>catkin</buildtool_depend>
 
+  <build_depend>message_generation</build_depend>
   <build_depend>bot_lcmgl</build_depend>
   <build_depend>octomap_utils</build_depend>
   <build_depend>octomap_lcmtypes</build_depend>
@@ -20,7 +21,8 @@
   <build_depend>cv_bridge</build_depend>
   <build_depend>pointmatcher_ros</build_depend>
   <build_depend>pcl_ros</build_depend>
-
+  
+  <run_depend>message_runtime</run_depend>
   <run_depend>bot_lcmgl</run_depend>
   <run_depend>octomap_utils</run_depend>
   <run_depend>octomap_lcmtypes</run_depend>

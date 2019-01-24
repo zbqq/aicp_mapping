@@ -6,6 +6,8 @@
 
 #include <tf_conversions/tf_eigen.h>
 
+#include <pcl/io/ply_io.h>
+
 namespace aicp {
 
 AppROS::AppROS(ros::NodeHandle &nh,
@@ -31,10 +33,6 @@ AppROS::AppROS(ros::NodeHandle &nh,
     world_to_body_ = Eigen::Isometry3d::Identity();
     world_to_body_previous_ = Eigen::Isometry3d::Identity();
 
-    cout << "============================" << endl
-         << "Start..." << endl
-         << "============================" << endl;
-
     // Create debug data folder
     data_directory_path_ << "/tmp/aicp_data";
     const char* path = data_directory_path_.str().c_str();
@@ -42,7 +40,10 @@ AppROS::AppROS(ros::NodeHandle &nh,
     if(boost::filesystem::exists(path))
         boost::filesystem::remove_all(path);
     if(boost::filesystem::create_directory(dir))
-        cerr << "Create AICP debug data directory: " << path << endl;
+    {
+        cout << "Create AICP debug data directory: " << path << endl
+             << "============================" << endl;
+    }
 
     // Pose publisher
     if (cl_cfg_.working_mode == "debug")
@@ -65,6 +66,11 @@ AppROS::AppROS(ros::NodeHandle &nh,
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
 {
+    if (cl_cfg_.load_map_from_file && !pose_marker_initialized_){
+        ROS_WARN_STREAM("[Aicp] Pose initial guess in map not set, waiting for interactive marker...");
+        return;
+    }
+
     std::unique_lock<std::mutex> lock(robot_state_mutex_);
     {
         // Latest world -> body (pose prior)
@@ -74,6 +80,10 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
     if (!pose_initialized_){
         world_to_body_previous_ = world_to_body_;
+
+        // Initialize transform: pose_in_odom -> interactive_marker
+        initialT_ = (world_to_body_marker_msg_ * world_to_body_.inverse()).matrix().cast<float>();
+        ROS_INFO_STREAM("[Aicp] Starting...");
     }
 
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
@@ -85,8 +95,6 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
         corrected_pose_ = total_correction_ * world_to_body_; // world -> reference =
                                                               // body -> reference * world -> body
-
-
 
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
@@ -131,15 +139,9 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
 void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in){
     if (!pose_initialized_){
-        cout << "[App ROS] Pose estimate not initialized, waiting for pose prior...\n";
+        ROS_WARN_STREAM("[Aicp] Pose not initialized, waiting for pose prior...");
         return;
     }
-
-//    // Latest world -> body (pose prior)
-//    {
-//        std::unique_lock<std::mutex> lock(robot_state_mutex_);
-//        world_to_body_ = world_to_body_msg_;
-//    }
 
     // Accumulate planar scans to 3D point cloud (global frame)
     if (!clear_clouds_buffer_ )
@@ -210,6 +212,67 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
     }
 }
 
+void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr& init_pose_msg_in)
+{
+    if (!cl_cfg_.load_map_from_file){
+        ROS_WARN_STREAM("[Aicp] Map service disabled - interactive marker neglected.");
+        return;
+    }
+    if (!map_initialized_){
+        ROS_WARN_STREAM("[Aicp] Map not initialized, waiting for map service...");
+        return;
+    }
+    if (!pose_initialized_){ // initial pose can be updated by user until localization starts, not after.
+        ROS_INFO_STREAM("[Aicp] Set localization initial pose in map.");
+
+        // world -> body initial guess from interactive marker
+        getPoseAsIsometry3d(init_pose_msg_in, world_to_body_marker_msg_);
+
+        pose_marker_initialized_ = TRUE;
+    }
+    else
+        ROS_WARN_STREAM("[Aicp] Interactive marker cannot be updated after localization started!");
+}
+
+bool AppROS::loadMapFromFileCallBack(aicp::ProcessFile::Request& request, aicp::ProcessFile::Response& response)
+{
+    response.success = loadMapFromFile(request.file_path);
+    return true;
+}
+
+bool AppROS::loadMapFromFile(const std::string& file_path)
+{
+    if (!cl_cfg_.load_map_from_file || map_initialized_){
+        if(map_initialized_)
+        {
+            pcl::PointCloud<pcl::PointXYZ>::Ptr map = map_->getCloud();
+            vis_->publishMap(map, map_->getUtime());
+        }
+        ROS_WARN_STREAM("[Aicp] Map service disabled or map already loaded!");
+        return false;
+    }
+
+    // Load the map from the file
+    ROS_INFO_STREAM("[Aicp] Loading map from '" << file_path << "' ...");
+    pcl::PointCloud<pcl::PointXYZ>::Ptr map (new pcl::PointCloud<pcl::PointXYZ>);
+    if (pcl::io::loadPLYFile<pcl::PointXYZ>(file_path.c_str(), *map) == -1)
+    {
+      ROS_ERROR_STREAM("[Aicp] Error loading map from file!");
+      return false;
+    }
+    ROS_INFO_STREAM("[Aicp] Loaded map with " << map->points.size() << " points.");
+
+    // Populate map object
+    map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
+                            map,
+                            Eigen::Isometry3d::Identity());
+
+    map_initialized_ = TRUE;
+    vis_->publishMap(map, map_->getUtime());
+
+    return true;
+}
+
 void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
                                  Eigen::Isometry3d& eigen_pose)
 {
@@ -217,8 +280,16 @@ void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedC
     tf::transformTFToEigen(temp_tf_pose_, eigen_pose);
 }
 
+void AppROS::getPoseAsIsometry3d(const geometry_msgs::PoseStampedConstPtr &pose_msg,
+                                 Eigen::Isometry3d& eigen_pose)
+{
+    tf::poseMsgToTF(pose_msg->pose, temp_tf_pose_);
+    tf::transformTFToEigen(temp_tf_pose_, eigen_pose);
+}
+
 void AppROS::run()
 {
     worker_thread_ = std::thread(std::ref(*this)); // std::ref passes a pointer for you behind the scene
 }
+
 } // namespace aicp

@@ -80,6 +80,15 @@ void App::operator()() {
                 // Pre-filter first cloud
                 pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
                 regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
+
+                // Initialize first pose (from interactive marker)
+                pcl::transformPointCloud (*(cloud->getCloud()), *ref_prefiltered, initialT_);
+                Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
+                Eigen::Isometry3d ref_pose = cloud->getPriorPose();
+                ref_pose = initialT_iso * ref_pose;
+
+                // update AlignedCloud
+                cloud->setPriorPose(ref_pose);
                 cloud->updateCloud(ref_prefiltered, TRUE);
                 // Initialize graph
                 aligned_clouds_graph_->initialize(cloud);

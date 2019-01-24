@@ -14,6 +14,8 @@ int main(int argc, char** argv){
     cl_cfg.config_file.append("aicp_config.yaml");
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                    // or debug - apply previous transforms to POSE_BODY
+    cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service
+    cl_cfg.localize_against_map = FALSE; // if disabled, map used for visualization only
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
     cl_cfg.reference_update_frequency = 5;
 
@@ -30,6 +32,8 @@ int main(int argc, char** argv){
 
     nh.getParam("config_file", cl_cfg.config_file);
     nh.getParam("working_mode", cl_cfg.working_mode);
+    nh.getParam("load_map_from_file", cl_cfg.load_map_from_file);
+    nh.getParam("localize_against_map", cl_cfg.localize_against_map);
     nh.getParam("failure_prediction_mode", cl_cfg.failure_prediction_mode);
     nh.getParam("reference_update_frequency", cl_cfg.reference_update_frequency);
 
@@ -70,6 +74,10 @@ int main(int argc, char** argv){
     // Subscribers
     ros::Subscriber lidar_sub = nh.subscribe(va_cfg.lidar_topic, 100, &aicp::AppROS::velodyneCallBack, app.get());
     ros::Subscriber pose_sub = nh.subscribe(cl_cfg.pose_body_channel, 100, &aicp::AppROS::robotPoseCallBack, app.get());
+    ros::Subscriber marker_sub = nh.subscribe("/interaction_marker/pose", 100, &aicp::AppROS::interactionMarkerCallBack, app.get());
+    // Advertise services (using service published by anybotics icp_tools ui)
+    ros::ServiceServer load_map_server_ = nh.advertiseService("/icp_tools/load_map_from_file", &aicp::AppROS::loadMapFromFileCallBack, app.get());
+    ROS_INFO_STREAM("[Aicp] Waiting for input messages...");
 
     app->run();
     ros::spin();

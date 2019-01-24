@@ -13,6 +13,7 @@ namespace aicp {
 ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
 {
     cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_cloud", 10);
+    map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/map", 10);
     pose_pub_ = nh_.advertise<nav_msgs::Path>("/aicp/poses",100);
     colors_ = {
          51/255.0, 160/255.0, 44/255.0,  //0
@@ -58,17 +59,17 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     int nsecs = (utime - (secs * 1E6)) * 1E3;
 
     sensor_msgs::PointCloud2 output;
-    //for(auto &p: cloud_rgb->points) p.rgb = rgb;
     int nColor = cloud_rgb->size() % (colors_.size()/3);
     double r = colors_[nColor*3]*255.0;
     double g = colors_[nColor*3+1]*255.0;
     double b = colors_[nColor*3+2]*255.0;
 
-    for (size_t i = 0; i < cloud_rgb->points.size (); i++){
+    for (size_t i = 0; i < cloud_rgb->points.size (); i++)
+    {
         cloud_rgb->points[i].r = r;
         cloud_rgb->points[i].g = g;
         cloud_rgb->points[i].b = b;
-      }
+    }
 
     pcl::toROSMsg(*cloud_rgb, output);
 
@@ -77,6 +78,31 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     output.header.stamp = ros::Time(secs, nsecs);
     output.header.frame_id = "map";
     cloud_pub_.publish(output);
+}
+
+void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                               int64_t utime)
+{
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::copyPointCloud(*cloud, *cloud_rgb);
+
+    int secs = utime * 1E-6;
+    int nsecs = (utime - (secs * 1E6)) * 1E3;
+
+    sensor_msgs::PointCloud2 output;
+    for (size_t i = 0; i < cloud_rgb->points.size (); i++)
+    {
+        cloud_rgb->points[i].r = 255.0;
+        cloud_rgb->points[i].g = 255.0;
+        cloud_rgb->points[i].b = 255.0;
+    }
+
+    pcl::toROSMsg(*cloud_rgb, output);
+
+    output.header.stamp = ros::Time(secs, nsecs);
+    output.header.frame_id = "map";
+    map_pub_.publish(output);
 }
 
 void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){

@@ -22,6 +22,11 @@ public:
                       string name,
                       int64_t utime);
 
+    // Publish map lcm
+    void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                    int64_t utime)
+    {}
+
     // Publish octree lcm
     void publishOctree(octomap::ColorOcTree*& octree,
                        string channel_name);

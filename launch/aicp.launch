@@ -8,6 +8,10 @@
     <!-- Debug mode or robot -->
     <param name="working_mode"               value="debug" />
 
+    <!-- Prior map info -->
+    <param name="load_map_from_file"         value="true" />
+    <param name="localize_against_map"       value="false" />
+
     <!-- Reference update policy -->
     <param name="failure_prediction_mode"    value="false" />
     <param name="reference_update_frequency" value="5" />
