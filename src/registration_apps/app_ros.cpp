@@ -3,6 +3,7 @@
 #include "aicp_registration/registration.hpp"
 #include "aicp_overlap/overlap.hpp"
 #include "aicp_classification/classification.hpp"
+#include "aicp_common_utils/common.hpp"
 
 #include <tf_conversions/tf_eigen.h>
 
@@ -83,9 +84,11 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
         // Initialize transform: pose_in_odom -> interactive_marker
         initialT_ = (world_to_body_marker_msg_ * world_to_body_.inverse()).matrix().cast<float>();
-        ROS_INFO_STREAM("[Aicp] Starting...");
+        total_correction_ = fromMatrix4fToIsometry3d(initialT_);
+        ROS_INFO_STREAM("[Aicp] Starting localization...");
     }
 
+    // TO_DO: remove modes -> deprecated in ROS as corrected trajectory not fed back to controller
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
     {
@@ -95,6 +98,9 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
         corrected_pose_ = total_correction_ * world_to_body_; // world -> reference =
                                                               // body -> reference * world -> body
+        // Publish initial guess interactive marker
+        if (!pose_initialized_)
+            vis_->publishPose(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
 
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
@@ -104,7 +110,6 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
         if ( updated_correction_ )
         {
-
             {
                 std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
                 clear_clouds_buffer_ = TRUE;

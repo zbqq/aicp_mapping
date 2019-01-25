@@ -82,7 +82,7 @@ void App::operator()() {
                 regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
 
                 // Initialize first pose (from interactive marker)
-                pcl::transformPointCloud (*(cloud->getCloud()), *ref_prefiltered, initialT_);
+                pcl::transformPointCloud (*ref_prefiltered, *ref_prefiltered, initialT_);
                 Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
                 Eigen::Isometry3d ref_pose = cloud->getPriorPose();
                 ref_pose = initialT_iso * ref_pose;
@@ -93,15 +93,15 @@ void App::operator()() {
                 // Initialize graph
                 aligned_clouds_graph_->initialize(cloud);
 
+                // Publish first reference cloud
+                reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
+//                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
+                vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                  cloud->getUtime());
+
                 if (cl_cfg_.verbose)
                 {
-                    // Publish first reference cloud
-                    reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
-//                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
-                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
-                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                      cloud->getUtime());
-
                     // Save first reference cloud to file
                     stringstream first_ref;
                     first_ref << data_directory_path_.str();
@@ -150,16 +150,13 @@ void App::operator()() {
                     cloud->setPriorPose(read_pose);
                 }
 
-                if (cl_cfg_.verbose)
-                {
-                    // Publish initialized reading cloud
+                // Publish initialized reading cloud
 //                    vis_->publishCloud(reading, 5010, "Initialized Reading"); // TODO: update to unique template LCM - ROS
-                    // Publish current reference cloud
+                // Publish current reference cloud
 //                    vis_->publishCloud(reference, 5020, "Current Reference");
-                    vis_->publishCloud(ref_prefiltered, 0, "", cloud->getUtime());
-                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                      cloud->getUtime());
-                }
+                vis_->publishCloud(ref_prefiltered, 0, "", cloud->getUtime());
+                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                  cloud->getUtime());
 
                 /*===================================
                 =        Filter Input Clouds        =
@@ -313,7 +310,7 @@ void App::operator()() {
                 initialT_ = correction * initialT_;
 
                 // Store chain of corrections for publishing
-                total_correction_ = getTransfParamAsIsometry3d(initialT_);
+                total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = TRUE;
 
                 if (cl_cfg_.verbose)
