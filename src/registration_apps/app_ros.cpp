@@ -67,7 +67,8 @@ AppROS::AppROS(ros::NodeHandle &nh,
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
 {
-    if (cl_cfg_.load_map_from_file && !pose_marker_initialized_){
+    if ((cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+         && !pose_marker_initialized_){
         ROS_WARN_STREAM("[Aicp] Pose initial guess in map not set, waiting for interactive marker...");
         return;
     }
@@ -83,8 +84,11 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         world_to_body_previous_ = world_to_body_;
 
         // Initialize transform: pose_in_odom -> interactive_marker
-        initialT_ = (world_to_body_marker_msg_ * world_to_body_.inverse()).matrix().cast<float>();
-        total_correction_ = fromMatrix4fToIsometry3d(initialT_);
+        if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+        {
+            initialT_ = (world_to_body_marker_msg_ * world_to_body_.inverse()).matrix().cast<float>();
+            total_correction_ = fromMatrix4fToIsometry3d(initialT_);
+        } // identity otherwise
         ROS_INFO_STREAM("[Aicp] Starting localization...");
     }
 
@@ -219,7 +223,7 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 
 void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr& init_pose_msg_in)
 {
-    if (!cl_cfg_.load_map_from_file){
+    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map){
         ROS_WARN_STREAM("[Aicp] Map service disabled - interactive marker neglected.");
         return;
     }
@@ -247,7 +251,8 @@ bool AppROS::loadMapFromFileCallBack(aicp::ProcessFile::Request& request, aicp::
 
 bool AppROS::loadMapFromFile(const std::string& file_path)
 {
-    if (!cl_cfg_.load_map_from_file || map_initialized_){
+    if ((!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map)
+         || map_initialized_){
         if(map_initialized_)
         {
             pcl::PointCloud<pcl::PointXYZ>::Ptr map = map_->getCloud();
@@ -257,7 +262,7 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
         return false;
     }
 
-    // Load the map from the file
+    // Load map from file
     ROS_INFO_STREAM("[Aicp] Loading map from '" << file_path << "' ...");
     pcl::PointCloud<pcl::PointXYZ>::Ptr map (new pcl::PointCloud<pcl::PointXYZ>);
     if (pcl::io::loadPLYFile<pcl::PointXYZ>(file_path.c_str(), *map) == -1)
