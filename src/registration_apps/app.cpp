@@ -71,8 +71,11 @@ void App::operator()() {
 
         // Process workload
         for (auto cloud : work_queue) {
+
             // First point cloud (becomes first reference)
-            if(aligned_clouds_graph_->isEmpty())
+            if(!cl_cfg_.localize_against_map &&
+               !cl_cfg_.load_map_from_file &&
+               aligned_clouds_graph_->isEmpty())
             {
                 /*===================================
                 =            First Cloud            =
@@ -80,15 +83,7 @@ void App::operator()() {
                 // Pre-filter first cloud
                 pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
                 regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
-
-                // Initialize first pose (from interactive marker)
-                pcl::transformPointCloud (*ref_prefiltered, *ref_prefiltered, initialT_);
-                Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
-                Eigen::Isometry3d ref_pose = cloud->getPriorPose();
-                ref_pose = initialT_iso * ref_pose;
-
                 // update AlignedCloud
-                cloud->setPriorPose(ref_pose);
                 cloud->updateCloud(ref_prefiltered, TRUE);
                 // Initialize graph
                 aligned_clouds_graph_->initialize(cloud);
@@ -100,21 +95,40 @@ void App::operator()() {
                 vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                   cloud->getUtime());
 
-                if (cl_cfg_.verbose)
-                {
-                    // Save first reference cloud to file
-                    stringstream first_ref;
-                    first_ref << data_directory_path_.str();
-                    first_ref << "/reference_";
-                    first_ref << to_string(0);
-                    first_ref << ".pcd";
-                    pcd_writer_.write<pcl::PointXYZ> (first_ref.str (),
-                                                      *(aligned_clouds_graph_->getLastCloud()->getCloud()),
-                                                      false);
-                }
+                first_cloud_initialized_ = TRUE;
             }
-            else
-            {
+//            // First point cloud (becomes first reference)
+//            if(!cl_cfg_.localize_against_map && aligned_clouds_graph_->isEmpty())
+//            {
+//                /*===================================
+//                =            First Cloud            =
+//                ===================================*/
+//                // Pre-filter first cloud
+//                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+//                regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
+
+//                // Initialize first pose (from interactive marker)
+//                pcl::transformPointCloud (*ref_prefiltered, *ref_prefiltered, initialT_);
+//                Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
+//                Eigen::Isometry3d ref_pose = cloud->getPriorPose();
+//                ref_pose = initialT_iso * ref_pose;
+
+//                // update AlignedCloud
+//                cloud->setPriorPose(ref_pose);
+//                cloud->updateCloud(ref_prefiltered, TRUE);
+//                // Initialize graph
+//                aligned_clouds_graph_->initialize(cloud);
+
+//                // Publish first reference cloud
+//                reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
+////                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
+//                vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+//                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+//                                  cloud->getUtime());
+
+//                first_cloud_initialized_now_ = TRUE;
+//            }
+            else {
                 TimingUtils::tic();
 
                 if (cl_cfg_.verbose)
@@ -129,15 +143,13 @@ void App::operator()() {
                 /*===================================
                 =          Set Input Clouds         =
                 ===================================*/
-                // Get current reference cloud
-                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered = aligned_clouds_graph_->getCurrentReference()->getCloud();
-
-                Eigen::Isometry3d ref_pose, read_pose;
-                ref_pose = aligned_clouds_graph_->getCurrentReference()->getCorrectedPose();
+                // Set reading cloud
+                Eigen::Isometry3d read_pose;
                 read_pose = cloud->getPriorPose();
 
-                // Initialize clouds before sending to filters
-                // (simulates correction integration only if "debug" mode)
+                // Initialize cloud before sending to filters
+                // (simulates correction integration only if "debug" mode
+                // and integrates interactive marker pose)
                 pcl::PointCloud<pcl::PointXYZ>::Ptr reading (new pcl::PointCloud<pcl::PointXYZ>);
                 if (cl_cfg_.working_mode == "robot")
                     *reading = *(cloud->getCloud());
@@ -150,13 +162,35 @@ void App::operator()() {
                     cloud->setPriorPose(read_pose);
                 }
 
+                // Crop map
+                pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_map (new pcl::PointCloud<pcl::PointXYZ>);
+                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+                {
+                    // crop map around cloud->getPriorPose();
+                    *cropped_map = *(map_->getCloud());
+                    Eigen::Matrix4f tmp = (cloud->getPriorPose()).matrix().cast<float>();
+                    getPointsInOrientedBox(cropped_map, -15.0, 15.0, tmp);
+                }
+
+                // Set reference cloud
+                Eigen::Isometry3d ref_pose;
+                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered;
+                if (!first_cloud_initialized_ || cl_cfg_.localize_against_map)
+                {
+                    ref_prefiltered = cropped_map;
+                    ref_pose = cloud->getPriorPose();
+                    first_cloud_initialized_ = TRUE;
+                }
+                else
+                {
+                    ref_prefiltered = aligned_clouds_graph_->getCurrentReference()->getCloud();
+                    ref_pose = aligned_clouds_graph_->getCurrentReference()->getCorrectedPose();
+                }
+
                 // Publish initialized reading cloud
 //                    vis_->publishCloud(reading, 5010, "Initialized Reading"); // TODO: update to unique template LCM - ROS
                 // Publish current reference cloud
 //                    vis_->publishCloud(reference, 5020, "Current Reference");
-                vis_->publishCloud(ref_prefiltered, 0, "", cloud->getUtime());
-                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                  cloud->getUtime());
 
                 /*===================================
                 =        Filter Input Clouds        =
@@ -205,12 +239,17 @@ void App::operator()() {
                 ColorOcTree* ref_tree;
                 ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
 
-                // 1) create octree from reference cloud (wrt robot's point of view)
-                // 2) add the reading cloud and compute overlap
-                ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
-                                                       ref_pose, read_pose,
-                                                       read_tree);
-                octree_overlap_ = overlapper_->getOverlap();
+                if(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0)
+                    octree_overlap_ = 100.0;
+                else
+                {
+                    // 1) create octree from reference cloud (wrt robot's point of view)
+                    // 2) add the reading cloud and compute overlap
+                    ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
+                                                           ref_pose, read_pose,
+                                                           read_tree);
+                    octree_overlap_ = overlapper_->getOverlap();
+                }
 
                 cout << "====================================" << endl
                      << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
@@ -279,20 +318,30 @@ void App::operator()() {
                 {
                     this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
 
+                    vis_->publishMap(ref_prefiltered, cloud->getUtime());
+//                    vis_->publishMap(read_prefiltered, cloud->getUtime());
+
                     pcl::transformPointCloud (*read_prefiltered, *output, correction);
+                    vis_->publishCloud(output, 0, "", cloud->getUtime());
                     Eigen::Isometry3d correction_iso = fromMatrix4fToIsometry3d(correction);
                     // update AlignedCloud with corrected pose and (prefiltered) cloud after alignment
                     cloud->updateCloud(output, correction_iso, false, aligned_clouds_graph_->getCurrentReferenceId());
                     // add AlignedCloud to graph
                     aligned_clouds_graph_->addCloud(cloud);
                     // windowed reference update policy (count number of clouds after last reference)
-                    if((aligned_clouds_graph_->getNbClouds() - (aligned_clouds_graph_->getCurrentReferenceId()+1))
-                        % cl_cfg_.reference_update_frequency == 0)
+                    if(((aligned_clouds_graph_->getNbClouds() - (aligned_clouds_graph_->getCurrentReferenceId()+1))
+                        % cl_cfg_.reference_update_frequency == 0) &&
+                        !cl_cfg_.localize_against_map)
                     {
                         // set AlignedCloud to be next reference
                         aligned_clouds_graph_->updateReference(aligned_clouds_graph_->getNbClouds()-1);
                         updates_counter_ ++;
                         cout << "[Main] -----> FREQUENCY REFERENCE UPDATE" << endl;
+                    }
+                    else if(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 1)
+                    {
+                        // set AlignedCloud to be next reference
+                        aligned_clouds_graph_->updateReference(aligned_clouds_graph_->getNbClouds()-1);
                     }
                 }
                 else
@@ -312,6 +361,22 @@ void App::operator()() {
                 // Store chain of corrections for publishing
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = TRUE;
+
+                // Publish
+                if(!cl_cfg_.localize_against_map)
+                {
+                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                      cloud->getUtime());
+                    reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
+                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                }
+                else
+                {
+                    vis_->publishPose(aligned_clouds_graph_->getCloudAt(aligned_clouds_graph_->getNbClouds()%5)->getCorrectedPose(),
+                                      0, "", cloud->getUtime());
+//                    reference_vis_ = aligned_clouds_graph_->getCloudAt(aligned_clouds_graph_->getNbClouds()%5)->getCloud();
+//                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                }
 
                 if (cl_cfg_.verbose)
                 {
@@ -338,7 +403,6 @@ void App::operator()() {
                 cout << "Next Reference: " << aligned_clouds_graph_->getCurrentReferenceId() << endl;
                 cout << "Updates: " << updates_counter_ << endl;
             }
-
             cout << "--------------------------------------------------------------------------------------" << endl;
         }
     }

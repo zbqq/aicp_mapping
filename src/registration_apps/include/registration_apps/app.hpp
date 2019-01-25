@@ -64,6 +64,8 @@ protected:
         map_initialized_ = FALSE;
         pose_marker_initialized_ = FALSE;
 
+        first_cloud_initialized_ = FALSE;
+
         valid_correction_ = FALSE;
         force_reference_update_ = FALSE;
 
@@ -126,6 +128,7 @@ protected:
     bool map_initialized_;
     bool pose_marker_initialized_;
     Eigen::Isometry3d world_to_body_marker_msg_; // Initializes body pose in map from user interaction marker
+    bool first_cloud_initialized_;
 
     // Clear buffer after pose update (to avoid distortion)
     bool clear_clouds_buffer_;
