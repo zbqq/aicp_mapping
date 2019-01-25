@@ -1,7 +1,8 @@
 #include "registration_apps/velodyne_accumulator.hpp"
 
+#include "aicp_filtering_utils/filteringUtils.hpp"
+
 #include <pcl/point_types.h>
-#include <pcl/filters/crop_box.h>
 
 using namespace std;
 using PointCloud = aicp::VelodyneAccumulatorROS::PointCloud;
@@ -55,7 +56,8 @@ void VelodyneAccumulatorROS::processLidar(const sensor_msgs::PointCloud2::ConstP
     pcl::fromROSMsg(*cloud_in,*cloud_tmp);
 
     // Filter: crop cloud using box (max points distance from sensor's origin)
-    cropMinMaxFilter(cloud_tmp);
+    Eigen::Matrix4f tmp = Eigen::MatrixXf::Identity(4, 4);
+    getPointsInOrientedBox(cloud_tmp, -30.0, 30.0, tmp);
 
     pcl::transformPointCloud(*cloud_tmp, point_cloud_, body_pose_eigen.translation().cast<float>(),
                              Eigen::Quaternionf(body_pose_eigen.rotation().cast<float>()));
@@ -93,14 +95,4 @@ uint64_t VelodyneAccumulatorROS::getFinishedTime() const{
     return utime_;
 }
 
-// Returns filtered cloud: crop cloud using box (centered at sensor's origin - assumes identity).
-// This filter reduces the input's size.
-void VelodyneAccumulatorROS::cropMinMaxFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud)
-{
-    pcl::CropBox<pcl::PointXYZ> boxFilter;
-    boxFilter.setMin(Eigen::Vector4f(-30.0, -30.0, -30.0, 1.0)); // minX, minY, minZ
-    boxFilter.setMax(Eigen::Vector4f(30.0, 30.0, 30.0, 1.0));
-    boxFilter.setInputCloud(cloud);
-    boxFilter.filter(*cloud);
-}
 } // namespace aicp
