@@ -5,7 +5,7 @@
       (e.g. rosbag play \-\-clock my_file.bag -->
       
   <!-- User interface -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find aicp)/config/rviz/aicp_localization.rviz">
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find aicp)/config/rviz/simple_aicp.rviz">
   </node>
 
   <!-- This publishes the transform to the second realsense camera -->
