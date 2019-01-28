@@ -169,7 +169,7 @@ void App::operator()() {
                     // crop map around cloud->getPriorPose();
                     *cropped_map = *(map_->getCloud());
                     Eigen::Matrix4f tmp = (cloud->getPriorPose()).matrix().cast<float>();
-                    getPointsInOrientedBox(cropped_map, -15.0, 15.0, tmp);
+                    getPointsInOrientedBox(cropped_map, -8.0, 8.0, tmp);
                 }
 
                 // Set reference cloud
@@ -367,12 +367,12 @@ void App::operator()() {
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                 }
-                else
+                else if((aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
                 {
-                    vis_->publishPose(aligned_clouds_graph_->getCloudAt(aligned_clouds_graph_->getNbClouds()%5)->getCorrectedPose(),
+                    vis_->publishPose(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(),
                                       0, "", cloud->getUtime());
-//                    reference_vis_ = aligned_clouds_graph_->getCloudAt(aligned_clouds_graph_->getNbClouds()%5)->getCloud();
-//                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                    reference_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
+                    vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                 }
 
                 if (cl_cfg_.verbose)

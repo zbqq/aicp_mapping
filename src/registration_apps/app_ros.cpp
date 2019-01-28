@@ -272,9 +272,12 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
     }
     ROS_INFO_STREAM("[Aicp] Loaded map with " << map->points.size() << " points.");
 
+    // Pre-filter map
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_map (new pcl::PointCloud<pcl::PointXYZ>);
+    regionGrowingUniformPlaneSegmentationFilter(map, filtered_map);
     // Populate map object
     map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
-                            map,
+                            filtered_map,
                             Eigen::Isometry3d::Identity());
 
     map_initialized_ = TRUE;
