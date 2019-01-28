@@ -97,37 +97,6 @@ void App::operator()() {
 
                 first_cloud_initialized_ = TRUE;
             }
-//            // First point cloud (becomes first reference)
-//            if(!cl_cfg_.localize_against_map && aligned_clouds_graph_->isEmpty())
-//            {
-//                /*===================================
-//                =            First Cloud            =
-//                ===================================*/
-//                // Pre-filter first cloud
-//                pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-//                regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
-
-//                // Initialize first pose (from interactive marker)
-//                pcl::transformPointCloud (*ref_prefiltered, *ref_prefiltered, initialT_);
-//                Eigen::Isometry3d initialT_iso = fromMatrix4fToIsometry3d(initialT_);
-//                Eigen::Isometry3d ref_pose = cloud->getPriorPose();
-//                ref_pose = initialT_iso * ref_pose;
-
-//                // update AlignedCloud
-//                cloud->setPriorPose(ref_pose);
-//                cloud->updateCloud(ref_prefiltered, TRUE);
-//                // Initialize graph
-//                aligned_clouds_graph_->initialize(cloud);
-
-//                // Publish first reference cloud
-//                reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
-////                    vis_->publishCloud(reference_vis_, 0, "First Reference"); // TODO: update to unique template LCM - ROS
-//                vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
-//                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-//                                  cloud->getUtime());
-
-//                first_cloud_initialized_now_ = TRUE;
-//            }
             else {
                 TimingUtils::tic();
 
@@ -312,9 +281,13 @@ void App::operator()() {
                    risk_prediction_(0,0) <= class_params_.svm.threshold)    // or below threshold
                 {
                     this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
-
-                    vis_->publishMap(ref_prefiltered, cloud->getUtime());
-//                    vis_->publishMap(read_prefiltered, cloud->getUtime());
+                    // Probably failed alignment
+                    if ((correction(0,3) > 0.5 || correction(1,3) > 0.5 || correction(2,3) > 0.5) &&
+                         aligned_clouds_graph_->getNbClouds() != 0)
+                    {
+                        cout << "[Main] -----> WRONG ALIGNMENT: DROPPED POINT CLOUD" << endl;
+                        break;
+                    }
 
                     pcl::transformPointCloud (*read_prefiltered, *output, correction);
                     Eigen::Isometry3d correction_iso = fromMatrix4fToIsometry3d(correction);
