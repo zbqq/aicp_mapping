@@ -14,7 +14,8 @@ int main(int argc, char** argv){
     cl_cfg.config_file.append("aicp_config.yaml");
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                    // or debug - apply previous transforms to POSE_BODY
-    cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service
+    cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service,
+                                       // align first cloud only against map (to visualize final drift)
     cl_cfg.localize_against_map = FALSE; // if disabled, map used for visualization only
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
     cl_cfg.reference_update_frequency = 5;

@@ -239,17 +239,12 @@ void App::operator()() {
                 ColorOcTree* ref_tree;
                 ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
 
-                if(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0)
-                    octree_overlap_ = 100.0;
-                else
-                {
-                    // 1) create octree from reference cloud (wrt robot's point of view)
-                    // 2) add the reading cloud and compute overlap
-                    ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
-                                                           ref_pose, read_pose,
-                                                           read_tree);
-                    octree_overlap_ = overlapper_->getOverlap();
-                }
+                // 1) create octree from reference cloud (wrt robot's point of view)
+                // 2) add the reading cloud and compute overlap
+                ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
+                                                       ref_pose, read_pose,
+                                                       read_tree);
+                octree_overlap_ = overlapper_->getOverlap();
 
                 cout << "====================================" << endl
                      << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
@@ -322,7 +317,6 @@ void App::operator()() {
 //                    vis_->publishMap(read_prefiltered, cloud->getUtime());
 
                     pcl::transformPointCloud (*read_prefiltered, *output, correction);
-                    vis_->publishCloud(output, 0, "", cloud->getUtime());
                     Eigen::Isometry3d correction_iso = fromMatrix4fToIsometry3d(correction);
                     // update AlignedCloud with corrected pose and (prefiltered) cloud after alignment
                     cloud->updateCloud(output, correction_iso, false, aligned_clouds_graph_->getCurrentReferenceId());
@@ -338,8 +332,11 @@ void App::operator()() {
                         updates_counter_ ++;
                         cout << "[Main] -----> FREQUENCY REFERENCE UPDATE" << endl;
                     }
-                    else if(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 1)
+                    else if(cl_cfg_.load_map_from_file &&
+                            !cl_cfg_.localize_against_map &&
+                            aligned_clouds_graph_->getNbClouds() == 1)
                     {
+                        // Case: reference is the map just for first iteration (-> visualization)
                         // set AlignedCloud to be next reference
                         aligned_clouds_graph_->updateReference(aligned_clouds_graph_->getNbClouds()-1);
                     }
