@@ -14,7 +14,6 @@
 #include "aicp_classification/common.hpp"
 #include "aicp_overlap/common.hpp"
 
-#include "aicp_registration/aligned_sweeps_collection.hpp"
 #include "aicp_registration/aligned_clouds_graph.hpp"
 
 #include "aicp_registration/abstract_registrator.hpp"
