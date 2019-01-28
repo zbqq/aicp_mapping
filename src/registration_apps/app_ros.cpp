@@ -49,7 +49,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Pose publisher
     if (cl_cfg_.working_mode == "debug")
     {
-        corrected_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(cl_cfg_.output_channel,10);
+        corrected_pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(cl_cfg_.output_channel,10);
     }
     // Verbose publishers
     if (cl_cfg_.verbose)
@@ -96,7 +96,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
     {
-        geometry_msgs::PoseStamped pose_msg_out;
+        geometry_msgs::PoseWithCovarianceStamped pose_msg_out;
 
         // Apply correction if available (identity otherwise)
         // TODO: this could be wrong and must be fixed to match cl_cfg_.working_mode == "robot" case
@@ -108,7 +108,8 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
-        tf::poseTFToMsg(temp_tf_pose_, pose_msg_out.pose);
+        tf::poseTFToMsg(temp_tf_pose_, pose_msg_out.pose.pose);
+        pose_msg_out.pose.covariance = pose_msg_in->pose.covariance;
         pose_msg_out.header = pose_msg_in->header;
         corrected_pose_pub_.publish(pose_msg_out);
 
