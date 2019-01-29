@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+  <!--NOTE: The "\-\-clock" argument needs to enabled when replaying the rosbag
+      (e.g. rosbag play \-\-clock my_file.bag -->
+
+  <param name="use_sim_time" value="true" />
+
+  <!-- Load robot description -->
+  <include file="$(find anymal_boxy_description)/launch/load.launch">
+    <arg name="simulation"       value="false"/>
+    <arg name="velodyne"         value="true"/>
+    <arg name="realsense"        value="true"/>
+  </include>
+
+  <!-- Quadruped tf publisher -->
+  <!-- doesnt seem to be needed -->
+<!--  <include file="$(find quadruped_tf_publisher)/launch/quadruped_tf_publisher.launch"/>
+-->
+
+  <arg name="data_package"            default="gazebo_worlds"/>
+  <arg name="world"                   default="empty"/>
+  <arg name="rviz_config_path"        default="$(find aicp)/config/rviz/config_aicp.rviz"/>
+  <arg name="rqt_perspective_path"    default="$(find anymal_b_navigation_ui)/config/rqt/rqt.perspective"/>
+
+  <!-- User interface -->
+  <include file="$(find anymal_boxy_ui)/launch/ui.launch">
+    <arg name="data_package"          value="$(arg data_package)"/>
+    <arg name="world"                 value="$(arg world)"/>
+    <arg name="rviz_config_path"      value="$(arg rviz_config_path)"/>
+    <arg name="rqt_perspective_path"  value="$(arg rqt_perspective_path)"/>
+    <arg name="tf_minimal"            value="false"/>
+  </include>
+
+  <!-- This publishes the transform to the second realsense camera -->
+  <!-- This is not needed as of 27 Nov 2018, playback of older logs might require it -->
+<!--
+  <node pkg="tf" type="static_transform_publisher" name="realsense_forward_frame_publisher" output="screen"  args="0 0 0 0 -0.7 0 /realsense_d435_camera /realsense_d435_camera_forward 100" />
+-->
+
+</launch>
