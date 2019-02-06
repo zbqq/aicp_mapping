@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /TF1
       Splitter Ratio: 0.5
     Tree Height: 1136
   - Class: rviz/Selection
@@ -25,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Aligned Cloud
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -48,33 +49,228 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        LF_HIP:
+          Value: false
+        LF_SHANK:
+          Value: false
+        LF_THIGH:
+          Value: false
+        LH_HIP:
+          Value: false
+        LH_SHANK:
+          Value: false
+        LH_THIGH:
+          Value: false
+        RF_HIP:
+          Value: false
+        RF_SHANK:
+          Value: false
+        RF_THIGH:
+          Value: false
+        RH_HIP:
+          Value: false
+        RH_SHANK:
+          Value: false
+        RH_THIGH:
+          Value: false
+        base:
+          Value: true
+        control:
+          Value: false
+        feetcenter:
+          Value: false
+        footprint:
+          Value: false
+        ghost_desired/LF_HIP:
+          Value: false
+        ghost_desired/LF_SHANK:
+          Value: false
+        ghost_desired/LF_THIGH:
+          Value: false
+        ghost_desired/LH_HIP:
+          Value: false
+        ghost_desired/LH_SHANK:
+          Value: false
+        ghost_desired/LH_THIGH:
+          Value: false
+        ghost_desired/RF_HIP:
+          Value: false
+        ghost_desired/RF_SHANK:
+          Value: false
+        ghost_desired/RF_THIGH:
+          Value: false
+        ghost_desired/RH_HIP:
+          Value: false
+        ghost_desired/RH_SHANK:
+          Value: false
+        ghost_desired/RH_THIGH:
+          Value: false
+        ghost_desired/base:
+          Value: false
+        ghost_desired/feetcenter:
+          Value: false
+        ghost_desired/footprint:
+          Value: false
+        ghost_measured/LF_HIP:
+          Value: false
+        ghost_measured/LF_SHANK:
+          Value: false
+        ghost_measured/LF_THIGH:
+          Value: false
+        ghost_measured/LH_HIP:
+          Value: false
+        ghost_measured/LH_SHANK:
+          Value: false
+        ghost_measured/LH_THIGH:
+          Value: false
+        ghost_measured/RF_HIP:
+          Value: false
+        ghost_measured/RF_SHANK:
+          Value: false
+        ghost_measured/RF_THIGH:
+          Value: false
+        ghost_measured/RH_HIP:
+          Value: false
+        ghost_measured/RH_SHANK:
+          Value: false
+        ghost_measured/RH_THIGH:
+          Value: false
+        ghost_measured/base:
+          Value: false
+        ghost_measured/feetcenter:
+          Value: false
+        ghost_measured/footprint:
+          Value: false
+        loco_footprint:
+          Value: false
+        map:
+          Value: false
+        map_ga:
+          Value: false
+        map_test:
+          Value: true
+        odom:
+          Value: true
+        realsense_d435_camera:
+          Value: false
+        realsense_d435_camera_forward:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        odom:
+          base:
+            LF_HIP:
+              LF_THIGH:
+                LF_SHANK:
+                  {}
+            LH_HIP:
+              LH_THIGH:
+                LH_SHANK:
+                  {}
+            RF_HIP:
+              RF_THIGH:
+                RF_SHANK:
+                  {}
+            RH_HIP:
+              RH_THIGH:
+                RH_SHANK:
+                  {}
+          control:
+            {}
+          feetcenter:
+            {}
+          footprint:
+            {}
+          ghost_desired/base:
+            ghost_desired/LF_HIP:
+              ghost_desired/LF_THIGH:
+                ghost_desired/LF_SHANK:
+                  {}
+            ghost_desired/LH_HIP:
+              ghost_desired/LH_THIGH:
+                ghost_desired/LH_SHANK:
+                  {}
+            ghost_desired/RF_HIP:
+              ghost_desired/RF_THIGH:
+                ghost_desired/RF_SHANK:
+                  {}
+            ghost_desired/RH_HIP:
+              ghost_desired/RH_THIGH:
+                ghost_desired/RH_SHANK:
+                  {}
+          ghost_desired/feetcenter:
+            {}
+          ghost_desired/footprint:
+            {}
+          ghost_measured/base:
+            ghost_measured/LF_HIP:
+              ghost_measured/LF_THIGH:
+                ghost_measured/LF_SHANK:
+                  {}
+            ghost_measured/LH_HIP:
+              ghost_measured/LH_THIGH:
+                ghost_measured/LH_SHANK:
+                  {}
+            ghost_measured/RF_HIP:
+              ghost_measured/RF_THIGH:
+                ghost_measured/RF_SHANK:
+                  {}
+            ghost_measured/RH_HIP:
+              ghost_measured/RH_THIGH:
+                ghost_measured/RH_SHANK:
+                  {}
+          ghost_measured/feetcenter:
+            {}
+          ghost_measured/footprint:
+            {}
+          loco_footprint:
+            {}
+          map:
+            {}
+          map_ga:
+            {}
+          map_test:
+            {}
       Update Interval: 0
-      Value: false
-    - Class: rviz/Axes
-      Enabled: false
-      Length: 0.5
-      Name: Odom Frame
-      Radius: 0.0500000007
-      Reference Frame: odom
-      Value: false
-    - Class: rviz/Axes
-      Enabled: true
-      Length: 0.5
-      Name: Map Frame
-      Radius: 0.0500000007
-      Reference Frame: map
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 7.98852873
+        Min Value: 1.08128166
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 130
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Velodyne
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 2
+      Size (m): 0.00999999978
+      Style: Points
+      Topic: /velodyne/point_cloud_filtered
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -107,37 +303,7 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Axes Length: 1
-      Axes Radius: 0.0500000007
-      Class: rviz/PoseWithCovariance
-      Color: 255; 25; 0
-      Covariance:
-        Orientation:
-          Alpha: 0.5
-          Color: 255; 255; 127
-          Color Style: Unique
-          Frame: Local
-          Offset: 1
-          Scale: 1
-          Value: true
-        Position:
-          Alpha: 0.300000012
-          Color: 204; 51; 204
-          Scale: 1
-          Value: true
-        Value: true
-      Enabled: true
-      Head Length: 0.300000012
-      Head Radius: 0.100000001
-      Name: Orignal Pose
-      Shaft Length: 1
-      Shaft Radius: 0.0500000007
-      Shape: Axes
-      Topic: /state_estimator/pose_in_odom
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.100000001
+      Axes Radius: 0.0199999996
       Class: rviz/PoseWithCovariance
       Color: 255; 25; 0
       Covariance:
@@ -161,7 +327,7 @@ Visualization Manager:
       Name: Corrected Pose
       Shaft Length: 1
       Shaft Radius: 0.0500000007
-      Shape: Arrow
+      Shape: Axes
       Topic: /aicp/pose_corrected
       Unreliable: false
       Value: true
@@ -192,7 +358,7 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
     Default Light: true
-    Fixed Frame: map
+    Fixed Frame: map_test
     Frame Rate: 30
   Name: root
   Tools:
@@ -213,25 +379,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 29.0714607
+      Distance: 18.2398243
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 10.5592031
-        Y: -5.22265005
-        Z: 2.9615953
+        X: 5.10010386
+        Y: -1.24335587
+        Z: 2.63355803
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.56979632
+      Pitch: 1.56479633
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.88356423
+      Yaw: 3.59356904
     Saved: ~
 Window Geometry:
   Displays:

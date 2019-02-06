@@ -9,7 +9,8 @@
 #include <tf_conversions/tf_eigen.h>
 #include <eigen_conversions/eigen_msg.h>
 
-
+#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 
 namespace aicp {
 
@@ -42,6 +43,9 @@ public:
     void publishPose(Eigen::Isometry3d pose,
                      int param, string name, int64_t utime);
 
+    // Publish tf from fixed_frame to odom
+    void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);
+
 private:
     ros::NodeHandle& nh_;
     ros::Publisher cloud_pub_;
@@ -53,6 +57,11 @@ private:
     std::vector<Eigen::Isometry3d> path_;
 
     std::string fixed_frame_; // map or map_test
+    std::string odom_frame_;
+    std::string base_frame_;
 
+    // TF listener and broadcaster
+    tf::TransformListener tf_listener_;
+    tf::TransformBroadcaster tf_broadcaster_;
 };
 }

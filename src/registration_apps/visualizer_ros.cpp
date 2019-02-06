@@ -3,8 +3,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_types.h>
 
-
 #include <sensor_msgs/PointCloud2.h>
+
+#include <tf_conversions/tf_eigen.h>
 
 using namespace std;
 
@@ -45,6 +46,9 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
          0.5, 0.5, 1.0,
          0.5, 1.0, 0.5,
          0.5, 0.5, 1.0};
+
+    odom_frame_ = "/odom";
+    base_frame_ = "/base";
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -124,6 +128,39 @@ void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, 
     }
 
     pose_pub_.publish(path_msg);
+}
+
+void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time)
+{
+    // TF listener
+    tf::StampedTransform base_to_odom_tf;
+    try {
+        // waitForTransform( to frame, from frame, ... )
+        //tf_listener_.waitForTransform(odom_frame_, base_frame_, ros::Time::now(), ros::Duration(1.0));
+        tf_listener_.lookupTransform(odom_frame_, base_frame_, msg_time, base_to_odom_tf);
+    }
+    catch (tf::TransformException ex)
+    {
+        ROS_ERROR("%s : ", ex.what());
+        return;
+    }
+    // Convert to Eigen
+    Eigen::Isometry3d base_to_odom_eigen;
+    tf::transformTFToEigen(base_to_odom_tf, base_to_odom_eigen);
+    // Multiply
+    Eigen::Isometry3d fixed_frame_to_odom_eigen;
+    fixed_frame_to_odom_eigen = fixed_frame_to_base_eigen * base_to_odom_eigen.inverse();
+
+    // Convert to TF
+    tf::StampedTransform fixed_frame_to_odom_tf;
+    tf::poseEigenToTF(fixed_frame_to_odom_eigen, fixed_frame_to_odom_tf);
+
+    cout << fixed_frame_to_odom_tf.frame_id_ << endl;
+//    // Broadcast
+//    tf_broadcaster_.sendTransform(tf::StampedTransform(fixed_frame_to_odom_tf,
+//                                                       ros::Time::now(),
+//                                                       odom_frame_,     // to frame    <-|
+//                                                       fixed_frame_));  // from frame  --|
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,

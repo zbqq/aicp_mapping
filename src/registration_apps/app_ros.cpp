@@ -27,7 +27,8 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Accumulator
     accu_ = new VelodyneAccumulatorROS(nh_, accu_config_);
     // Visualizer
-    vis_ = new ROSVisualizer(nh_);
+    vis_ = new ROSVisualizer(nh_, cl_cfg_.fixed_frame);
+    vis_ros_ = new ROSVisualizer(nh_, cl_cfg_.fixed_frame);
 
     // Init pose to identity
     world_to_body_ = Eigen::Isometry3d::Identity();
@@ -91,6 +92,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         ROS_INFO_STREAM("[Aicp] Starting localization...");
     }
 
+///////////////////////////////////////////////////////////////////// TODO
     // TO_DO: remove modes -> deprecated in ROS as corrected trajectory not fed back to controller
     // Compute and publish correction, same frequency as input pose (if "debug" mode)
     if (cl_cfg_.working_mode == "debug")
@@ -104,6 +106,25 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         // Publish initial guess interactive marker
         if (!pose_initialized_)
             vis_->publishPose(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
+
+        // Publish fixed_frame to odom tf
+        ros::Time msg_time(pose_msg_in->header.stamp.sec, pose_msg_in->header.stamp.nsec);
+        //vis_ros_->publishFixedFrameToOdomTF(corrected_pose_, msg_time);
+
+        tf::TransformListener listener_;
+        tf::StampedTransform body_pose_tf;
+        try {
+            // waitForTransform( to frame, from frame, ... )
+            listener_.waitForTransform("/odom", "/base", msg_time, ros::Duration(1.0));
+            listener_.lookupTransform("/odom", "/base", msg_time, body_pose_tf);
+        }
+        catch (tf::TransformException ex)
+        {
+            ROS_ERROR("%s : ", ex.what());
+            ROS_ERROR("Skipping tf.");
+            return;
+        }
+///////////////////////////////////////////////////////////////////// TODO
 
         // Publish /aicp/pose_corrected
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);

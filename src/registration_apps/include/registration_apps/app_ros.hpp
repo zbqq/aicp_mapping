@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ros/node_handle.h>
-#include <tf/transform_listener.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -20,8 +19,7 @@ public:
            const VelodyneAccumulatorConfig& va_cfg,
            const RegistrationParams& reg_params,
            const OverlapParams& overlap_params,
-           const ClassificationParams& class_params,
-           const string& bot_param_path);
+           const ClassificationParams& class_params);
     ~AppROS(){
     }
 
@@ -38,7 +36,6 @@ public:
 
 private:
     ros::NodeHandle& nh_;
-    tf::TransformListener body_to_lidar_listener_;
 
     Eigen::Isometry3d world_to_body_;
     Eigen::Isometry3d world_to_body_previous_;
@@ -51,6 +48,9 @@ private:
 
     VelodyneAccumulatorROS* accu_;
     VelodyneAccumulatorConfig accu_config_;
+
+    // ROS only visualizer
+    ROSVisualizer* vis_ros_;
 
     // Tool functions
     void getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,
