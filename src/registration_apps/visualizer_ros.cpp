@@ -10,7 +10,8 @@ using namespace std;
 
 namespace aicp {
 
-ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
+ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
+                                                                        fixed_frame_(fixed_frame)
 {
     cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_cloud", 10);
     map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/map", 10);
@@ -76,7 +77,7 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     //utime has been checked and is correct;
     //cloud is called and it is correct
     output.header.stamp = ros::Time(secs, nsecs);
-    output.header.frame_id = "map";
+    output.header.frame_id = fixed_frame_;
     cloud_pub_.publish(output);
 }
 
@@ -101,7 +102,7 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     pcl::toROSMsg(*cloud_rgb, output);
 
     output.header.stamp = ros::Time(secs, nsecs);
-    output.header.frame_id = "map";
+    output.header.frame_id = fixed_frame_;
     map_pub_.publish(output);
 }
 
@@ -112,12 +113,12 @@ void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, 
     int secs = utime*1E-6;
     int nsecs = (utime - (secs*1E6))*1E3;
     path_msg.header.stamp = ros::Time(secs, nsecs);
-    path_msg.header.frame_id = "map";
+    path_msg.header.frame_id = fixed_frame_;
 
     for (size_t i = 0; i < path_.size(); ++i){
         geometry_msgs::PoseStamped m;
         m.header.stamp = ros::Time(secs, nsecs);
-        m.header.frame_id = "map";
+        m.header.frame_id = fixed_frame_;
         tf::poseEigenToMsg(path_[i], m.pose);
         path_msg.poses.push_back(m);
     }

@@ -16,8 +16,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
                const VelodyneAccumulatorConfig &va_cfg,
                const RegistrationParams &reg_params,
                const OverlapParams &overlap_params,
-               const ClassificationParams &class_params,
-               const string &bot_param_path) :
+               const ClassificationParams &class_params) :
     App(cl_cfg, reg_params, overlap_params, class_params),
     nh_(nh), accu_config_(va_cfg)
 {
@@ -110,7 +109,8 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
         tf::poseTFToMsg(temp_tf_pose_, pose_msg_out.pose.pose);
         pose_msg_out.pose.covariance = pose_msg_in->pose.covariance;
-        pose_msg_out.header = pose_msg_in->header;
+        pose_msg_out.header.stamp = pose_msg_in->header.stamp;
+        pose_msg_out.header.frame_id = cl_cfg_.fixed_frame;
         corrected_pose_pub_.publish(pose_msg_out);
 
         if ( updated_correction_ )
@@ -130,13 +130,13 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         overlap_msg.data = octree_overlap_;
         overlap_pub_.publish(overlap_msg);
 
-        // Publish /aicp/alignability
-        std_msgs::Float32 alignability_msg;
-        alignability_msg.data = alignability_;
-        alignability_pub_.publish(alignability_msg);
-
         if (!risk_prediction_.isZero())
         {
+            // Publish /aicp/alignability
+            std_msgs::Float32 alignability_msg;
+            alignability_msg.data = alignability_;
+            alignability_pub_.publish(alignability_msg);
+
             // Publish /aicp/alignment_risk
             std_msgs::Float32 risk_msg;
             risk_msg.data = risk_prediction_(0,0);

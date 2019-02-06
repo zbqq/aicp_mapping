@@ -7,6 +7,9 @@
 
     <!-- Debug mode or robot -->
     <param name="working_mode"               value="debug" />
+    
+    <!-- Fixed frame (default: map, debug: map_test -->
+    <param name="fixed_frame"                value="map_test" />
 
     <!-- Prior map info -->
     <param name="load_map_from_file"         value="false" />

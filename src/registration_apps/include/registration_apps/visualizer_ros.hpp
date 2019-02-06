@@ -17,7 +17,7 @@ class ROSVisualizer : public Visualizer
 {
 public:
 
-    ROSVisualizer(ros::NodeHandle& nh);
+    ROSVisualizer(ros::NodeHandle& nh, string fixed_frame);
 //    ~ROSVisualizer();
 
     // Publish cloud
@@ -52,6 +52,7 @@ private:
     // Path (vector of poses)
     std::vector<Eigen::Isometry3d> path_;
 
+    std::string fixed_frame_; // map or map_test
 
 };
 }

@@ -30,6 +30,7 @@ struct CommandLineConfig
     string pose_body_channel;
     string output_channel;
     string working_mode;
+    string fixed_frame;
     bool load_map_from_file;
     bool localize_against_map;
     bool failure_prediction_mode;
