@@ -255,7 +255,7 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
         if(map_initialized_)
         {
             pcl::PointCloud<pcl::PointXYZ>::Ptr map = map_->getCloud();
-            vis_->publishMap(map, map_->getUtime());
+            vis_->publishMap(map, map_->getUtime(), 0);
         }
         ROS_WARN_STREAM("[Aicp] Map service disabled or map already loaded!");
         return false;
@@ -280,7 +280,7 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
                             Eigen::Isometry3d::Identity());
 
     map_initialized_ = TRUE;
-    vis_->publishMap(map, map_->getUtime());
+    vis_->publishMap(map, map_->getUtime(), 0);
 
     return true;
 }

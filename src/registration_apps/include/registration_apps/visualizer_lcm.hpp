@@ -24,7 +24,8 @@ public:
 
     // Publish map lcm
     void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                    int64_t utime)
+                    int64_t utime,
+                    int channel)
     {}
 
     // Publish octree lcm

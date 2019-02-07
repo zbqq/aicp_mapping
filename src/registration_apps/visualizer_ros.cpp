@@ -15,7 +15,8 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
                                                                         fixed_frame_(fixed_frame)
 {
     cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_cloud", 10);
-    map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/map", 10);
+    prior_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/prior_map", 10);
+    aligned_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_map", 10);
     pose_pub_ = nh_.advertise<nav_msgs::Path>("/aicp/poses",100);
     colors_ = {
          51/255.0, 160/255.0, 44/255.0,  //0
@@ -86,7 +87,8 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
 }
 
 void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                               int64_t utime)
+                               int64_t utime,
+                               int channel)
 {
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -107,7 +109,13 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
 
     output.header.stamp = ros::Time(secs, nsecs);
     output.header.frame_id = fixed_frame_;
-    map_pub_.publish(output);
+
+    if (channel == 0)
+        prior_map_pub_.publish(output);
+    else if (channel == 1)
+        aligned_map_pub_.publish(output);
+    else
+        ROS_INFO_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
 }
 
 void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){

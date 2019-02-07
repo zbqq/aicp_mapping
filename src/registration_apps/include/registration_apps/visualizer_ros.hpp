@@ -33,7 +33,9 @@ public:
 
     // Publish map
     void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                    int64_t utime);
+                    int64_t utime,
+                    int channel); // 0 : /aicp/prior_map
+                                  // 1 : /aicp/aligned_map
 
     // Publish octree
     void publishOctree(octomap::ColorOcTree*& octree,
@@ -49,7 +51,8 @@ public:
 private:
     ros::NodeHandle& nh_;
     ros::Publisher cloud_pub_;
-    ros::Publisher map_pub_;
+    ros::Publisher prior_map_pub_;
+    ros::Publisher aligned_map_pub_;
     ros::Publisher pose_pub_;
     // Duplicates the list in collections renderer. assumed to be 3xN colors
     std::vector<double> colors_;
