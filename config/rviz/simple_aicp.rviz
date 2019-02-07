@@ -1,13 +1,14 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 78
+    Help Height: 204
     Name: Displays
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
+        - /TF1/Frames1
+        - /Velodyne1/Status1
       Splitter Ratio: 0.5
-    Tree Height: 1136
+    Tree Height: 1010
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -26,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Aligned Cloud
 Visualization Manager:
   Class: ""
   Displays:
@@ -165,87 +166,15 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        odom:
-          base:
-            LF_HIP:
-              LF_THIGH:
-                LF_SHANK:
-                  {}
-            LH_HIP:
-              LH_THIGH:
-                LH_SHANK:
-                  {}
-            RF_HIP:
-              RF_THIGH:
-                RF_SHANK:
-                  {}
-            RH_HIP:
-              RH_THIGH:
-                RH_SHANK:
-                  {}
-          control:
-            {}
-          feetcenter:
-            {}
-          footprint:
-            {}
-          ghost_desired/base:
-            ghost_desired/LF_HIP:
-              ghost_desired/LF_THIGH:
-                ghost_desired/LF_SHANK:
-                  {}
-            ghost_desired/LH_HIP:
-              ghost_desired/LH_THIGH:
-                ghost_desired/LH_SHANK:
-                  {}
-            ghost_desired/RF_HIP:
-              ghost_desired/RF_THIGH:
-                ghost_desired/RF_SHANK:
-                  {}
-            ghost_desired/RH_HIP:
-              ghost_desired/RH_THIGH:
-                ghost_desired/RH_SHANK:
-                  {}
-          ghost_desired/feetcenter:
-            {}
-          ghost_desired/footprint:
-            {}
-          ghost_measured/base:
-            ghost_measured/LF_HIP:
-              ghost_measured/LF_THIGH:
-                ghost_measured/LF_SHANK:
-                  {}
-            ghost_measured/LH_HIP:
-              ghost_measured/LH_THIGH:
-                ghost_measured/LH_SHANK:
-                  {}
-            ghost_measured/RF_HIP:
-              ghost_measured/RF_THIGH:
-                ghost_measured/RF_SHANK:
-                  {}
-            ghost_measured/RH_HIP:
-              ghost_measured/RH_THIGH:
-                ghost_measured/RH_SHANK:
-                  {}
-          ghost_measured/feetcenter:
-            {}
-          ghost_measured/footprint:
-            {}
-          loco_footprint:
-            {}
-          map:
-            {}
-          map_ga:
-            {}
-          map_test:
-            {}
+        map_test:
+          {}
       Update Interval: 0
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 7.98852873
-        Min Value: 1.08128166
+        Max Value: 7.75819206
+        Min Value: -0.0343088508
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -253,7 +182,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 130
@@ -270,7 +199,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -303,7 +232,7 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Axes Length: 1
-      Axes Radius: 0.0199999996
+      Axes Radius: 0.00999999978
       Class: rviz/PoseWithCovariance
       Color: 255; 25; 0
       Covariance:
@@ -379,25 +308,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.2398243
+      Distance: 16.3518734
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 5.10010386
-        Y: -1.24335587
-        Z: 2.63355803
+        X: 0.86835593
+        Y: -0.542346895
+        Z: 1.75131249
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.56479633
+      Pitch: 1.4897964
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.59356904
+      Yaw: 3.66858649
     Saved: ~
 Window Geometry:
   Displays:
