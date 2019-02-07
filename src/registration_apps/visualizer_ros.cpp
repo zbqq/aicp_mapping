@@ -135,9 +135,9 @@ void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_
     // TF listener
     tf::StampedTransform base_to_odom_tf;
     try {
-        // waitForTransform( to frame, from frame, ... )
-        //tf_listener_.waitForTransform(odom_frame_, base_frame_, ros::Time::now(), ros::Duration(1.0));
-        tf_listener_.lookupTransform(odom_frame_, base_frame_, msg_time, base_to_odom_tf);
+        // waitForTransform( to frame, from frame, ros::Time(0) = last available, ... )
+        tf_listener_.waitForTransform(odom_frame_, base_frame_, ros::Time(0), ros::Duration(1.0));
+        tf_listener_.lookupTransform(odom_frame_, base_frame_, ros::Time(0), base_to_odom_tf);
     }
     catch (tf::TransformException ex)
     {
@@ -155,12 +155,11 @@ void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_
     tf::StampedTransform fixed_frame_to_odom_tf;
     tf::poseEigenToTF(fixed_frame_to_odom_eigen, fixed_frame_to_odom_tf);
 
-    cout << fixed_frame_to_odom_tf.frame_id_ << endl;
-//    // Broadcast
-//    tf_broadcaster_.sendTransform(tf::StampedTransform(fixed_frame_to_odom_tf,
-//                                                       ros::Time::now(),
-//                                                       odom_frame_,     // to frame    <-|
-//                                                       fixed_frame_));  // from frame  --|
+    // Broadcast
+    tf_broadcaster_.sendTransform(tf::StampedTransform(fixed_frame_to_odom_tf,
+                                                       msg_time,
+                                                       fixed_frame_,   // from frame  --| (parent frame)
+                                                       odom_frame_));  // to frame    <-|
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
