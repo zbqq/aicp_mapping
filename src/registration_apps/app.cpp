@@ -344,6 +344,10 @@ void App::operator()() {
                                       cloud->getUtime());
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                    // Output map
+                    aligned_map_ = aligned_map_ + *reference_vis_;
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map__ptr = aligned_map_.makeShared();
+                    vis_->publishMap(aligned_map__ptr, cloud->getUtime(), 1);
                 }
                 else if((aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
                 {

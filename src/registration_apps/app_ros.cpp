@@ -254,8 +254,8 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
          || map_initialized_){
         if(map_initialized_)
         {
-            pcl::PointCloud<pcl::PointXYZ>::Ptr map = map_->getCloud();
-            vis_->publishMap(map, map_->getUtime(), 0);
+            pcl::PointCloud<pcl::PointXYZ>::Ptr map = prior_map_->getCloud();
+            vis_->publishMap(map, prior_map_->getUtime(), 0);
         }
         ROS_WARN_STREAM("[Aicp] Map service disabled or map already loaded!");
         return false;
@@ -275,12 +275,12 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_map (new pcl::PointCloud<pcl::PointXYZ>);
     regionGrowingUniformPlaneSegmentationFilter(map, filtered_map);
     // Populate map object
-    map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
-                            filtered_map,
-                            Eigen::Isometry3d::Identity());
+    prior_map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
+                                  filtered_map,
+                                  Eigen::Isometry3d::Identity());
 
     map_initialized_ = TRUE;
-    vis_->publishMap(map, map_->getUtime(), 0);
+    vis_->publishMap(map, prior_map_->getUtime(), 0);
 
     return true;
 }

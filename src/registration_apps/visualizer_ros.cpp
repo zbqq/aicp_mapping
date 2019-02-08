@@ -100,9 +100,18 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     sensor_msgs::PointCloud2 output;
     for (size_t i = 0; i < cloud_rgb->points.size (); i++)
     {
-        cloud_rgb->points[i].r = 255.0;
-        cloud_rgb->points[i].g = 255.0;
-        cloud_rgb->points[i].b = 255.0;
+        if (channel == 0)
+        {
+            cloud_rgb->points[i].r = 255.0;
+            cloud_rgb->points[i].g = 255.0;
+            cloud_rgb->points[i].b = 255.0;
+        }
+        else if (channel == 1)
+        {
+            cloud_rgb->points[i].r = 255.0;
+            cloud_rgb->points[i].g = 255.0;
+            cloud_rgb->points[i].b = 0.0;
+        }
     }
 
     pcl::toROSMsg(*cloud_rgb, output);

@@ -112,7 +112,8 @@ protected:
     // Data structure
     AlignedCloudsGraph* aligned_clouds_graph_;
     // Map
-    AlignedCloud* map_;
+    AlignedCloud* prior_map_;
+    pcl::PointCloud<pcl::PointXYZ> aligned_map_;
     // Visualizer
     Visualizer* vis_;
 
