@@ -136,7 +136,7 @@ void App::operator()() {
                 if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
                 {
                     // crop map around cloud->getPriorPose();
-                    *cropped_map = *(map_->getCloud());
+                    *cropped_map = *(prior_map_->getCloud());
                     Eigen::Matrix4f tmp = (cloud->getPriorPose()).matrix().cast<float>();
                     getPointsInOrientedBox(cropped_map, -8.0, 8.0, tmp);
                 }
