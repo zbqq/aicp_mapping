@@ -138,7 +138,9 @@ void App::operator()() {
                     // crop map around cloud->getPriorPose();
                     *cropped_map = *(prior_map_->getCloud());
                     Eigen::Matrix4f tmp = (cloud->getPriorPose()).matrix().cast<float>();
-                    getPointsInOrientedBox(cropped_map, -8.0, 8.0, tmp);
+                    getPointsInOrientedBox(cropped_map,
+                                           -cl_cfg_.crop_map_around_base,
+                                           cl_cfg_.crop_map_around_base, tmp);
                 }
 
                 // Set reference cloud
@@ -208,7 +210,8 @@ void App::operator()() {
                 ColorOcTree* ref_tree;
                 ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
 
-                if(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0)
+                if((cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
+                    cl_cfg_.localize_against_map)
                     octree_overlap_ = 100.0;
                 else
                 {
@@ -287,7 +290,9 @@ void App::operator()() {
                 {
                     this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
                     // Probably failed alignment
-                    if ((correction(0,3) > 0.5 || correction(1,3) > 0.5 || correction(2,3) > 0.5) &&
+                    if ((correction(0,3) > cl_cfg_.max_correction_magnitude ||
+                         correction(1,3) > cl_cfg_.max_correction_magnitude ||
+                         correction(2,3) > cl_cfg_.max_correction_magnitude) &&
                          aligned_clouds_graph_->getNbClouds() != 0)
                     {
                         cout << "[Main] -----> WRONG ALIGNMENT: DROPPED POINT CLOUD" << endl;
@@ -300,6 +305,15 @@ void App::operator()() {
                     cloud->updateCloud(output, correction_iso, false, aligned_clouds_graph_->getCurrentReferenceId());
                     // add AlignedCloud to graph
                     aligned_clouds_graph_->addCloud(cloud);
+
+                    // Add last aligned cloud to map
+                    if(cl_cfg_.merge_aligned_clouds_to_map && cl_cfg_.localize_against_map)
+                    {
+                        pcl::PointCloud<pcl::PointXYZ>::Ptr merged_map (new pcl::PointCloud<pcl::PointXYZ>);
+                        *merged_map = *(prior_map_->getCloud()) + *output;
+                        prior_map_->updateCloud(merged_map, 0);
+                    }
+
                     // windowed reference update policy (count number of clouds after last reference)
                     if(((aligned_clouds_graph_->getNbClouds() - (aligned_clouds_graph_->getCurrentReferenceId()+1))
                         % cl_cfg_.reference_update_frequency == 0) &&

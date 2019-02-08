@@ -18,8 +18,14 @@ int main(int argc, char** argv){
     cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service,
                                        // align first cloud only against map (to visualize final drift)
     cl_cfg.localize_against_map = FALSE; // if disabled, map used for visualization only
+    cl_cfg.crop_map_around_base = 8.0; // rectangular box dimesions: value*2 x value*2
+    cl_cfg.merge_aligned_clouds_to_map = false; // improves performance if trajectory goes
+                                                // outside map (issue: slow)
+
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
     cl_cfg.reference_update_frequency = 5;
+    cl_cfg.max_correction_magnitude = 0.5; // Max allowed correction magnitude
+                                           // (probably failed alignment otherwise)
 
     cl_cfg.pose_body_channel = "/state_estimator/pose_in_odom";
     cl_cfg.output_channel = "/aicp/pose_corrected"; // Create new channel...
@@ -37,8 +43,12 @@ int main(int argc, char** argv){
     nh.getParam("fixed_frame", cl_cfg.fixed_frame);
     nh.getParam("load_map_from_file", cl_cfg.load_map_from_file);
     nh.getParam("localize_against_map", cl_cfg.localize_against_map);
+    nh.getParam("crop_map_around_base", cl_cfg.crop_map_around_base);
+    nh.getParam("merge_aligned_clouds_to_map", cl_cfg.merge_aligned_clouds_to_map);
+
     nh.getParam("failure_prediction_mode", cl_cfg.failure_prediction_mode);
     nh.getParam("reference_update_frequency", cl_cfg.reference_update_frequency);
+    nh.getParam("max_correction_magnitude", cl_cfg.max_correction_magnitude);
 
     nh.getParam("pose_body_channel", cl_cfg.pose_body_channel);
     nh.getParam("output_channel", cl_cfg.output_channel);
