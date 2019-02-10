@@ -94,6 +94,10 @@ void App::operator()() {
                 vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                 vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                   cloud->getUtime());
+                // Output map
+                aligned_map_ = aligned_map_ + *reference_vis_;
+                pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map_ptr = aligned_map_.makeShared();
+                vis_->publishMap(aligned_map_ptr, cloud->getUtime(), 1);
 
                 first_cloud_initialized_ = TRUE;
             }
@@ -351,8 +355,8 @@ void App::operator()() {
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = TRUE;
 
-                // Publish
-                if(!cl_cfg_.localize_against_map)
+                // Store aligned map and publish
+                if(aligned_clouds_graph_->getLastCloud()->isReference())
                 {
                     vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
                                       cloud->getUtime());
@@ -360,10 +364,11 @@ void App::operator()() {
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                     // Output map
                     aligned_map_ = aligned_map_ + *reference_vis_;
-                    pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map__ptr = aligned_map_.makeShared();
-                    vis_->publishMap(aligned_map__ptr, cloud->getUtime(), 1);
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map_ptr = aligned_map_.makeShared();
+                    vis_->publishMap(aligned_map_ptr, cloud->getUtime(), 1);
                 }
-                else if((aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
+                else if(cl_cfg_.localize_against_map &&
+                        (aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
                 {
                     vis_->publishPose(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(),
                                       0, "", cloud->getUtime());
@@ -393,6 +398,7 @@ void App::operator()() {
                 cout << "Reference: " << aligned_clouds_graph_->getLastCloud()->getItsReferenceId() << endl;
                 cout << "Reading: " << aligned_clouds_graph_->getLastCloudId() << endl;
                 cout << "Number Clouds: " << aligned_clouds_graph_->getNbClouds() << endl;
+                cout << "Output Map Size: " << aligned_map_.size() << endl;
                 cout << "Next Reference: " << aligned_clouds_graph_->getCurrentReferenceId() << endl;
                 cout << "Updates: " << updates_counter_ << endl;
             }
