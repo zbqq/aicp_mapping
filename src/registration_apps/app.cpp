@@ -310,14 +310,6 @@ void App::operator()() {
                     // add AlignedCloud to graph
                     aligned_clouds_graph_->addCloud(cloud);
 
-                    // Add last aligned cloud to map
-                    if(cl_cfg_.merge_aligned_clouds_to_map && cl_cfg_.localize_against_map)
-                    {
-                        pcl::PointCloud<pcl::PointXYZ>::Ptr merged_map (new pcl::PointCloud<pcl::PointXYZ>);
-                        *merged_map = *(prior_map_->getCloud()) + *output;
-                        prior_map_->updateCloud(merged_map, 0);
-                    }
-
                     // windowed reference update policy (count number of clouds after last reference)
                     if(((aligned_clouds_graph_->getNbClouds() - (aligned_clouds_graph_->getCurrentReferenceId()+1))
                         % cl_cfg_.reference_update_frequency == 0) &&
@@ -374,6 +366,23 @@ void App::operator()() {
                                       0, "", cloud->getUtime());
                     reference_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
+                    // Add last aligned reference to map
+                    if(cl_cfg_.merge_aligned_clouds_to_map)
+                    {
+                        pcl::PointCloud<pcl::PointXYZ>::Ptr merged_map (new pcl::PointCloud<pcl::PointXYZ>);
+                        *merged_map = *(prior_map_->getCloud()) + *output;
+                        prior_map_->updateCloud(merged_map, 0);
+                    }
+                }
+
+                // Downsample prior map at very low frequency
+                // (once every 30 clouds -> amortized time)
+                if(cl_cfg_.localize_against_map && cl_cfg_.merge_aligned_clouds_to_map &&
+                   (aligned_clouds_graph_->getNbClouds()-1) % 30 == 0)
+                {
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr map_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+                    regionGrowingUniformPlaneSegmentationFilter(prior_map_->getCloud(), map_prefiltered);
+                    prior_map_->updateCloud(map_prefiltered, 0);
                 }
 
                 if (cl_cfg_.verbose)
@@ -399,6 +408,8 @@ void App::operator()() {
                 cout << "Reading: " << aligned_clouds_graph_->getLastCloudId() << endl;
                 cout << "Number Clouds: " << aligned_clouds_graph_->getNbClouds() << endl;
                 cout << "Output Map Size: " << aligned_map_.size() << endl;
+                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+                    cout << "Prior Map Size: " << prior_map_->getCloud()->size() << endl;
                 cout << "Next Reference: " << aligned_clouds_graph_->getCurrentReferenceId() << endl;
                 cout << "Updates: " << updates_counter_ << endl;
             }

@@ -124,7 +124,7 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     else if (channel == 1)
         aligned_map_pub_.publish(output);
     else
-        ROS_INFO_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
+        ROS_WARN_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
 }
 
 void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){
@@ -158,12 +158,13 @@ void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_
     }
     catch (tf::TransformException ex)
     {
-        ROS_ERROR("%s : ", ex.what());
+        ROS_WARN("[ROSVisualizer] %s : ", ex.what());
         return;
     }
     // Convert to Eigen
     Eigen::Isometry3d base_to_odom_eigen;
     tf::transformTFToEigen(base_to_odom_tf, base_to_odom_eigen);
+
     // Multiply
     Eigen::Isometry3d fixed_frame_to_odom_eigen;
     fixed_frame_to_odom_eigen = fixed_frame_to_base_eigen * base_to_odom_eigen.inverse();
