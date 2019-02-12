@@ -34,6 +34,9 @@ AppROS::AppROS(ros::NodeHandle &nh,
     world_to_body_ = Eigen::Isometry3d::Identity();
     world_to_body_previous_ = Eigen::Isometry3d::Identity();
 
+    // Init prior map
+    loadMapFromFile(cl_cfg.map_from_file_path);
+
     // Create debug data folder
     data_directory_path_ << "/tmp/aicp_data";
     const char* path = data_directory_path_.str().c_str();
@@ -250,14 +253,14 @@ bool AppROS::loadMapFromFileCallBack(aicp::ProcessFile::Request& request, aicp::
 
 bool AppROS::loadMapFromFile(const std::string& file_path)
 {
-    if ((!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map)
-         || map_initialized_){
-        if(map_initialized_)
-        {
-            pcl::PointCloud<pcl::PointXYZ>::Ptr map = prior_map_->getCloud();
-            vis_->publishMap(map, prior_map_->getUtime(), 0);
-        }
-        ROS_WARN_STREAM("[Aicp] Map service disabled or map already loaded!");
+    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map){
+        ROS_WARN_STREAM("[Aicp] Map service disabled!");
+        return false;
+    }
+    if (pose_initialized_){
+        pcl::PointCloud<pcl::PointXYZ>::Ptr map = prior_map_->getCloud();
+        vis_->publishMap(map, prior_map_->getUtime(), 0);
+        ROS_WARN_STREAM("[Aicp] Map cannot be updated after localization started!");
         return false;
     }
 
@@ -269,15 +272,17 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
       ROS_ERROR_STREAM("[Aicp] Error loading map from file!");
       return false;
     }
-    ROS_INFO_STREAM("[Aicp] Loaded map with " << map->points.size() << " points.");
 
     // Pre-filter map
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_map (new pcl::PointCloud<pcl::PointXYZ>);
     regionGrowingUniformPlaneSegmentationFilter(map, filtered_map);
     // Populate map object
+    if (map_initialized_)
+        delete prior_map_;
     prior_map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
                                   filtered_map,
                                   Eigen::Isometry3d::Identity());
+    ROS_INFO_STREAM("[Aicp] Loaded map with " << prior_map_->getCloud()->points.size() << " points.");
 
     map_initialized_ = TRUE;
     vis_->publishMap(map, prior_map_->getUtime(), 0);

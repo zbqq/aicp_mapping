@@ -17,6 +17,7 @@ int main(int argc, char** argv){
     cl_cfg.fixed_frame = "map";
     cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service,
                                        // align first cloud only against map (to visualize final drift)
+    cl_cfg.map_from_file_path = "";
     cl_cfg.localize_against_map = FALSE; // if disabled, map used for visualization only
     cl_cfg.crop_map_around_base = 8.0; // rectangular box dimesions: value*2 x value*2
     cl_cfg.merge_aligned_clouds_to_map = false; // improves performance if trajectory goes
@@ -42,6 +43,7 @@ int main(int argc, char** argv){
     nh.getParam("working_mode", cl_cfg.working_mode);
     nh.getParam("fixed_frame", cl_cfg.fixed_frame);
     nh.getParam("load_map_from_file", cl_cfg.load_map_from_file);
+    nh.getParam("map_from_file_path", cl_cfg.map_from_file_path);
     nh.getParam("localize_against_map", cl_cfg.localize_against_map);
     nh.getParam("crop_map_around_base", cl_cfg.crop_map_around_base);
     nh.getParam("merge_aligned_clouds_to_map", cl_cfg.merge_aligned_clouds_to_map);

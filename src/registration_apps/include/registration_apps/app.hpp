@@ -33,6 +33,7 @@ struct CommandLineConfig
     string fixed_frame;
     bool load_map_from_file;
     bool localize_against_map;
+    string map_from_file_path;
     float crop_map_around_base;
     bool merge_aligned_clouds_to_map;
     bool failure_prediction_mode;

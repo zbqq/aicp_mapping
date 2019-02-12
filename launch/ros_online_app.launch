@@ -4,19 +4,19 @@
   <!--NOTE: The "\-\-clock" argument needs to enabled when replaying the rosbag
       (e.g. rosbag play \-\-clock my_file.bag -->
       
-  <!-- User interface -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find aicp)/config/rviz/simple_aicp.rviz">
-  </node>
+  <arg name="fixed_frame"        default="map_test"/>
 
-  <!-- This publishes the transform to the second realsense camera -->
-  <!--node pkg="tf" type="static_transform_publisher" name="realsense_forward_frame_publisher" output="screen"  args="0 0 0 0 -0.7 0 /realsense_d435_camera /realsense_d435_camera_forward 100" /-->
+  <!-- User interface -->
+  <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find aicp)/config/rviz/simple_aicp.rviz">
+  </node-->
   
   <!-- Run AICP -->
-  <!--include file="$(find aicp)/launch/aicp.launch"> </include-->
+  <include file="$(find aicp)/launch/aicp.launch"> 
+    <arg name="fixed_frame"       value="$(arg fixed_frame)"/>
+  </include>
  
-  <!-- Run AICP -->
-  <node pkg="rosbag" type="play" name="log" output="screen" args="--clock -s 150 --pause /home/snobili/logs/anymal/2018-08-13-fire-college/anymal_2018-08-13-15-26-49.bag">
-  </node>
+  <!-- Initial pose guess (IMPORTANT: set in set_aicp_initial_guess.py for each log) -->
+  <node pkg="aicp" name="set_aicp_initial_guess" type="set_aicp_initial_guess.py" args="$(arg fixed_frame)" output="screen"> 
+  </node> 
  
-
 </launch>
