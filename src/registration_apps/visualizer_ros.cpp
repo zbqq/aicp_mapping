@@ -3,16 +3,20 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_types.h>
 
-
 #include <sensor_msgs/PointCloud2.h>
+
+#include <tf_conversions/tf_eigen.h>
 
 using namespace std;
 
 namespace aicp {
 
-ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
+ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
+                                                                        fixed_frame_(fixed_frame)
 {
     cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_cloud", 10);
+    prior_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/prior_map", 10);
+    aligned_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_map", 10);
     pose_pub_ = nh_.advertise<nav_msgs::Path>("/aicp/poses",100);
     colors_ = {
          51/255.0, 160/255.0, 44/255.0,  //0
@@ -43,6 +47,9 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh) : nh_(nh)
          0.5, 0.5, 1.0,
          0.5, 1.0, 0.5,
          0.5, 0.5, 1.0};
+
+    odom_frame_ = "/odom";
+    base_frame_ = "/base";
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -58,25 +65,66 @@ void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     int nsecs = (utime - (secs * 1E6)) * 1E3;
 
     sensor_msgs::PointCloud2 output;
-    //for(auto &p: cloud_rgb->points) p.rgb = rgb;
     int nColor = cloud_rgb->size() % (colors_.size()/3);
     double r = colors_[nColor*3]*255.0;
     double g = colors_[nColor*3+1]*255.0;
     double b = colors_[nColor*3+2]*255.0;
 
-    for (size_t i = 0; i < cloud_rgb->points.size (); i++){
+    for (size_t i = 0; i < cloud_rgb->points.size (); i++)
+    {
         cloud_rgb->points[i].r = r;
         cloud_rgb->points[i].g = g;
         cloud_rgb->points[i].b = b;
-      }
+    }
 
     pcl::toROSMsg(*cloud_rgb, output);
 
     //utime has been checked and is correct;
     //cloud is called and it is correct
     output.header.stamp = ros::Time(secs, nsecs);
-    output.header.frame_id = "map";
+    output.header.frame_id = fixed_frame_;
     cloud_pub_.publish(output);
+}
+
+void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                               int64_t utime,
+                               int channel)
+{
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::copyPointCloud(*cloud, *cloud_rgb);
+
+    int secs = utime * 1E-6;
+    int nsecs = (utime - (secs * 1E6)) * 1E3;
+
+    sensor_msgs::PointCloud2 output;
+    for (size_t i = 0; i < cloud_rgb->points.size (); i++)
+    {
+        if (channel == 0)
+        {
+            cloud_rgb->points[i].r = 255.0;
+            cloud_rgb->points[i].g = 255.0;
+            cloud_rgb->points[i].b = 255.0;
+        }
+        else if (channel == 1)
+        {
+            cloud_rgb->points[i].r = 255.0;
+            cloud_rgb->points[i].g = 255.0;
+            cloud_rgb->points[i].b = 0.0;
+        }
+    }
+
+    pcl::toROSMsg(*cloud_rgb, output);
+
+    output.header.stamp = ros::Time(secs, nsecs);
+    output.header.frame_id = fixed_frame_;
+
+    if (channel == 0)
+        prior_map_pub_.publish(output);
+    else if (channel == 1)
+        aligned_map_pub_.publish(output);
+    else
+        ROS_WARN_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
 }
 
 void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){
@@ -86,17 +134,50 @@ void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, 
     int secs = utime*1E-6;
     int nsecs = (utime - (secs*1E6))*1E3;
     path_msg.header.stamp = ros::Time(secs, nsecs);
-    path_msg.header.frame_id = "map";
+    path_msg.header.frame_id = fixed_frame_;
 
     for (size_t i = 0; i < path_.size(); ++i){
         geometry_msgs::PoseStamped m;
         m.header.stamp = ros::Time(secs, nsecs);
-        m.header.frame_id = "map";
+        m.header.frame_id = fixed_frame_;
         tf::poseEigenToMsg(path_[i], m.pose);
         path_msg.poses.push_back(m);
     }
 
     pose_pub_.publish(path_msg);
+}
+
+void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time)
+{
+    // TF listener
+    tf::StampedTransform base_to_odom_tf;
+    try {
+        // waitForTransform( to frame, from frame, ros::Time(0) = last available, ... )
+        tf_listener_.waitForTransform(odom_frame_, base_frame_, ros::Time(0), ros::Duration(1.0));
+        tf_listener_.lookupTransform(odom_frame_, base_frame_, ros::Time(0), base_to_odom_tf);
+    }
+    catch (tf::TransformException ex)
+    {
+        ROS_WARN("[ROSVisualizer] %s : ", ex.what());
+        return;
+    }
+    // Convert to Eigen
+    Eigen::Isometry3d base_to_odom_eigen;
+    tf::transformTFToEigen(base_to_odom_tf, base_to_odom_eigen);
+
+    // Multiply
+    Eigen::Isometry3d fixed_frame_to_odom_eigen;
+    fixed_frame_to_odom_eigen = fixed_frame_to_base_eigen * base_to_odom_eigen.inverse();
+
+    // Convert to TF
+    tf::StampedTransform fixed_frame_to_odom_tf;
+    tf::poseEigenToTF(fixed_frame_to_odom_eigen, fixed_frame_to_odom_tf);
+
+    // Broadcast
+    tf_broadcaster_.sendTransform(tf::StampedTransform(fixed_frame_to_odom_tf,
+                                                       msg_time,
+                                                       fixed_frame_,   // from frame  --| (parent frame)
+                                                       odom_frame_));  // to frame    <-|
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,

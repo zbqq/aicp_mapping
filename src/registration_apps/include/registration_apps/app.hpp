@@ -30,8 +30,15 @@ struct CommandLineConfig
     string pose_body_channel;
     string output_channel;
     string working_mode;
+    string fixed_frame;
+    bool load_map_from_file;
+    bool localize_against_map;
+    string map_from_file_path;
+    float crop_map_around_base;
+    bool merge_aligned_clouds_to_map;
     bool failure_prediction_mode;
     int reference_update_frequency;
+    float max_correction_magnitude;
     bool verbose;
 };
 
@@ -59,6 +66,11 @@ protected:
         pose_initialized_ = FALSE;
         updated_correction_ = TRUE;
 
+        map_initialized_ = FALSE;
+        pose_marker_initialized_ = FALSE;
+
+        first_cloud_initialized_ = FALSE;
+
         valid_correction_ = FALSE;
         force_reference_update_ = FALSE;
 
@@ -79,6 +91,7 @@ protected:
 
         local_ = Eigen::Isometry3d::Identity();
         world_to_body_msg_ = Eigen::Isometry3d::Identity();
+        world_to_body_marker_msg_ = Eigen::Isometry3d::Identity();
         corrected_pose_ = Eigen::Isometry3d::Identity(); // world_to_body corrected (world -> body)
         total_correction_ = Eigen::Isometry3d::Identity();
     }
@@ -102,6 +115,9 @@ protected:
 
     // Data structure
     AlignedCloudsGraph* aligned_clouds_graph_;
+    // Map
+    AlignedCloud* prior_map_;
+    pcl::PointCloud<pcl::PointXYZ> aligned_map_;
     // Visualizer
     Visualizer* vis_;
 
@@ -114,6 +130,11 @@ protected:
 
     bool pose_initialized_;
     bool updated_correction_;
+    // Map service
+    bool map_initialized_;
+    bool pose_marker_initialized_;
+    Eigen::Isometry3d world_to_body_marker_msg_; // Initializes body pose in map from user interaction marker
+    bool first_cloud_initialized_;
 
     // Clear buffer after pose update (to avoid distortion)
     bool clear_clouds_buffer_;

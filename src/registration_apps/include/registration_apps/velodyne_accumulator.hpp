@@ -40,9 +40,6 @@ public:
     const PointCloud& getCloud();
     void clearCloud();
 
-    // filters
-    void cropMinMaxFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
-
 private:
     tf::TransformListener listener_;
     VelodyneAccumulatorConfig config_;

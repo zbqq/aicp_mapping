@@ -501,27 +501,6 @@ float getPointsInOrientedBox(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud,
   float nb_points_in_box;
   nb_points_in_box = (float)(ind_points_in_box.size());
 
-//    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-//    viewer->setBackgroundColor (0, 0, 0);
-//    viewer->addCoordinateSystem (1.0);
-//    viewer->initCameraParameters ();
-//    viewer->addPointCloud<pcl::PointXYZRGBNormal>(cloud, "sample cloud");
-
-//    // Enlarge box boundaries (before orienting it) mainly along direction perpendicular to plane
-//    float x_edge = (max_point_OBB.x - min_point_OBB.x);
-//    float y_edge = (max_point_OBB.y - min_point_OBB.y);
-//    float z_edge = (max_point_OBB.z - min_point_OBB.z); // direction perpendicular to plane
-
-//    Eigen::Vector3f position (position_OBB.x, position_OBB.y, position_OBB.z);
-//    Eigen::Quaternionf quat (rotational_matrix_OBB);
-//    viewer->addCube (position, quat, x_edge, y_edge, z_edge, "OBB");
-
-//    while(!viewer->wasStopped())
-//    {
-//      viewer->spinOnce (100);
-//      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-//    }
-
   return nb_points_in_box;
 }
 
@@ -635,4 +614,24 @@ void registrationFailurePredictionFilter(Eigen::MatrixXf system_covariance, std:
   // "On Degeneracy of Optimization-based State Estimation Problems", J. Zhang, 2016
   predictions.push_back(system_lambdas.tail<3>()[pos_min]/system_lambdas.tail<3>()[pos_max]);
 //  cout << "[Filtering Utils] Inverse Condition Number (degenerate if ~ 0, want 1): " << prediction << endl;
+}
+
+// Returns filtered cloud: crop cloud using box (centered at origin)
+// This filter reduces size of the input cloud
+void getPointsInOrientedBox(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                            float min, float max,
+                            Eigen::Matrix4f& origin)
+{
+    pcl::CropBox<pcl::PointXYZ> box_filter;
+
+    Eigen::Vector3f position, orientation;
+    position << origin(0,3), origin(1,3), origin(2,3);
+    orientation = origin.block<3,3>(0,0).eulerAngles(0, 1, 2); // (rx,ry,rz) in radians
+
+    box_filter.setMin(Eigen::Vector4f(min, min, min, 1.0)); // minX, minY, minZ
+    box_filter.setMax(Eigen::Vector4f(max, max, max, 1.0));
+    box_filter.setRotation(orientation);
+    box_filter.setTranslation(position);
+    box_filter.setInputCloud(cloud);
+    box_filter.filter(*cloud);
 }
