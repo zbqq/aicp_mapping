@@ -46,7 +46,7 @@
 using namespace std;
 using namespace aicp;
 
-void getPoseFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>& cloud, Eigen::Isometry3d& pose);
+void getPoseFromPointCloud(pcl::PointCloud<pcl::PointXYZ> &cloud, Eigen::Isometry3d& pose);
 void writeResultToFile(string out_file, int line_number, float filtered_cloud_size, 
                       float fov_overlap, float octree_overlap, float alignability, 
                       Eigen::MatrixXd &risk_prediction, Eigen::Matrix4f &T);
@@ -228,12 +228,12 @@ int main (int argc, char** argv)
   overlapper_ = create_overlapper(overlap_params_);
   classifier_ = create_classifier(classification_params_);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr ref_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr reference (new pcl::PointCloud<pcl::PointXYZ>);
   Eigen::Isometry3d reference_pose;
 
   for (int i = 0; i < number_test_clouds; i ++)
   {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr read_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr reading (new pcl::PointCloud<pcl::PointXYZ>);
     Eigen::Isometry3d reading_pose;
   
     std::stringstream pcl_name;
@@ -247,37 +247,32 @@ int main (int argc, char** argv)
       /*===================================
       =   Load Reference Cloud and Pose   =
       ===================================*/
-      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pcl_name.str().c_str(), *ref_ptr) == -1)
+      if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcl_name.str().c_str(), *reference) == -1)
       {
         PCL_ERROR ("Error loading PCD file.\n");
         return (-1);
       }
-      std::cout << "Loaded " << ref_ptr->width * ref_ptr->height << " data points from " << pcl_name.str().c_str() << std::endl;
+      std::cout << "Loaded " << reference->width * reference->height << " data points from " << pcl_name.str().c_str() << std::endl;
 
-      getPoseFromPointCloud(*ref_ptr, reference_pose);
+      getPoseFromPointCloud(*reference, reference_pose);
     }
     else // load i-th reading cloud from file
     {
       /*===================================
       =    Load Reading Cloud and Pose    =
       ===================================*/      
-      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (pcl_name.str().c_str(), *read_ptr) == -1)
+      if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcl_name.str().c_str(), *reading) == -1)
       {
         PCL_ERROR ("Error loading PCD file.\n");
         return (-1);
       }      
-      std::cout << "Loaded " << read_ptr->width * read_ptr->height << " data points from " << pcl_name.str().c_str() << std::endl;
+      std::cout << "Loaded " << reading->width * reading->height << " data points from " << pcl_name.str().c_str() << std::endl;
 
-      getPoseFromPointCloud(*read_ptr, reading_pose);
+      getPoseFromPointCloud(*reading, reading_pose);
 
       /*===================================
       =        Filter Input Clouds        =
       ===================================*/
-
-      pcl::PointCloud<pcl::PointXYZ>::Ptr ref_xyz_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::PointCloud<pcl::PointXYZ>::Ptr read_xyz_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-      copyPointCloud(*ref_ptr, *ref_xyz_ptr);
-      copyPointCloud(*read_ptr, *read_xyz_ptr);
 
       pcl::PointCloud<pcl::PointXYZ> overlap_points_ref;
       pcl::PointCloud<pcl::PointXYZ> overlap_points_read;
@@ -288,7 +283,7 @@ int main (int argc, char** argv)
       // ------------------
       // FOV-based Overlap
       // ------------------
-      fov_overlap_ = overlapFilter(*ref_xyz_ptr, *read_xyz_ptr,
+      fov_overlap_ = overlapFilter(*reference, *reading,
                                    reference_pose, reading_pose,
                                    registration_params_.sensorRange , registration_params_.sensorAngularView,
                                    overlap_points_ref, overlap_points_read);
@@ -300,10 +295,10 @@ int main (int argc, char** argv)
       // Pre-filtering: 1) down-sampling
       //                2) planes extraction
       // ------------------------------------
-      pcl::PointCloud<pcl::PointXYZ>::Ptr ref_xyz_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-      regionGrowingUniformPlaneSegmentationFilter(ref_xyz_ptr, ref_xyz_prefiltered);
-      pcl::PointCloud<pcl::PointXYZ>::Ptr read_xyz_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-      regionGrowingUniformPlaneSegmentationFilter(read_xyz_ptr, read_xyz_prefiltered);
+      pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+      regionGrowingUniformPlaneSegmentationFilter(reference, ref_prefiltered);
+      pcl::PointCloud<pcl::PointXYZ>::Ptr read_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
+      regionGrowingUniformPlaneSegmentationFilter(reading, read_prefiltered);
 
       // ---------------------
       // Octree-based Overlap
@@ -313,7 +308,7 @@ int main (int argc, char** argv)
 
       // Create octree from reference cloud (wrt robot point of view),
       // add the reading cloud and compute overlap
-      ref_tree = overlapper_->computeOverlap(*ref_xyz_prefiltered, *read_xyz_prefiltered,
+      ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
                                              reference_pose, reading_pose,
                                              read_tree);
       octree_overlap_ = overlapper_->getOverlap();
@@ -364,24 +359,17 @@ int main (int argc, char** argv)
       /*===================================
       =          Register Clouds          =
       ===================================*/
+      Eigen::Matrix4f T = Eigen::Matrix4f::Identity(4,4);
 
-      Eigen::Matrix4f T = Eigen::Matrix4f::Zero(4,4);
-
-      vector<float> soa_predictions;
-      registr_->registerClouds(*ref_xyz_prefiltered, *read_xyz_prefiltered, T, soa_predictions);
-      if (!soa_predictions.empty())
-      {
-        cout << "[Main] Degeneracy (degenerate if ~ 0): " << soa_predictions.at(0) << " %" << endl;
-        cout << "[Main] ICN (degenerate if ~ 0): " << soa_predictions.at(1) << endl;
-      }
+      registr_->registerClouds(*ref_prefiltered, *read_prefiltered, T);
 
       cout << "============================" << endl
            << "Computed 3D Transform:" << endl
            << "============================" << endl
            << T << endl;
 
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-      pcl::transformPointCloud (*read_ptr, *out_ptr, T);
+      pcl::PointCloud<pcl::PointXYZ>::Ptr output (new pcl::PointCloud<pcl::PointXYZ>);
+      pcl::transformPointCloud (*reading, *output, T);
 
       // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       // // Publish clouds and octrees to LCM
@@ -393,8 +381,8 @@ int main (int argc, char** argv)
       // publishOctreeToLCM(lcm, read_tree, "OCTOMAP");
       // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       // Write results to file
-      writeResultToFile(out_file.str().c_str(), i, read_xyz_prefiltered->size(),
-                        fov_overlap_, octree_overlap_, alignability_, 
+      writeResultToFile(out_file.str().c_str(), i, read_prefiltered->size(),
+                        fov_overlap_, octree_overlap_, alignability_,
                         risk_prediction_, T);
       // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       cout << "\n" << "-------------------------------------------------------------------------------" << "\n \n";
@@ -407,7 +395,7 @@ int main (int argc, char** argv)
   return (0);
 }
 
-void getPoseFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>& cloud, Eigen::Isometry3d& pose)
+void getPoseFromPointCloud(pcl::PointCloud<pcl::PointXYZ>& cloud, Eigen::Isometry3d& pose)
 {
   pose.setIdentity();
   pose.translation() << cloud.sensor_origin_.x(), cloud.sensor_origin_.y(), cloud.sensor_origin_.z();

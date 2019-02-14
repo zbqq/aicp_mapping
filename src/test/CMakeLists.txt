@@ -1,10 +1,15 @@
 ###############
 add_executable(aicp-test test_aicp.cpp)
 target_link_libraries(aicp-test 
-	boost_system yaml-cpp
-	aicpPointmatcherUtils aicpFilteringUtils
-	aicpCommonUtils aicpDrawingUtils 
-	aicpRegistration aicpOverlap aicpClassification)
+                      boost_system
+                      yaml-cpp
+                      aicpPointmatcherUtils
+                      aicpFilteringUtils
+                      aicpCommonUtils
+                      aicpDrawingUtils 
+                      aicpRegistration
+                      aicpOverlap
+                      aicpClassification)
 
 ###############
 add_executable(color-octomap-server color-octomap-server.cpp)

@@ -1,0 +1,1143 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /TF1/Frames1
+        - /AICP1
+      Splitter Ratio: 0.719444454
+    Tree Height: 873
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /Interact1
+      - /2D Nav Goal1
+      - /Center Frame1
+    Name: Tool Properties
+    Splitter Ratio: 0.588679016
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+      - /Current View1/Focal Point1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Experimental: false
+    Name: Time
+    SyncMode: 0
+    SyncSource: ""
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 360
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.100000001
+      Cell Size: 0.25
+      Class: rviz/Grid
+      Color: 255; 255; 255
+      Enabled: true
+      Line Style:
+        Line Width: 0.0299999993
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 100
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+      Marker Scale: 0.25
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: true
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /rviz_world_loader/marker
+          Name: World
+          Namespaces:
+            {}
+          Queue Size: 0
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /gazebo2rviz_models_visual
+          Name: Gazebo World
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: World
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            LF_ADAPTER:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LF_FOOT:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LF_HIP:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LF_SHANK:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LF_THIGH:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LH_ADAPTER:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LH_FOOT:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LH_HIP:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LH_SHANK:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            LH_THIGH:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            Link Tree Style: Links in Alphabetic Order
+            RF_ADAPTER:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RF_FOOT:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RF_HIP:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RF_SHANK:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RF_THIGH:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RH_ADAPTER:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RH_FOOT:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RH_HIP:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RH_SHANK:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            RH_THIGH:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            base:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            base_inertia:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            handle_mount_front:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            handle_mount_front_forward:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            handle_mount_front_forward_sensor_mount_axis_aligned:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            handle_mount_front_sensor_mount_axis_aligned:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            imu_link:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            realsense_d435_camera:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            realsense_d435_camera_axis_aligned:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_d435_camera_parent:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_d435_forward_camera:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            realsense_d435_forward_camera_axis_aligned:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_d435_forward_camera_parent:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_forward_mount:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_forward_mount_tilted:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            realsense_mount:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            realsense_mount_tilted:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            velodyne:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            velodyne_axis_aligned:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            velodyne_mount:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+          Name: Model
+          Robot Description: quadruped_description
+          TF Prefix: ""
+          Update Interval: 0
+          Value: true
+          Visual Enabled: true
+        - Class: rviz/InteractiveMarkers
+          Enable Transparency: true
+          Enabled: true
+          Name: Interaction Marker
+          Show Axes: true
+          Show Descriptions: true
+          Show Visual Aids: false
+          Update Topic: /interaction_marker/update
+          Value: true
+      Enabled: true
+      Name: ANYmal
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: 0.100000001
+              Name: Desired Torque
+              Show text: true
+              Topic: /loco/cfd/distVirtualTorqueInBaseFrameAtBase
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: 0.00200000009
+              Name: Desired Force
+              Show text: true
+              Topic: /loco/cfd/distVirtualForceInBaseFrameAtBase
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+          Enabled: true
+          Name: Virtual Model Control
+        - Class: rviz/Group
+          Displays:
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: -0.00499999989
+              Name: Left Fore Foot
+              Show text: true
+              Topic: /loco/cfd/leftForeLeg/desContactForceAtFoot
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: -0.00499999989
+              Name: Right Fore Foot
+              Show text: true
+              Topic: /loco/cfd/rightForeLeg/desContactForceAtFoot
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: -0.00499999989
+              Name: Left Hind Foot
+              Show text: true
+              Topic: /loco/cfd/leftHindLeg/desContactForceAtFoot
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+            - Alpha: 1
+              Class: kindr_rviz_plugins/VectorAtPosition
+              Color: 0; 0; 0
+              Enabled: true
+              History Length: 1
+              Length scale: -0.00499999989
+              Name: Right Hind Foot
+              Show text: true
+              Topic: /loco/cfd/rightHindLeg/desContactForceAtFoot
+              Unreliable: false
+              Value: true
+              Width scale: 0.300000012
+          Enabled: true
+          Name: Contact Force Distribution
+      Enabled: false
+      Name: Locomotion Controller
+    - Class: rviz/Group
+      Displays:
+        - Class: free_gait_rviz_plugin/FreeGaitPreview
+          Enabled: true
+          Name: Free Gait Virtual Preview
+          Playback:
+            Playback Speed: 3
+          Settings:
+            Auto En/Disable Visuals: true
+            Auto Hide When: Reached End of Preview
+            Auto-Play: true
+            Feedback Topic: ""
+            Goal Topic: /free_gait/preview_steps
+            Localization Topic: /localization_manager/map_in_odom
+            Preview Rate: 100
+            Result Topic: ""
+            Robot Model: Free Gait Virtual Preview Robot
+            Robot State Topic: /state_estimator/quadruped_state
+            Start State: Reset to Real Robot State
+            TF Prefix: virtual_preview
+          Value: true
+          Visuals:
+            End Effector Targets:
+              Color: 0; 0; 1
+              Value: true
+            End Effector Trajectories: true
+            Stances: true
+            Surface Normals: true
+            Value: false
+        - Alpha: 0.5
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: false
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: Free Gait Virtual Preview Robot
+          Robot Description: quadruped_description
+          TF Prefix: virtual_preview
+          Update Interval: 0
+          Value: false
+          Visual Enabled: true
+        - Class: free_gait_rviz_plugin/FreeGaitPreview
+          Enabled: true
+          Name: Free Gait Real Preview
+          Playback:
+            Playback Speed: 6
+          Settings:
+            Auto En/Disable Visuals: true
+            Auto Hide When: Received Action Result
+            Auto-Play: true
+            Feedback Topic: ""
+            Goal Topic: /anymal_ctrl_free_gait/execute_steps/goal
+            Localization Topic: /localization_manager/map_in_odom
+            Preview Rate: 30
+            Result Topic: /anymal_ctrl_free_gait/execute_steps/result
+            Robot Model: Free Gait Real Preview Robot
+            Robot State Topic: /state_estimator/quadruped_state
+            Start State: Reset to Real Robot State
+            TF Prefix: real_preview
+          Value: true
+          Visuals:
+            End Effector Targets:
+              Color: 0; 0; 1
+              Value: true
+            End Effector Trajectories: true
+            Stances: true
+            Surface Normals: true
+            Value: false
+        - Alpha: 0.5
+          Class: rviz/RobotModel
+          Collision Enabled: false
+          Enabled: false
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Name: Free Gait Real Preview Robot
+          Robot Description: quadruped_description
+          TF Prefix: real_preview
+          Update Interval: 0
+          Value: false
+          Visual Enabled: true
+      Enabled: false
+      Name: Free Gait
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.709428012
+            Min Value: -0.0267386734
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar_master/point_cloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.0305535495
+            Min Value: -0.0256133378
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud Filtered
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar_master/point_cloud_filtered
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.00463200966
+            Min Value: -0.014493417
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud Scan
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar_master/point_cloud_scan
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.00995948911
+            Min Value: -0.0137250423
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud Scan Filtered
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar_master/point_cloud_scan_filtered
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.44856146
+            Min Value: -0.00817596447
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/LaserScan
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Laser Scan
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar/scan
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 0.447014213
+            Min Value: -0.0087858187
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/LaserScan
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Laser Scan Filtered
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /actuated_lidar_master/scan_filtered
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: false
+      Name: Actuated Lidar
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 20.3362541
+            Min Value: -2.01221418
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /velodyne/point_cloud_filtered
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: false
+      Name: Velodyne
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Point Cloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /realsense_d435/depth/color/points
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: false
+      Name: RealSense D435
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.100000001
+          Class: rviz/Pose
+          Color: 255; 155; 155
+          Enabled: true
+          Head Length: 0.300000012
+          Head Radius: 0.100000001
+          Name: Initial Guess
+          Shaft Length: 1
+          Shaft Radius: 0.0500000007
+          Shape: Arrow
+          Topic: /icp_tools/initial_guess
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.100000001
+          Class: rviz/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.300000012
+          Head Radius: 0.100000001
+          Name: Resulting Pose
+          Shaft Length: 1
+          Shaft Radius: 0.0500000007
+          Shape: Arrow
+          Topic: /icp_tools/pose_visualizable
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2.02160287
+            Min Value: -0.0376505554
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Input Point Cloud (filtered)
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /icp_tools/input_point_cloud_filtered
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2.62618423
+            Min Value: -0.119977951
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Input Point Cloud (filtered, matched)
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /icp_tools/input_point_cloud_filtered_and_matched
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 3.13260007
+            Min Value: -0.0511999987
+            Value: true
+          Axis: Z
+          Channel Name: probabilityStatic
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 1
+          Min Color: 0; 0; 0
+          Min Intensity: 0.100000001
+          Name: Map (static)
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /icp_tools/map_static
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 3.13260007
+            Min Value: -0.0511999987
+            Value: true
+          Axis: Z
+          Channel Name: probabilityStatic
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0.100000001
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Map (dynamic)
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /icp_tools/map_dynamic
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: false
+      Enabled: false
+      Name: ICP
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 3.13260007
+            Min Value: -0.0511999987
+            Value: true
+          Axis: Z
+          Channel Name: probabilityStatic
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 1
+          Min Color: 0; 0; 0
+          Min Intensity: 0.100000001
+          Name: Prior Map
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /aicp/prior_map
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: ""
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Output Map
+          Position Transformer: ""
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /aicp/aligned_map
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2.62618423
+            Min Value: -0.119977951
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 0
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Aligned Cloud
+          Position Transformer: XYZ
+          Queue Size: 1
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.00999999978
+          Style: Points
+          Topic: /aicp/aligned_cloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Buffer Length: 1
+          Class: rviz/Path
+          Color: 25; 255; 0
+          Enabled: true
+          Head Diameter: 0.300000012
+          Head Length: 0.200000003
+          Length: 0.300000012
+          Line Style: Lines
+          Line Width: 0.0299999993
+          Name: Corrected Path
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: Axes
+          Radius: 0.0299999993
+          Shaft Diameter: 0.100000001
+          Shaft Length: 0.100000001
+          Topic: /aicp/poses
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.0500000007
+          Class: rviz/PoseWithCovariance
+          Color: 255; 25; 0
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.300000012
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.300000012
+          Head Radius: 0.100000001
+          Name: Corrected Pose
+          Shaft Length: 1
+          Shaft Radius: 0.0500000007
+          Shape: Axes
+          Topic: /aicp/pose_corrected
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: AICP
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Class: grid_map_rviz_plugin/GridMap
+          Color: 200; 200; 200
+          Color Layer: elevation
+          Color Transformer: GridMapLayer
+          Enabled: true
+          Height Layer: elevation
+          Height Transformer: GridMapLayer
+          History Length: 1
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 10
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Elevation Map
+          Show Grid Lines: true
+          Topic: /elevation_mapping/elevation_map
+          Unreliable: false
+          Use Rainbow: true
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /elevation_map_long_range_fused_visualization/surface_normals
+          Name: Surface Normals
+          Namespaces:
+            {}
+          Queue Size: 1
+          Value: false
+      Enabled: false
+      Name: Elevation Map
+  Enabled: true
+  Global Options:
+    Background Color: 0; 0; 0
+    Default Light: true
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Topic: /initialpose
+    - Class: rviz/SetGoal
+      Topic: /goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+    - Class: center_frame_tool/CenterFrameTool
+      Frame: base
+    - Class: gazebo_play_tool/GazeboPlayTool
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 29.022049
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.0599999987
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: -0.198140472
+        Y: -1.38669622
+        Z: -3.84077716
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.0500000007
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.00999999978
+      Pitch: 0.579796851
+      Target Frame: base
+      Value: Orbit (rviz)
+      Yaw: 5.30356407
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1416
+  Hide Left Dock: false
+  Hide Right Dock: true
+  QMainWindow State: 000000ff00000000fd00000004000000000000016a00000542fc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005e00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000028000003a9000000d000fffffffb0000000a0056006900650077007301000003d700000193000000a900fffffffb0000001a004b0069006e006500630074002000430061006d0065007200610000000191000001010000000000000000fb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000100044006900730070006c006100790073000000030100000135000000d000fffffffb0000001a004b0069006e006500630074002000430061006d0065007200610000000000ffffffff0000000000000000fb0000000c00430061006d00650072006100000001d20000007c0000000000000000000000010000017200000226fc0200000003fb0000001e0054006f006f006c002000500072006f0070006500720074006900650073000000003c000000b80000005e00fffffffc00000028000002260000000000fffffffa000000000100000003fb00000012005000610074006800500061006e0065006c0000000000ffffffff0000000000000000fb00000012005000610074006800500061006e0065006c0100000000ffffffff0000000000000000fb0000000a0056006900650077007300000004ba000001720000010f00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000002000009bd000000a9fc0100000001fb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000000000000075a0000000000000000000000030000073f0000003efc0100000002fb0000000800540069006d006500000000000000073f0000030000fffffffb0000000800540069006d006501000000000000045000000000000000000000084f0000054200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: true
+  Width: 2495
+  X: 2625
+  Y: 24

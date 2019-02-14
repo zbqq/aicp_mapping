@@ -196,7 +196,7 @@ namespace aicp {
 
     gettimeofday(&stop, NULL);  // stop timer
     double time_to_insert = (stop.tv_sec - start.tv_sec) + 1.0e-6 *(stop.tv_usec - start.tv_usec);
-    cout << "[Octrees Overlap] Time to create octree: " << time_to_insert << " seconds." << endl;
+//    cout << "[Octrees Overlap] Time to create octree: " << time_to_insert << " seconds." << endl;
 
     // get rid of graph in mem before doing anything fancy with tree (=> memory)
     delete graph;

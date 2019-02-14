@@ -11,7 +11,7 @@ namespace aicp{
   PointmatcherRegistration::~PointmatcherRegistration() {}
 
   //Templates
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)
+  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZ>& cloud_ref, pcl::PointCloud<pcl::PointXYZ>& cloud_read, Eigen::Matrix4f &final_transform)
   {
     DP empty;
     reference_cloud_ = empty;
@@ -19,10 +19,10 @@ namespace aicp{
     fromPCLToDataPoints(reference_cloud_, cloud_ref);
     fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    return registerClouds(final_transform, failure_prediction_factors);
+    return registerClouds(final_transform);
   }
 
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)
+  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGB>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGB>& cloud_read, Eigen::Matrix4f &final_transform)
   {
     DP empty;
     reference_cloud_ = empty;
@@ -30,10 +30,10 @@ namespace aicp{
     fromPCLToDataPoints(reference_cloud_, cloud_ref);
     fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-    return registerClouds(final_transform, failure_prediction_factors);
+    return registerClouds(final_transform);
   }
 
-  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)
+  void PointmatcherRegistration::registerClouds(pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_ref, pcl::PointCloud<pcl::PointXYZRGBNormal>& cloud_read, Eigen::Matrix4f &final_transform)
   {
 //    DP empty;
 //    reference_cloud_ = empty;
@@ -41,7 +41,7 @@ namespace aicp{
 //    fromPCLToDataPoints(reference_cloud_, cloud_ref);
 //    fromPCLToDataPoints(reading_cloud_, cloud_read);
 
-//    return registerClouds(final_transform, failure_prediction_factors);
+//    return registerClouds(final_transform);
   }
 
   //Load and apply configuration
@@ -89,7 +89,7 @@ namespace aicp{
   }
 
   //Registration: Compute transform which aligns reading cloud onto the reference cloud.
-  void PointmatcherRegistration::registerClouds(Eigen::Matrix4f &final_transform, vector<float>& failure_prediction_factors)
+  void PointmatcherRegistration::registerClouds(Eigen::Matrix4f &final_transform)
   {
     int cloud_dimension = reference_cloud_.getEuclideanDim();
 
@@ -120,9 +120,9 @@ namespace aicp{
     // cout << "[Pointmatcher] System Covariance (A^T * A): " << endl << system_covariance << endl;
     // registrationFailurePredictionFilter(system_covariance, failure_prediction_factors);
     // cout << "[Pointmatcher] Failure Prediction Factor: " << endl << failure_prediction_factor << endl;
-    std::cout << "[Pointmatcher] Degeneracy and ICN state: DISABLED!\n";
-    if (!failure_prediction_factors.empty())
-      failure_prediction_factors.clear();
+    // std::cout << "[Pointmatcher] Degeneracy and ICN state: DISABLED!\n";
+    // if (!failure_prediction_factors.empty())
+    //  failure_prediction_factors.clear();
 
     // Transform reading with T
     DP tmp_out_read_cloud_(reading_cloud_);

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+  <!--NOTE: The "\-\-clock" argument needs to enabled when replaying the rosbag
+      (e.g. rosbag play \-\-clock my_file.bag -->
+      
+  <arg name="fixed_frame"        default="map_test"/>
+
+  <!-- User interface -->
+  <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find aicp)/config/rviz/simple_aicp.rviz">
+  </node-->
+  
+  <!-- Run AICP -->
+  <include file="$(find aicp)/launch/aicp.launch"> 
+    <arg name="fixed_frame"       value="$(arg fixed_frame)"/>
+  </include>
+ 
+  <!-- Initial pose guess (IMPORTANT: set in set_aicp_initial_guess.py for each log) -->
+  <node pkg="aicp" name="set_aicp_initial_guess" type="set_aicp_initial_guess.py" args="$(arg fixed_frame)" output="screen"> 
+  </node> 
+ 
+</launch>
