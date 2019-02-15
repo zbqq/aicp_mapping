@@ -18,7 +18,8 @@
     <!-- Prior map info -->
     <param name="load_map_from_file"            value="$(arg load_map_from_file)" />
     <param name="map_from_file_path"            value="$(arg map_from_file_path)" />
-    <param name="localize_against_map"          value="$(arg localize_against_map)" />
+    <param name="localize_against_prior_map"    value="$(arg localize_against_map)" />
+    <param name="localize_against_built_map"    value="false" />
     <!-- Prior map params -->
     <param name="crop_map_around_base"          value="15.0" /> <!-- box dimesions: value*2 x value*2 -->
                                                                 <!-- 15.0 to generate Ground Truth (David IROS19) -->
