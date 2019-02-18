@@ -2,7 +2,7 @@
 
 <launch>
 
-  <arg name="fixed_frame"      default="$(arg fixed_frame)"/>
+  <arg name="fixed_frame"      default="map"/>
   <arg name="map_path"         default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
 
   <!-- Run AICP (command line configuration) -->
