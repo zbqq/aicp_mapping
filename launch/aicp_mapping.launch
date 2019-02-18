@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mode: requires no prior map. builds the map on the fly at launch -->
+
+<launch>
+
+  <arg name="load_map_from_file"         default="false"/>
+  <arg name="localize_against_map"         default="false"/>
+
+  <include file="$(find aicp)/launch/aicp.launch"> 
+    <arg name="fixed_frame"       value="$(arg fixed_frame)"/>
+  </include>
+
+</launch>
