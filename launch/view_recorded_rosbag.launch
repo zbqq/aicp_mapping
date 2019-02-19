@@ -13,11 +13,6 @@
     <arg name="realsense"        value="true"/>
   </include>
 
-  <!-- Quadruped tf publisher -->
-  <!-- doesnt seem to be needed -->
-<!--  <include file="$(find quadruped_tf_publisher)/launch/quadruped_tf_publisher.launch"/>
--->
-
   <arg name="data_package"            default="gazebo_worlds"/>
   <arg name="world"                   default="empty"/>
   <arg name="rviz_config_path"        default="$(find aicp)/config/rviz/config_aicp.rviz"/>
@@ -31,11 +26,5 @@
     <arg name="rqt_perspective_path"  value="$(arg rqt_perspective_path)"/>
     <arg name="tf_minimal"            value="false"/>
   </include>
-
-  <!-- This publishes the transform to the second realsense camera -->
-  <!-- This is not needed as of 27 Nov 2018, playback of older logs might require it -->
-<!--
-  <node pkg="tf" type="static_transform_publisher" name="realsense_forward_frame_publisher" output="screen"  args="0 0 0 0 -0.7 0 /realsense_d435_camera /realsense_d435_camera_forward 100" />
--->
 
 </launch>
