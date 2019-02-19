@@ -2,8 +2,11 @@
 
 <launch>
 
-  <arg name="fixed_frame"      default="$(arg fixed_frame)"/>
-  <arg name="map_path"         default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
+  <arg name="fixed_frame"      default="map"/>
+  <arg name="map_from_file_path"         default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
+  <arg name="load_map_from_file"      default="true"/>
+  <arg name="localize_against_map"      default="true"/>
+
 
   <!-- Run AICP (command line configuration) -->
   <node pkg="aicp" type="aicp_ros_online" name="aicp_ros_online" output="screen">
@@ -13,9 +16,9 @@
     <!-- Fixed frame (default: map, debug: map_test -->
     <param name="fixed_frame"                   value="$(arg fixed_frame)" />
     <!-- Prior map info -->
-    <param name="load_map_from_file"            value="true" />
-    <param name="map_from_file_path"            value="$(arg map_path)" />
-    <param name="localize_against_map"          value="true" />
+    <param name="load_map_from_file"            value="$(arg load_map_from_file)" />
+    <param name="map_from_file_path"            value="$(arg map_from_file_path)" />
+    <param name="localize_against_map"          value="$(arg localize_against_map)" />
     <!-- Prior map params -->
     <param name="crop_map_around_base"          value="15.0" /> <!-- box dimesions: value*2 x value*2 -->
                                                                 <!-- 15.0 to generate Ground Truth (David IROS19) -->
