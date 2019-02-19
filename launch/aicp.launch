@@ -2,10 +2,10 @@
 
 <launch>
 
-  <arg name="fixed_frame"      default="map"/>
-  <arg name="map_from_file_path"         default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
-  <arg name="load_map_from_file"      default="true"/>
-  <arg name="localize_against_map"      default="true"/>
+  <arg name="fixed_frame"                  default="map"/>
+  <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
+  <arg name="load_map_from_file"           default="true"/>
+  <arg name="localize_against_map"         default="true"/>
 
 
   <!-- Run AICP (command line configuration) -->
@@ -31,7 +31,7 @@
     <!-- 3D point cloud characteristics -->
     <param name="batch_size"                    value="7" />
   	<!-- Visualize and store -->
-    <param name="verbose"                       value="true" />
+    <param name="verbose"                       value="false" />
 
   </node>
 
