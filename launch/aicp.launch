@@ -4,8 +4,9 @@
 
   <arg name="fixed_frame"                  default="map"/>
   <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
-  <arg name="load_map_from_file"           default="true"/>
-  <arg name="localize_against_map"         default="true"/>
+  <arg name="load_map_from_file"           default="false"/>
+  <arg name="localize_against_prior_map"   default="false"/>
+  <arg name="localize_against_built_map"   default="false"/>
 
 
   <!-- Run AICP (command line configuration) -->
@@ -18,7 +19,8 @@
     <!-- Prior map info -->
     <param name="load_map_from_file"            value="$(arg load_map_from_file)" />
     <param name="map_from_file_path"            value="$(arg map_from_file_path)" />
-    <param name="localize_against_map"          value="$(arg localize_against_map)" />
+    <param name="localize_against_prior_map"    value="$(arg localize_against_prior_map)" />
+    <param name="localize_against_built_map"    value="$(arg localize_against_built_map)" /> <!-- implicit loop closure when revisit known place -->
     <!-- Prior map params -->
     <param name="crop_map_around_base"          value="15.0" /> <!-- box dimesions: value*2 x value*2 -->
                                                                 <!-- 15.0 to generate Ground Truth (David IROS19) -->

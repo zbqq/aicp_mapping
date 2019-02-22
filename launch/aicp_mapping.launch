@@ -4,11 +4,13 @@
 <launch>
 
   <arg name="load_map_from_file"           default="false"/>
-  <arg name="localize_against_map"         default="false"/>
+  <arg name="localize_against_prior_map"   default="false"/> <!-- ! should always be false in this launch file ! -->
+  <arg name="localize_against_built_map"   default="false"/> <!-- implicit loop closure when revisit known place -->
 
   <include file="$(find aicp)/launch/aicp.launch"> 
     <arg name="load_map_from_file"         value="$(arg load_map_from_file)"/>
-    <arg name="localize_against_map"       value="$(arg localize_against_map)"/>
+    <arg name="localize_against_prior_map" value="$(arg localize_against_prior_map)"/>
+    <arg name="localize_against_built_map" value="$(arg localize_against_built_map)"/>
   </include>
 
 </launch>

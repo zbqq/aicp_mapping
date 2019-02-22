@@ -68,7 +68,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
 {
-    if ((cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+    if ((cl_cfg_.load_map_from_file || cl_cfg_.localize_against_prior_map)
          && !pose_marker_initialized_){
         ROS_WARN_STREAM("[Aicp] Pose initial guess in map not set, waiting for interactive marker...");
         return;
@@ -85,7 +85,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         world_to_body_previous_ = world_to_body_;
 
         // Initialize transform: pose_in_odom -> interactive_marker
-        if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+        if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_prior_map)
         {
             initialT_ = (world_to_body_marker_msg_ * world_to_body_.inverse()).matrix().cast<float>();
             total_correction_ = fromMatrix4fToIsometry3d(initialT_);
@@ -225,7 +225,7 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 
 void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr& init_pose_msg_in)
 {
-    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map){
+    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_prior_map){
         ROS_WARN_STREAM("[Aicp] Map service disabled - interactive marker neglected.");
         return;
     }
@@ -253,7 +253,7 @@ bool AppROS::loadMapFromFileCallBack(aicp::ProcessFile::Request& request, aicp::
 
 bool AppROS::loadMapFromFile(const std::string& file_path)
 {
-    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_map){
+    if (!cl_cfg_.load_map_from_file && !cl_cfg_.localize_against_prior_map){
         ROS_WARN_STREAM("[Aicp] Map service disabled!");
         return false;
     }

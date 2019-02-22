@@ -73,7 +73,7 @@ void App::operator()() {
         for (auto cloud : work_queue) {
 
             // First point cloud (becomes first reference)
-            if(!cl_cfg_.localize_against_map &&
+            if(!cl_cfg_.localize_against_prior_map &&
                !cl_cfg_.load_map_from_file &&
                aligned_clouds_graph_->isEmpty())
             {
@@ -137,7 +137,7 @@ void App::operator()() {
 
                 // Crop map
                 pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_map (new pcl::PointCloud<pcl::PointXYZ>);
-                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_prior_map)
                 {
                     // crop map around cloud->getPriorPose();
                     *cropped_map = *(prior_map_->getCloud());
@@ -150,11 +150,21 @@ void App::operator()() {
                 // Set reference cloud
                 Eigen::Isometry3d ref_pose;
                 pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered;
-                if (!first_cloud_initialized_ || cl_cfg_.localize_against_map)
+                if (!first_cloud_initialized_ || cl_cfg_.localize_against_prior_map)
                 {
                     ref_prefiltered = cropped_map;
                     ref_pose = cloud->getPriorPose();
                     first_cloud_initialized_ = TRUE;
+                }
+                else if (cl_cfg_.localize_against_built_map)
+                {
+                    copyPointCloud(aligned_map_, *cropped_map);
+                    Eigen::Matrix4f tmp = (cloud->getPriorPose()).matrix().cast<float>();
+                    getPointsInOrientedBox(cropped_map,
+                                           -cl_cfg_.crop_map_around_base,
+                                           cl_cfg_.crop_map_around_base, tmp);
+                    ref_prefiltered = cropped_map;
+                    ref_pose = cloud->getPriorPose();
                 }
                 else
                 {
@@ -214,18 +224,18 @@ void App::operator()() {
                 ColorOcTree* ref_tree;
                 ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
 
-                if((cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
-                    cl_cfg_.localize_against_map)
-                    octree_overlap_ = 100.0;
-                else
-                {
+//                if(//(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
+//                    cl_cfg_.localize_against_prior_map)
+//                    octree_overlap_ = 100.0;
+//                else
+//                {
                     // 1) create octree from reference cloud (wrt robot's point of view)
                     // 2) add the reading cloud and compute overlap
                     ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
                                                            ref_pose, read_pose,
                                                            read_tree);
                     octree_overlap_ = overlapper_->getOverlap();
-                }
+//                }
 
                 cout << "====================================" << endl
                      << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
@@ -294,9 +304,9 @@ void App::operator()() {
                 {
                     this->doRegistration(*ref_prefiltered, *read_prefiltered, correction);
                     // Probably failed alignment
-                    if ((correction(0,3) > cl_cfg_.max_correction_magnitude ||
-                         correction(1,3) > cl_cfg_.max_correction_magnitude ||
-                         correction(2,3) > cl_cfg_.max_correction_magnitude) &&
+                    if ((abs(correction(0,3)) > cl_cfg_.max_correction_magnitude ||
+                         abs(correction(1,3)) > cl_cfg_.max_correction_magnitude ||
+                         abs(correction(2,3)) > cl_cfg_.max_correction_magnitude) &&
                          aligned_clouds_graph_->getNbClouds() != 0)
                     {
                         cout << "[Main] -----> WRONG ALIGNMENT: DROPPED POINT CLOUD" << endl;
@@ -313,7 +323,7 @@ void App::operator()() {
                     // windowed reference update policy (count number of clouds after last reference)
                     if(((aligned_clouds_graph_->getNbClouds() - (aligned_clouds_graph_->getCurrentReferenceId()+1))
                         % cl_cfg_.reference_update_frequency == 0) &&
-                        !cl_cfg_.localize_against_map)
+                        !cl_cfg_.localize_against_prior_map)
                     {
                         // set AlignedCloud to be next reference
                         aligned_clouds_graph_->updateReference(aligned_clouds_graph_->getNbClouds()-1);
@@ -321,7 +331,7 @@ void App::operator()() {
                         cout << "[Main] -----> FREQUENCY REFERENCE UPDATE" << endl;
                     }
                     else if(cl_cfg_.load_map_from_file &&
-                            !cl_cfg_.localize_against_map &&
+                            !cl_cfg_.localize_against_prior_map &&
                             aligned_clouds_graph_->getNbClouds() == 1)
                     {
                         // Case: reference is the map just for first iteration (-> visualization)
@@ -359,7 +369,7 @@ void App::operator()() {
                     pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map_ptr = aligned_map_.makeShared();
                     vis_->publishMap(aligned_map_ptr, cloud->getUtime(), 1);
                 }
-                else if(cl_cfg_.localize_against_map &&
+                else if(cl_cfg_.localize_against_prior_map &&
                         (aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
                 {
                     vis_->publishPose(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(),
@@ -377,7 +387,7 @@ void App::operator()() {
 
                 // Downsample prior map at very low frequency
                 // (once every 30 clouds -> amortized time)
-                if(cl_cfg_.localize_against_map && cl_cfg_.merge_aligned_clouds_to_map &&
+                if(cl_cfg_.localize_against_prior_map && cl_cfg_.merge_aligned_clouds_to_map &&
                    (aligned_clouds_graph_->getNbClouds()-1) % 30 == 0)
                 {
                     pcl::PointCloud<pcl::PointXYZ>::Ptr map_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
@@ -408,7 +418,7 @@ void App::operator()() {
                 cout << "Reading: " << aligned_clouds_graph_->getLastCloudId() << endl;
                 cout << "Number Clouds: " << aligned_clouds_graph_->getNbClouds() << endl;
                 cout << "Output Map Size: " << aligned_map_.size() << endl;
-                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_map)
+                if (cl_cfg_.load_map_from_file || cl_cfg_.localize_against_prior_map)
                     cout << "Prior Map Size: " << prior_map_->getCloud()->size() << endl;
                 cout << "Next Reference: " << aligned_clouds_graph_->getCurrentReferenceId() << endl;
                 cout << "Updates: " << updates_counter_ << endl;
