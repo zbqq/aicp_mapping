@@ -2,13 +2,10 @@
 #define AICP_CLASSIFICATION_COMMON_HPP_
 
 #include <iostream>
-#include <string>
+#include <memory>
 #include <vector>
-#include <Eigen/Dense>
-#include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/common/common_headers.h>
 
+#include <Eigen/Dense>
 
 static void confusionMatrix(unsigned int tp, unsigned int tn, unsigned int fp, unsigned int fn) {
   std::cout << "====================================" << std::endl

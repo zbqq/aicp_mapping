@@ -1,28 +1,24 @@
 #pragma once
+
 #include <memory>
-#include <lcm/lcm-cpp.hpp>
-#include <bot_param/param_client.h>
-#include <cloud_accumulate/cloud_accumulate.hpp>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <thread>
-#include <lcmtypes/bot_core/pose_t.hpp>
-#include <lcmtypes/bot_core/rigid_transform_t.hpp>
 
-#include "aicp_registration/pointmatcher_registration.hpp"
+#include <Eigen/Dense>
+
 #include "aicp_registration/common.hpp"
-#include "aicp_classification/common.hpp"
-#include "aicp_overlap/common.hpp"
-
+#include "aicp_registration/pointmatcher_registration.hpp"
 #include "aicp_registration/aligned_clouds_graph.hpp"
-
 #include "aicp_registration/abstract_registrator.hpp"
+
+#include "aicp_overlap/common.hpp"
 #include "aicp_overlap/abstract_overlapper.hpp"
+
+#include "aicp_classification/common.hpp"
 #include "aicp_classification/abstract_classification.hpp"
 
 #include "registration_apps/visualizer.hpp"
-
-#include <pointmatcher/PointMatcher.h>
 
 struct CommandLineConfig
 {
@@ -64,16 +60,16 @@ public:
 
 protected:
     void paramInit(){
-        pose_initialized_ = FALSE;
-        updated_correction_ = TRUE;
+        pose_initialized_ = false;
+        updated_correction_ = true;
 
-        map_initialized_ = FALSE;
-        pose_marker_initialized_ = FALSE;
+        map_initialized_ = false;
+        pose_marker_initialized_ = false;
 
-        first_cloud_initialized_ = FALSE;
+        first_cloud_initialized_ = false;
 
-        valid_correction_ = FALSE;
-        force_reference_update_ = FALSE;
+        valid_correction_ = false;
+        force_reference_update_ = false;
 
         // Reference cloud update counters
         updates_counter_ = 0;
@@ -81,7 +77,7 @@ protected:
         // Count lines output file
         online_results_line_ = 0;
 
-        clear_clouds_buffer_ = FALSE;
+        clear_clouds_buffer_ = false;
 
         fov_overlap_ = -1.0;
         octree_overlap_ = -1.0;
@@ -157,7 +153,7 @@ protected:
     bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d total_correction_;
-    std::vector<Isometry3d> poseNodes_;
+    std::vector<Eigen::Isometry3d> poseNodes_;
     // Reference cloud update counters
     int updates_counter_;
     // Current reference pre-filtered

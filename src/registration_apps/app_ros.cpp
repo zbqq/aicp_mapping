@@ -119,9 +119,9 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
     {
         {
             std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-            clear_clouds_buffer_ = TRUE;
+            clear_clouds_buffer_ = true;
         }
-        updated_correction_ = FALSE;
+        updated_correction_ = false;
     }
 
     if (cl_cfg_.verbose)
@@ -145,7 +145,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
         }
     }
 
-    pose_initialized_ = TRUE;
+    pose_initialized_ = true;
 }
 
 void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in){
@@ -164,7 +164,7 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
     {
         {
             std::unique_lock<std::mutex> lock(cloud_accumulate_mutex_);
-            clear_clouds_buffer_ = FALSE;
+            clear_clouds_buffer_ = false;
 //            cout << "[App ROS] Cleaning cloud buffer of " << accu_->getCounter() << " scans." << endl;
         }
 
@@ -239,7 +239,7 @@ void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr&
         // world -> body initial guess from interactive marker
         getPoseAsIsometry3d(init_pose_msg_in, world_to_body_marker_msg_);
 
-        pose_marker_initialized_ = TRUE;
+        pose_marker_initialized_ = true;
     }
     else
         ROS_WARN_STREAM("[Aicp] Interactive marker cannot be updated after localization started!");
@@ -284,7 +284,7 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
                                   Eigen::Isometry3d::Identity());
     ROS_INFO_STREAM("[Aicp] Loaded map with " << prior_map_->getCloud()->points.size() << " points.");
 
-    map_initialized_ = TRUE;
+    map_initialized_ = true;
     vis_->publishMap(map, prior_map_->getUtime(), 0);
 
     return true;

@@ -1,6 +1,11 @@
 #pragma once
 
-#include "aicp_drawing_utils/drawingUtils.hpp"
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+
+#include <octomap/ColorOcTree.h>
+
+#include <Eigen/Dense>
 
 namespace aicp {
 
@@ -14,12 +19,12 @@ public:
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                               int param,
-                              string name,
+                              std::string name,
                               int64_t utime = -1) = 0;
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
                               int param,
-                              string name,
+                              std::string name,
                               int64_t utime = -1) = 0;
 
     virtual void publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -27,11 +32,11 @@ public:
                             int channel) = 0;
 
     virtual void publishOctree(octomap::ColorOcTree*& octree,
-                               string channel_name) = 0;
+                               std::string channel_name) = 0;
 
     virtual void publishPose(Eigen::Isometry3d pose_,
                              int param,
-                             string name,
+                             std::string name,
                              int64_t utime = -1) = 0;
 
 protected:

@@ -4,8 +4,6 @@
 #include "aicp_classification/abstract_classification.hpp"
 #include "aicp_classification/svm.hpp"
 
-//#include <memory>
-
 namespace aicp {
 
 	static std::unique_ptr<AbstractClassification> create_classifier(const ClassificationParams& parameters) {

@@ -1,9 +1,7 @@
 #ifndef AICP_REGISTRATOR_ABSTRACT_HPP_
 #define AICP_REGISTRATOR_ABSTRACT_HPP_
 
-//#include <Eigen/Dense>
 #include <pcl/point_types.h>
-//#include <pcl/io/pcd_io.h>
 #include <pcl/common/common_headers.h>
 
 namespace aicp {

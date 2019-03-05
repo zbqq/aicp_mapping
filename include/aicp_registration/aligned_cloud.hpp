@@ -1,9 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <Eigen/Geometry>
 
-// PCL
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 

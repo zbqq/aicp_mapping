@@ -18,17 +18,17 @@ class ROSVisualizer : public Visualizer
 {
 public:
 
-    ROSVisualizer(ros::NodeHandle& nh, string fixed_frame);
+    ROSVisualizer(ros::NodeHandle& nh, std::string fixed_frame);
 //    ~ROSVisualizer();
 
     // Publish cloud
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                       int param, // channel name
-                      string name,
+                      std::string name,
                       int64_t utime);
     void publishCloud(pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr& cloud,
                       int param, // channel name
-                      string name,
+                      std::string name,
                       int64_t utime);
 
     // Publish map
@@ -39,11 +39,11 @@ public:
 
     // Publish octree
     void publishOctree(octomap::ColorOcTree*& octree,
-                       string channel_name);
+                       std::string channel_name);
 
     // Publish corrected pose
     void publishPose(Eigen::Isometry3d pose,
-                     int param, string name, int64_t utime);
+                     int param, std::string name, int64_t utime);
 
     // Publish tf from fixed_frame to odom
     void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);

@@ -3,7 +3,7 @@
 
 #include <octomap/octomap.h>
 #include <octomap/ColorOcTree.h>
-#include <octomap_utils/octomap_utils.hpp>
+
 #include <pcl/point_types.h>
 #include <pcl/common/common_headers.h>
 

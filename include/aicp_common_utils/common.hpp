@@ -79,4 +79,5 @@ std::string extract_ints(std::string str);
 //sample from Gaussian distribution
 Eigen::VectorXf get_random_gaussian_variable(float mean, float std_deviation, int size);
 
+void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw);
 

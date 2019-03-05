@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-
-
 struct RegistrationParams {
   typedef std::string string;
   string type;

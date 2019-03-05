@@ -15,23 +15,23 @@ int main(int argc, char** argv){
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                    // or debug - apply previous transforms to POSE_BODY
     cl_cfg.fixed_frame = "map";
-    cl_cfg.load_map_from_file = FALSE; // if enabled, wait for file_path to be sent through a service,
+    cl_cfg.load_map_from_file = false; // if enabled, wait for file_path to be sent through a service,
                                        // align first cloud only against map (to visualize final drift)
     cl_cfg.map_from_file_path = "";
-    cl_cfg.localize_against_prior_map = FALSE; // reference is prior map cropped around current pose
-    cl_cfg.localize_against_built_map = FALSE; // reference is aligned map cropped around current pose
+    cl_cfg.localize_against_prior_map = false; // reference is prior map cropped around current pose
+    cl_cfg.localize_against_built_map = false; // reference is aligned map cropped around current pose
     cl_cfg.crop_map_around_base = 8.0; // rectangular box dimesions: value*2 x value*2
     cl_cfg.merge_aligned_clouds_to_map = false; // improves performance if trajectory goes
                                                 // outside map (issue: slow)
 
-    cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
+    cl_cfg.failure_prediction_mode = false; // compute Alignment Risk
     cl_cfg.reference_update_frequency = 5;
     cl_cfg.max_correction_magnitude = 0.5; // Max allowed correction magnitude
                                            // (probably failed alignment otherwise)
 
     cl_cfg.pose_body_channel = "/state_estimator/pose_in_odom";
     cl_cfg.output_channel = "/aicp/pose_corrected"; // Create new channel...
-    cl_cfg.verbose = FALSE; // enable visualization for debug
+    cl_cfg.verbose = false; // enable visualization for debug
 
     aicp::VelodyneAccumulatorConfig va_cfg;
     va_cfg.batch_size = 80; // 240 is about 1 sweep at 5RPM // 80 is about 1 sweep at 15RPM

@@ -7,31 +7,18 @@
   <author email="snobili@robots.ox.ac.uk">Simona Nobili</author>
   <maintainer email="snobili@robots.ox.ac.uk">Simona Nobili</maintainer>
   <maintainer email="mcamurri@robots.ox.ac.uk">Marco Camurri</maintainer>
-  <license>TODO</license>
+  <license>LGPL-2.1</license>
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>message_generation</build_depend>
-  <build_depend>bot_lcmgl</build_depend>
-  <build_depend>octomap_utils</build_depend>
-  <build_depend>octomap_lcmtypes</build_depend>
-  <build_depend>pronto_vis</build_depend>
-  <build_depend>concise_args</build_depend>
-  <build_depend>yaml-cpp</build_depend>
-  <build_depend>cloud_accumulate</build_depend>
-  <build_depend>cv_bridge</build_depend>
   <build_depend>pointmatcher_ros</build_depend>
   <build_depend>pcl_ros</build_depend>
+  <build_depend>octomap_ros</build_depend>
   
   <run_depend>message_runtime</run_depend>
-  <run_depend>bot_lcmgl</run_depend>
-  <run_depend>octomap_utils</run_depend>
-  <run_depend>octomap_lcmtypes</run_depend>
-  <run_depend>pronto_vis</run_depend>
-  <run_depend>concise_args</run_depend>
-  <run_depend>yaml-cpp</run_depend>
-  <run_depend>cv_bridge</run_depend>
   <run_depend>pointmatcher_ros</run_depend>
   <run_depend>pcl_ros</run_depend>
+  <run_depend>octomap_ros</run_depend>
 
   <export>
   </export>

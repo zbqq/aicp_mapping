@@ -1,13 +1,11 @@
 #include "registration_apps/app.hpp"
-#include "aicp_common_utils/timing.hpp"
 #include "aicp_registration/registration.hpp"
 #include "aicp_overlap/overlap.hpp"
 #include "aicp_classification/classification.hpp"
+
+#include "aicp_common_utils/timing.hpp"
 #include "aicp_common_utils/common.hpp"
-#include "aicp_drawing_utils/drawingUtils.hpp"
-
-#include <lcmtypes/bot_core/double_array_t.hpp>
-
+//#include "aicp_drawing_utils/drawingUtils.hpp"
 
 namespace aicp {
 
@@ -84,7 +82,7 @@ void App::operator()() {
                 pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
                 regionGrowingUniformPlaneSegmentationFilter(cloud->getCloud(), ref_prefiltered);
                 // update AlignedCloud
-                cloud->updateCloud(ref_prefiltered, TRUE);
+                cloud->updateCloud(ref_prefiltered, true);
                 // Initialize graph
                 aligned_clouds_graph_->initialize(cloud);
 
@@ -99,7 +97,7 @@ void App::operator()() {
                 pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map_ptr = aligned_map_.makeShared();
                 vis_->publishMap(aligned_map_ptr, cloud->getUtime(), 1);
 
-                first_cloud_initialized_ = TRUE;
+                first_cloud_initialized_ = true;
             }
             else {
                 TimingUtils::tic();
@@ -154,7 +152,7 @@ void App::operator()() {
                 {
                     ref_prefiltered = cropped_map;
                     ref_pose = cloud->getPriorPose();
-                    first_cloud_initialized_ = TRUE;
+                    first_cloud_initialized_ = true;
                 }
                 else if (cl_cfg_.localize_against_built_map)
                 {
@@ -273,7 +271,7 @@ void App::operator()() {
                     // ---------------
                     // Alignment Risk
                     // ---------------
-                    MatrixXd testing_data(1, 2);
+                    Eigen::MatrixXd testing_data(1, 2);
                     testing_data << (float)octree_overlap_, (float)alignability_;
 
                     classifier_->test(testing_data, &risk_prediction_);
@@ -355,7 +353,7 @@ void App::operator()() {
 
                 // Store chain of corrections for publishing
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
-                updated_correction_ = TRUE;
+                updated_correction_ = true;
 
                 // Store aligned map and publish
                 if(aligned_clouds_graph_->getLastCloud()->isReference())

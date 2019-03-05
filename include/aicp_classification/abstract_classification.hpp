@@ -1,8 +1,9 @@
 #ifndef AICP_CLASSIFICATION_ABSTRACT_HPP_
 #define AICP_CLASSIFICATION_ABSTRACT_HPP_
 
-#include "common.hpp"
 #include <opencv2/core/core.hpp>
+
+#include "common.hpp"
 
 namespace aicp {
 
