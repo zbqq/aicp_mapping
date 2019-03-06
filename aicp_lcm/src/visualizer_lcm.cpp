@@ -1,4 +1,4 @@
-#include "registration_apps/visualizer_lcm.hpp"
+#include "aicp_lcm/visualizer_lcm.hpp"
 
 using namespace std;
 

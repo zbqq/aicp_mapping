@@ -22,38 +22,20 @@ include_directories(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${AICP_CORE_LIB}
-  CATKIN_DEPENDS)
- 
-########################  
-# registration library #
-########################
-add_library(aicpRegistration SHARED src/registration/pointmatcher_registration.cpp
-                                    src/registration/aligned_cloud.cpp
-                                    src/registration/aligned_clouds_graph.cpp)
-target_link_libraries(aicpRegistration ${libpointmatcher_LIBRARIES}
-                                       ${PCL_LIBRARIES}
-                                       ${Eigen3_LIBRARIES})
-
-##########################
-# octree-overlap library #
-##########################
-add_library(aicpOverlap SHARED src/overlap/octrees_overlap.cpp)
-target_link_libraries(aicpOverlap ${PCL_LIBRARIES}
-                                  ${OCTOMAP_LIBRARIES})
-
-
-#########################
-# clasification library #
-#########################
-add_library(aicpClassification SHARED src/classification/svm.cpp)
-target_link_libraries(aicpClassification ${Eigen3_LIBRARIES}
-                                         ${OpenCV_LIBS})
-
-
-#########################
-# utils library #
-#########################
+  LIBRARIES ${AICP_CORE_LIB} # libraries which will be visible outside 
+            aicpRegistration
+            aicpOverlap
+            aicpClassification
+            aicpUtils 
+  CATKIN_DEPENDS
+  DEPENDS PCL
+          OCTOMAP
+          OpenCV) # dependencies which will be taken outside
+  
+  
+#################
+# Utils library #
+#################
 add_library(aicpUtils SHARED src/utils/common.cpp
                              src/utils/timing.cpp
                              src/utils/cloudIO.cpp
@@ -63,26 +45,61 @@ add_library(aicpUtils SHARED src/utils/common.cpp
 target_link_libraries(aicpUtils ${libpointmatcher_LIBRARIES}
                                 ${PCL_LIBRARIES}
                                 ${Eigen3_LIBRARIES})
+
+
+##################
+# Octree-overlap #
+##################
+add_library(aicpOverlap SHARED src/overlap/octrees_overlap.cpp)
+target_link_libraries(aicpOverlap ${PCL_LIBRARIES}
+                                  ${OCTOMAP_LIBRARIES})
+
+
+#################
+# Clasification #
+#################
+add_library(aicpClassification SHARED src/classification/svm.cpp)
+target_link_libraries(aicpClassification ${Eigen3_LIBRARIES}
+                                         ${OpenCV_LIBS})
+                                         
+add_executable(aicp_classification_main src/classification/main.cpp)
+target_link_libraries(aicp_classification_main aicpClassification
+                                               aicpUtils
+                                               yaml-cpp)
+add_executable(aicp_classification_example src/classification/example.cpp)
+target_link_libraries(aicp_classification_example aicpClassification
+                                                  aicpUtils
+                                                  yaml-cpp)
+                                                  
+                                                  
+################  
+# Registration #
+################
+add_library(aicpRegistration SHARED src/registration/pointmatcher_registration.cpp
+                                    src/registration/aligned_cloud.cpp
+                                    src/registration/aligned_clouds_graph.cpp)
+target_link_libraries(aicpRegistration ${libpointmatcher_LIBRARIES}
+                                       ${PCL_LIBRARIES}
+                                       ${Eigen3_LIBRARIES}
+                                       yaml-cpp)
+
                                       
-#####################  
-# aicp_core library #
-#####################
-add_library(${AICP_CORE_LIB} src/registration/app.cpp
-                             src/registration/yaml_configurator.cpp)
+################  
+# Core library #
+################
+add_library(${AICP_CORE_LIB} SHARED src/registration/app.cpp
+                                    src/registration/yaml_configurator.cpp)
 target_link_libraries(${AICP_CORE_LIB} yaml-cpp
                                        aicpRegistration
                                        aicpOverlap
                                        aicpClassification
                                        aicpUtils)
-                                       
-                                       
-# TODO: Unit test
-#catkin_add_gtest(aicp_test src/test/imu_module_test.cpp)
-#target_link_libraries(aicp_test ${catkin_LIBRARIES})
 
 
-# Install libraries
-install(TARGETS ${TARGETS}
+#############
+## Install ##
+#############
+install(TARGETS ${TARGETS} ${AICP_CORE_LIB}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -90,13 +107,11 @@ install(TARGETS ${TARGETS}
 install(DIRECTORY include/aicp_registration/
                   include/aicp_overlap/
                   include/aicp_classification/
-                  include/aicp_filtering_utils/
-                  include/aicp_common_utils/
+                  include/aicp_utils/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         FILES_MATCHING PATTERN "*.hpp"
         PATTERN ".svn" EXCLUDE)
 
 # TODO: 
-#add_subdirectory(src/test)
 #add_subdirectory(src/pcl)
 #add_subdirectory(src/kitti)

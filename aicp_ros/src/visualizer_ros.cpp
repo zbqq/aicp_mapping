@@ -1,4 +1,4 @@
-#include "visualizer_ros.hpp"
+#include "aicp_ros/visualizer_ros.hpp"
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_types.h>

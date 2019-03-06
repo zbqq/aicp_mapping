@@ -2,26 +2,21 @@
 #include "aicp_classification/classification.hpp"
 #include "aicp_classification/common.hpp"
 
-// yaml
-#include "yaml-cpp/yaml.h" // read the yaml config
-
 // project
-#include "aicp_common_utils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
-#include "aicp_common_utils/fileIO.h"
+#include "aicp_utils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
+#include "aicp_utils/fileIO.h"
 
-#include <memory> // unique_ptr
-
-// csv to Eigen Matrix
 #include <Eigen/Dense>
+#include <memory> // unique_ptr
 #include <vector>
 #include <fstream>
 
-// opencv
-#include <opencv2/opencv.hpp>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+// yaml
+#include <yaml-cpp/yaml.h> // read the yaml config
 
+// opencv
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 using namespace cv;
 using namespace Eigen;

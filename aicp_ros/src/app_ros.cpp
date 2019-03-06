@@ -1,4 +1,4 @@
-#include "app_ros.hpp"
+#include "aicp_ros/app_ros.hpp"
 
 #include "aicp_registration/registration.hpp"
 #include "aicp_overlap/overlap.hpp"

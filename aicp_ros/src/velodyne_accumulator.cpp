@@ -1,4 +1,4 @@
-#include "velodyne_accumulator.hpp"
+#include "aicp_ros/velodyne_accumulator.hpp"
 
 #include "aicp_utils/filteringUtils.hpp"
 

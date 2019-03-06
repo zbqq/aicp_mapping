@@ -1,13 +1,4 @@
-#include "registration_apps/app_lcm.hpp"
-
-#include <lcmtypes/bot_core/double_array_t.hpp>
-#include <bot_frames_cpp/bot_frames_cpp.hpp>
-
-#include "aicp_registration/registration.hpp"
-#include "aicp_overlap/overlap.hpp"
-#include "aicp_classification/classification.hpp"
-
-#include "registration_apps/visualizer_lcm.hpp"
+#include "aicp_lcm/app_lcm.hpp"
 
 namespace aicp {
 
