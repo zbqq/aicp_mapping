@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>aicp_srv</name>
+  <version>0.0.0</version>
+  <description>AICP services package</description>
+
+  <author email="snobili@robots.ox.ac.uk">Simona Nobili</author>
+  <maintainer email="snobili@robots.ox.ac.uk">Simona Nobili</maintainer>
+  <maintainer email="mcamurri@robots.ox.ac.uk">Marco Camurri</maintainer>
+  <license>LGPL-2.1</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>ros_cpp</build_depend>
+  <build_depend>message_generation</build_depend>
+  <run_depend>ros_cpp</run_depend>
+  <run_depend>message_runtime</run_depend>
+
+  <export>
+  </export>
+</package>

@@ -1,6 +1,6 @@
-#include "velodyne_accumulator.hpp"
+#include "registration_apps/velodyne_accumulator.hpp"
 
-#include "aicp_utils/filteringUtils.hpp"
+#include "aicp_filtering_utils/filteringUtils.hpp"
 
 #include <pcl/point_types.h>
 

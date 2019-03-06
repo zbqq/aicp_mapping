@@ -1,4 +1,4 @@
-#include "aicp_pointmatcher_utils/icpMonitor.h"
+#include "aicp_utils/icpMonitor.h"
 
 /* Compute metrics (implemented in libpointmatcher) given registration between a reference and an input cloud
 (Haussdorff distance, Haussdorff quantile distance and Robust mean distance in meters). */

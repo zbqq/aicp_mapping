@@ -1,3 +1,8 @@
+###########
+include_directories(
+  include
+)
+
 ############### registration executable
 #add_executable(aicp-registration main.cpp)
 #target_link_libraries(aicp-registration ${catkin_LIBRARIES}
@@ -10,6 +15,19 @@
 #                                        aicpRegistration
 #                                        aicpOverlap
 #                                        aicpClassification)
+
+add_library(registration_apps app.cpp
+                              yaml_configurator.cpp)
+target_link_libraries(registration_apps yaml-cpp
+                                        #boost_system
+                                        #boost_filesystem
+                                        aicpPointmatcherUtils
+                                        aicpFilteringUtils
+                                        aicpCommonUtils
+                                        #aicpDrawingUtils
+                                        aicpRegistration
+                                        aicpOverlap
+                                        aicpClassification)
 
 ############### online registration executable
 #add_executable(aicp-lcm-online lcm_online_app.cpp

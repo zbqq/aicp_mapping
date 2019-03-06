@@ -7,10 +7,10 @@
 #include "aicp_registration/common.hpp"
 #include "aicp_registration/abstract_registrator.hpp"
 
-#include "aicp_common_utils/cloudIO.h"
-#include "aicp_common_utils/fileIO.h"
-#include "aicp_pointmatcher_utils/icpMonitor.h"
-#include "aicp_filtering_utils/filteringUtils.hpp"
+#include "aicp_utils/cloudIO.h"
+#include "aicp_utils/fileIO.h"
+#include "aicp_utils/icpMonitor.h"
+#include "aicp_utils/filteringUtils.hpp"
 
 using namespace std;
 

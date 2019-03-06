@@ -9,25 +9,7 @@
 #include <Eigen/Dense>
 #include <boost/shared_ptr.hpp>
 
-//#include <lcm/lcm-cpp.hpp>
-
-//#include <bot_frames/bot_frames.h>
-//#include <bot_param/param_client.h>
-
-//#include <lcmtypes/bot_core.hpp>
-//#include <lcmtypes/multisense.hpp>
-
-#include <vtkSmartPointer.h>
-#include <vtkXMLPolyDataWriter.h>
-#include <vtkPolyDataWriter.h>
-#include <vtkPolyData.h>
-#include <vtkPointData.h>
-#include <vtkPoints.h>
-#include <vtkFloatArray.h>
-#include <vtkUnsignedIntArray.h>
-#include <vtkIdTypeArray.h>
-#include <vtkCellArray.h>
-#include <vtkTimerLog.h>
+#include <pcl/io/vtk_lib_io.h>
 
 //----------------------------------------------------------------------------
 namespace
@@ -95,9 +77,9 @@ void savePointCloudVTK(const char *filename, PointMatcher<float>::DataPoints dat
 
   if ((distance.rows() == 1) && (distance.cols() == 1))// If filled, distance is (1 X nbPoints).
   {
-    distance.resize(1, nbPoints);  
+    distance.resize(1, nbPoints);
     for (int i = 0; i < nbPoints; i++)
-    {  
+    {
       distance(0, i) = -1;
     }
   }
@@ -133,9 +115,9 @@ void savePointCloudVTP(const char *filename, PointMatcher<float>::DataPoints dat
 
   if ((distance.rows() == 1) && (distance.cols() == 1))// If filled, distance is (1 X nbPoints).
   {
-    PointMatcher<float>::Matrix distance(1, nbPoints);  
+    PointMatcher<float>::Matrix distance(1, nbPoints);
     for (int i = 0; i < nbPoints; i++)
-    {  
+    {
       distance(0, i) = -1;
     }
   }
@@ -150,7 +132,7 @@ void savePointCloudVTP(const char *filename, PointMatcher<float>::DataPoints dat
   dataArrays.Dataset->SetVerts(NewVertexCells(nbPoints));
 
   // Write to file
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer =  vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+  vtkSmartPointer<vtkPolyDataWriter> writer =  vtkSmartPointer<vtkPolyDataWriter>::New();
   writer->SetFileName(filename);
   #if VTK_MAJOR_VERSION <= 5
     writer->SetInput(dataArrays.Dataset);

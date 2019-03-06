@@ -1,9 +1,9 @@
-#include "app_ros.hpp"
+#include "registration_apps/app_ros.hpp"
 
 #include "aicp_registration/registration.hpp"
 #include "aicp_overlap/overlap.hpp"
 #include "aicp_classification/classification.hpp"
-#include "aicp_utils/common.hpp"
+#include "aicp_common_utils/common.hpp"
 
 #include <tf_conversions/tf_eigen.h>
 
@@ -245,7 +245,7 @@ void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr&
         ROS_WARN_STREAM("[Aicp] Interactive marker cannot be updated after localization started!");
 }
 
-bool AppROS::loadMapFromFileCallBack(aicp_srv::ProcessFile::Request& request, aicp_srv::ProcessFile::Response& response)
+bool AppROS::loadMapFromFileCallBack(aicp::ProcessFile::Request& request, aicp::ProcessFile::Response& response)
 {
     response.success = loadMapFromFile(request.file_path);
     return true;

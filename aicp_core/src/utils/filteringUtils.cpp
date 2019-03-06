@@ -1,4 +1,4 @@
-#include "aicp_filtering_utils/filteringUtils.hpp"
+#include "aicp_utils/filteringUtils.hpp"
 
 // Returns filtered cloud: uniform sampling and planes segmentation.
 // This filter reduces the input's size.
