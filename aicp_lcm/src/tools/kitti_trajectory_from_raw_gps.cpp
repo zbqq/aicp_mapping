@@ -36,37 +36,21 @@
 // prepend with 0
 #include <iomanip>
 
-#include <boost/thread/thread.hpp>
-
 // precision
 #include <limits>
 typedef std::numeric_limits< double > dbl;
-
-// erase from vec
-#include <algorithm>
 
 // args
 #include <ConciseArgs>
 
 // lcm
-#include <lcmtypes/vs_object_collection_t.h>
-#include <lcmtypes/vs_point3d_list_collection_t.h>
-#include <bot_core/bot_core.h>
 #include <lcmtypes/bot_core_image_t.h>
-#include <lcmtypes/bot_core/pose_t.hpp>
+#include <lcmtypes/bot_core_pose_t.h>
+
+#include <pronto_vis/pronto_vis.hpp> // visualize pt clds
 
 // Eigen
 #include <Eigen/Geometry>
-
-// pronto
-#include <pronto_math/pronto_math.hpp>
-#include <pronto_vis/pronto_vis.hpp> // visualize pt clds
-
-// boost
-#include <boost/algorithm/string.hpp>
-
-// cfg
-#include "yaml-cpp/yaml.h"
 
 // opencv
 #include <opencv2/opencv.hpp>

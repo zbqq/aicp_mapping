@@ -1,9 +1,9 @@
-// aicp-create-cube-cloud
+// aicp_create_cube_cloud
 
 #include <iostream>
 
 //eigen
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 
 //pcl
 #include <pcl/point_types.h>

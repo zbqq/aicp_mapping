@@ -1,4 +1,4 @@
-// pcl-remove-ground -i <input_cloud> -o <output_cloud>
+// pcl_remove_ground -i <input_cloud> -o <output_cloud>
 
 #include <iostream>
 #include <pcl/io/pcd_io.h>

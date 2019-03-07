@@ -10,7 +10,7 @@
 #include <iostream>
 #include <string>
 
-#include "aicp_kitti/matrix.h"
+#include "aicp_tools/matrix.h"
 
 // args
 #include <ConciseArgs>
@@ -207,6 +207,8 @@ vector<int32_t> computeRoi (vector<Matrix> &poses_gt,vector<Matrix> &poses_resul
 
 void plotPathPlot (string dir,string res_dir,vector<int32_t> &roi,vector<string> &exp_ids,int32_t idx) {
 
+  int systemret;
+
   // gnuplot file name
   char command[1024];
   char file_name[256];
@@ -248,16 +250,16 @@ void plotPathPlot (string dir,string res_dir,vector<int32_t> &roi,vector<string>
 
     // run gnuplot => create png + eps
     sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
-    system(command);
+    systemret = system(command);
   }
 
   // create pdf and crop
   sprintf(command,"cd %s; ps2pdf %02d.eps %02d_large.pdf",dir.c_str(),idx,idx);
-  system(command);
+  systemret = system(command);
   sprintf(command,"cd %s; pdfcrop %02d_large.pdf %02d.pdf",dir.c_str(),idx,idx);
-  system(command);
+  systemret = system(command);
   sprintf(command,"cd %s; rm %02d_large.pdf",dir.c_str(),idx);
-  system(command);
+  systemret = system(command);
   cout << "--------------------------------------------------------" << endl;
 }
 
@@ -331,6 +333,7 @@ void saveErrorPlots(vector<errors> &seq_err,string plot_error_dir,char* prefix) 
 void plotErrorPlots (string dir,vector<string> &exp_ids,char* idx) {
 
   char command[1024];
+  int systemret;
 
   // for all four error plots do
   for (int32_t i=0; i<4; i++) {
@@ -398,16 +401,16 @@ void plotErrorPlots (string dir,vector<string> &exp_ids,char* idx) {
       
       // run gnuplot => create png + eps
       sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
-      system(command);
+      systemret = system(command);
     }
     
     // create pdf and crop
     sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),idx,suffix,idx,suffix);
-    system(command);
+    systemret = system(command);
     sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),idx,suffix,idx,suffix);
-    system(command);
+    systemret = system(command);
     sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),idx,suffix);
-    system(command);
+    systemret = system(command);
   }
 }
 
@@ -460,10 +463,11 @@ bool eval (string gt_path, string result_path, string exp_ids) {
   string plot_error_dir = eval_dir + "/plot_error";
 
   // create output directories
-  system(("mkdir " + eval_dir).c_str());
-  system(("mkdir " + error_dir).c_str());
-  system(("mkdir " + plot_path_dir).c_str());
-  system(("mkdir " + plot_error_dir).c_str());
+  int systemret;
+  systemret = system(("mkdir " + eval_dir).c_str());
+  systemret = system(("mkdir " + error_dir).c_str());
+  systemret = system(("mkdir " + plot_path_dir).c_str());
+  systemret = system(("mkdir " + plot_error_dir).c_str());
 
   // plot status
   cout << "Ground truth directory: " << gt_dir << endl;

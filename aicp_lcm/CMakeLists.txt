@@ -91,4 +91,9 @@ install(TARGETS ${PROJECT_NAME} #${PROJECT_NAME}_node
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         FILES_MATCHING PATTERN "*.hpp")
+        
+###############  
+# Extra Tools #
+###############
+#add_subdirectory(src/tools)
   

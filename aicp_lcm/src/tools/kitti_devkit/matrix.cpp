@@ -19,7 +19,7 @@ libviso2; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA 02110-1301, USA 
 */
 
-#include "aicp_kitti/matrix.h"
+#include "aicp_tools/matrix.h"
 #include <math.h>
 
 #define SWAP(a,b) {temp=a;a=b;b=temp;}

@@ -112,6 +112,7 @@ install(DIRECTORY include/aicp_registration/
         FILES_MATCHING PATTERN "*.hpp"
         PATTERN ".svn" EXCLUDE)
 
-# TODO: 
-#add_subdirectory(src/pcl)
-#add_subdirectory(src/kitti)
+###############  
+# Extra Tools #
+###############
+#add_subdirectory(src/tools)
