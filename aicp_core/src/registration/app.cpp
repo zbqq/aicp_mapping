@@ -222,18 +222,18 @@ void App::operator()() {
                 ColorOcTree* ref_tree;
                 ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
 
-//                if(//(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
-//                    cl_cfg_.localize_against_prior_map)
-//                    octree_overlap_ = 100.0;
-//                else
-//                {
+                if(//(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
+                    cl_cfg_.localize_against_prior_map)
+                    octree_overlap_ = 100.0;
+                else
+                {
                     // 1) create octree from reference cloud (wrt robot's point of view)
                     // 2) add the reading cloud and compute overlap
                     ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
                                                            ref_pose, read_pose,
                                                            read_tree);
                     octree_overlap_ = overlapper_->getOverlap();
-//                }
+                }
 
                 cout << "====================================" << endl
                      << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
