@@ -7,7 +7,15 @@ using namespace std;
 namespace aicp {
 
     bool YAMLConfigurator::parse(const std::string& path){
-        yn_ = YAML::LoadFile(path);
+        try
+        {
+          yn_ = YAML::LoadFile(path);
+        }
+        catch(exception& e)
+        {
+            cout << "ERROR:" << e.what() << '\n';
+            return false;
+        }
         if(yn_.IsNull()){
             return false;
         }
@@ -52,9 +60,7 @@ namespace aicp {
             const string key = it->first.as<string>();
 
             if(key.compare("configFileName") == 0) {
-              registration_params.pointmatcher.configFileName.append(FILTERS_CONFIG_LOC);
-              registration_params.pointmatcher.configFileName.append(PATH_SEPARATOR);
-              registration_params.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
+              registration_params.pointmatcher.configFileName = it->second.as<string>();
             }
             else if(key.compare("printOutputStatistics") == 0) {
               registration_params.pointmatcher.printOutputStatistics =  it->second.as<bool>();

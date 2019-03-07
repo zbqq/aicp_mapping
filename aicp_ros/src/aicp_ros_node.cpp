@@ -9,9 +9,8 @@ int main(int argc, char** argv){
     ros::NodeHandle nh("~");
 
     CommandLineConfig cl_cfg;
-    cl_cfg.config_file.append(CONFIG_LOC);
-    cl_cfg.config_file.append(PATH_SEPARATOR);
-    cl_cfg.config_file.append("aicp_config.yaml");
+    cl_cfg.registration_config_file.append("");
+    cl_cfg.aicp_config_file.append("");
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                    // or debug - apply previous transforms to POSE_BODY
     cl_cfg.fixed_frame = "map";
@@ -40,7 +39,8 @@ int main(int argc, char** argv){
     va_cfg.lidar_topic ="/velodyne/point_cloud_filtered";
     va_cfg.inertial_frame = "/odom";
 
-    nh.getParam("config_file", cl_cfg.config_file);
+    nh.getParam("registration_config_file", cl_cfg.registration_config_file);
+    nh.getParam("aicp_config_file", cl_cfg.aicp_config_file);
     nh.getParam("working_mode", cl_cfg.working_mode);
     nh.getParam("fixed_frame", cl_cfg.fixed_frame);
     nh.getParam("load_map_from_file", cl_cfg.load_map_from_file);
@@ -68,8 +68,8 @@ int main(int argc, char** argv){
     =            YAML Config            =
     ===================================*/
     aicp::YAMLConfigurator yaml_conf;
-    if(!yaml_conf.parse(cl_cfg.config_file)){
-        cerr << "ERROR: could not parse file " << cl_cfg.config_file << endl;
+    if(!yaml_conf.parse(cl_cfg.aicp_config_file)){
+        cerr << "ERROR: could not parse file " << cl_cfg.aicp_config_file << endl;
         return -1;
     }
     yaml_conf.printParams();

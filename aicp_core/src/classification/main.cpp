@@ -3,7 +3,6 @@
 #include "aicp_classification/common.hpp"
 
 // project
-#include "aicp_utils/common.hpp" // CONFIG_LOC, PATH_SEPARATOR
 #include "aicp_utils/fileIO.h"
 
 #include <Eigen/Dense>
@@ -51,9 +50,12 @@ int main(int argc, char **argv) {
   std::string yamlConfig_;
   YAML::Node yn_;
 
-  yamlConfig_.append(CONFIG_LOC);
-  yamlConfig_.append(PATH_SEPARATOR);
-  yamlConfig_.append("aicp_config.yaml");
+  // parse command line
+  if (argc < 1) {
+      std::cerr << "[Main] Usage: " << argv[0] << " PATH TO AICP CONFIG (e.g. aicp_config.yaml)" << std::endl;
+      return 1;
+  }
+  yamlConfig_.append(argv[0]);
 
   yn_ = YAML::LoadFile(yamlConfig_);
 

@@ -5,7 +5,6 @@
 
 #include "aicp_utils/timing.hpp"
 #include "aicp_utils/common.hpp"
-//#include "aicp_drawing_utils/drawingUtils.hpp"
 
 namespace aicp {
 
@@ -26,8 +25,7 @@ void App::doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
     =              AICP Core            =
     ===================================*/
     string configNameAICP;
-    configNameAICP.append(FILTERS_CONFIG_LOC);
-    configNameAICP.append("/icp_autotuned.yaml");
+    configNameAICP.append(cl_cfg_.registration_config_file);
 
     // Auto-tune ICP chain (quantile for the outlier filter)
     float current_ratio = octree_overlap_/100.0;

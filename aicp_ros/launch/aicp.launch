@@ -2,6 +2,8 @@
 
 <launch>
 
+  <arg name="registration_config_file"     default="$(find aicp_core)/config/icp/icp_autotuned.yaml"/>
+  <arg name="aicp_config_file"             default="$(find aicp_core)/config/aicp_config.yaml"/>
   <arg name="fixed_frame"                  default="map"/>
   <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
   <arg name="load_map_from_file"           default="false"/>
@@ -10,8 +12,10 @@
 
 
   <!-- Run AICP (command line configuration) -->
-  <node pkg="aicp" type="aicp_ros_online" name="aicp_ros_online" output="screen">
+  <node pkg="aicp_ros" type="aicp_ros_node" name="aicp_ros_node" output="screen">
 
+    <param name="registration_config_file"      value="$(arg registration_config_file)" />
+    <param name="aicp_config_file"              value="$(arg aicp_config_file)" />
     <!-- In ROS should always be set to debug mode -->
     <param name="working_mode"                  value="debug" />
     <!-- Fixed frame (default: map, debug: map_test -->

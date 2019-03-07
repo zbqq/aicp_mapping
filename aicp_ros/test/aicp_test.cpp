@@ -83,9 +83,10 @@ int main (int argc, char** argv)
 
   // Config file
   string config_file;
-  config_file.append(CONFIG_LOC);
-  config_file.append(PATH_SEPARATOR);
-  config_file.append("aicp_test_config.yaml");
+  config_file.append("/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned_default.yaml");
+
+  string configNameAICP;
+  configNameAICP.append("/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned.yaml");
 
   // Expected result file
   std::stringstream expected_file;
@@ -130,9 +131,7 @@ int main (int argc, char** argv)
       const string key = it->first.as<string>();
 
       if(key.compare("configFileName") == 0) {
-        registration_params_.pointmatcher.configFileName.append(FILTERS_CONFIG_LOC);
-        registration_params_.pointmatcher.configFileName.append(PATH_SEPARATOR);
-        registration_params_.pointmatcher.configFileName = FILTERS_CONFIG_LOC + PATH_SEPARATOR + it->second.as<string>();
+        registration_params_.pointmatcher.configFileName = it->second.as<string>();
       }
     }
   }
@@ -343,10 +342,6 @@ int main (int argc, char** argv)
       /*===================================
       =              AICP Core            =
       ===================================*/
-      string configNameAICP;
-      configNameAICP.append(FILTERS_CONFIG_LOC);
-      configNameAICP.append("/icp_autotuned.yaml");
-
       // Auto-tune ICP chain (quantile for the outlier filter)
       float current_ratio = octree_overlap_/100.0;
       if (current_ratio < 0.25)

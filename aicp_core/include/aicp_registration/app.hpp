@@ -22,7 +22,8 @@
 
 struct CommandLineConfig
 {
-    string config_file;
+    string registration_config_file; //e.g. icp_autotuned.yaml
+    string aicp_config_file;         //e.g. aicp_config.yaml
     string pose_body_channel;
     string output_channel;
     string working_mode;

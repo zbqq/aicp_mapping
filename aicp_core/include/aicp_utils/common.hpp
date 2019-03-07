@@ -15,42 +15,6 @@
   const std::string PATH_SEPARATOR="/";
 #endif
 
-// if for some reason this is not defined in the cmake
-// make the default project location point to RPG_BASE/software/aicp
-#ifdef PROJECTDIR
-  #define PROJECT_LOC PROJECTDIR
-#else
-  #define RPG_BASE getenv("RPG_BASE")
-  const std::string PROJECT_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp");
-#endif
-
-#ifdef PROJECT_LOC
-  const std::string CONFIG_LOC = PROJECT_LOC + PATH_SEPARATOR + std::string("config");
-#else
-  #ifndef RPG_BASE
-    #define RPG_BASE getenv("RPG_BASE")
-  #endif
-  const std::string CONFIG_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp") + PATH_SEPARATOR + std::string("config");
-#endif
-
-#ifdef PROJECT_LOC
-  const std::string FILTERS_CONFIG_LOC = PROJECT_LOC + PATH_SEPARATOR + std::string("config/icp");
-#else
-  #ifndef RPG_BASE
-    #define RPG_BASE getenv("RPG_BASE")
-  #endif
-  const std::string FILTERS_CONFIG_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp") + PATH_SEPARATOR + std::string("config/icp");
-#endif
-
-#ifdef PROJECT_LOC
-  const std::string DATA_LOC = PROJECT_LOC + PATH_SEPARATOR + std::string("data");
-#else
-  #ifndef RPG_BASE
-    #define RPG_BASE getenv("RPG_BASE")
-  #endif
-  const std::string DATA_LOC = std::string(RPG_BASE) + PATH_SEPARATOR + std::string("software") + PATH_SEPARATOR + std::string("aicp") + PATH_SEPARATOR + std::string("data");
-#endif
-
 /**
  * Utility functions
  */
