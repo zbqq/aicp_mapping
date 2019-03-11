@@ -60,6 +60,8 @@ public:
     void operator()();
 
     // AICP core pipeline
+    void filterCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in,
+                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_out);
     void runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefiltered,
                          pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_prefiltered,
                          Eigen::Isometry3d& reference_pose,
@@ -67,14 +69,15 @@ public:
                          Eigen::Matrix4f &T);
 
 private:
+    // App specific
     void setReference(AlignedCloudPtr& reading_cloud,
                       pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
                       Eigen::Isometry3d& reference_pose);
+    // App specific
     void setAndFilterReading(AlignedCloudPtr& reading_cloud_in,
                              pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_cloud_out,
                              Eigen::Isometry3d& reading_pose);
-    void filterCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in,
-                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_out);
+
     void computeOverlap(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
                         pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_cloud,
                         Eigen::Isometry3d& reference_pose,
