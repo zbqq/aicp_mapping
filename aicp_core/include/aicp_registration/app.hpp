@@ -59,6 +59,34 @@ public:
     // thread function doing actual work
     void operator()();
 
+    // AICP core pipeline
+    void runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefiltered,
+                         pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_prefiltered,
+                         Eigen::Isometry3d& reference_pose,
+                         Eigen::Isometry3d& reading_pose,
+                         Eigen::Matrix4f &T);
+
+private:
+    void setReference(AlignedCloudPtr& reading_cloud,
+                      pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
+                      Eigen::Isometry3d& reference_pose);
+    void setAndFilterReading(AlignedCloudPtr& reading_cloud_in,
+                             pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_cloud_out,
+                             Eigen::Isometry3d& reading_pose);
+    void filterCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in,
+                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_out);
+    void computeOverlap(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
+                        pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_cloud,
+                        Eigen::Isometry3d& reference_pose,
+                        Eigen::Isometry3d& reading_pose);
+    void computeAlignmentRisk(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
+                              pcl::PointCloud<pcl::PointXYZ>::Ptr& reading_cloud,
+                              Eigen::Isometry3d& reference_pose,
+                              Eigen::Isometry3d& reading_pose);
+    void computeRegistration(pcl::PointCloud<pcl::PointXYZ>& reference_cloud,
+                             pcl::PointCloud<pcl::PointXYZ>& reading_cloud,
+                             Eigen::Matrix4f &T);
+
 protected:
     void paramInit(){
         pose_initialized_ = false;
@@ -166,7 +194,5 @@ protected:
     pcl::PointCloud<pcl::PointXYZ>::Ptr reference_vis_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr last_reading_vis_;
     //Eigen::Isometry3d ref_pose_vis_;
-    // AICP core
-    void doRegistration(pcl::PointCloud<pcl::PointXYZ>& reference, pcl::PointCloud<pcl::PointXYZ>& reading, Eigen::Matrix4f &T);
 };
 } // namespace aicp
