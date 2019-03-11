@@ -65,9 +65,8 @@ using namespace std;
 
 int main(int argc, char **argv){
     CommandLineConfig cl_cfg;
-    cl_cfg.config_file.append(CONFIG_LOC);
-    cl_cfg.config_file.append(PATH_SEPARATOR);
-    cl_cfg.config_file.append("aicp_config.yaml");
+    cl_cfg.registration_config_file.append("");
+    cl_cfg.aicp_config_file.append("");
     cl_cfg.working_mode = "robot"; // e.g. robot - POSE_BODY has been already corrected
                                    // or debug - apply previous transforms to POSE_BODY
     cl_cfg.failure_prediction_mode = FALSE; // compute Alignment Risk
@@ -85,7 +84,8 @@ int main(int argc, char **argv){
     //ca_cfg.check_local_to_scan_valid = FALSE;
 
     ConciseArgs parser(argc, argv, "aicp-lcm-online");
-    parser.add(cl_cfg.config_file, "c", "config_file", "AICP config file location");
+    parser.add(cl_cfg.registration_config_file, "cr", "registration_config_file", "Registration config file location");
+    parser.add(cl_cfg.aicp_config_file, "ca", "aicp_config_file", "AICP config file location");
     parser.add(cl_cfg.working_mode, "s", "working_mode", "Robot or debug?");
     parser.add(cl_cfg.failure_prediction_mode, "ar", "failure_prediction_mode", "Alignment Risk for reference update");
     parser.add(cl_cfg.reference_update_frequency, "f", "reference_update_frequency", "Reference update frequency (number of clouds)");
@@ -105,8 +105,8 @@ int main(int argc, char **argv){
     =            YAML Config            =
     ===================================*/
     aicp::YAMLConfigurator yaml_conf;
-    if(!yaml_conf.parse(cl_cfg.config_file)){
-      cerr << "ERROR: could not parse AICP config file." << cl_cfg.config_file << endl;
+    if(!yaml_conf.parse(cl_cfg.aicp_config_file)){
+      cerr << "ERROR: could not parse AICP config file." << cl_cfg.aicp_config_file << endl;
       return -1;
     }
     yaml_conf.printParams();
