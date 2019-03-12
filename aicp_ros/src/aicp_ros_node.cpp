@@ -5,7 +5,7 @@
 using namespace std;
 
 int main(int argc, char** argv){
-    ros::init(argc, argv, "aicp_ros_online_node");
+    ros::init(argc, argv, "aicp_ros_node");
     ros::NodeHandle nh("~");
 
     CommandLineConfig cl_cfg;
