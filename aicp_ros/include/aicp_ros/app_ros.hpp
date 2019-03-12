@@ -6,10 +6,12 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include <aicp_srv/ProcessFile.h>
+#include <std_srvs/Trigger.h>
 
 #include "aicp_registration/app.hpp"
 #include "velodyne_accumulator.hpp"
 #include "visualizer_ros.hpp"
+#include "talker_ros.hpp"
 
 namespace aicp {
 class AppROS : public App {
@@ -34,6 +36,8 @@ public:
     // Advertise services
     bool loadMapFromFileCallBack(aicp_srv::ProcessFile::Request& request, aicp_srv::ProcessFile::Response& response);
     bool loadMapFromFile(const std::string& file_path);
+    bool goBackRequestCallBack(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response);
+    bool goBackRequest();
 
     void run();
 
@@ -54,6 +58,8 @@ private:
 
     // ROS only visualizer
     ROSVisualizer* vis_ros_;
+    // ROS talker
+    ROSTalker* talk_ros_;
 
     // Tool functions
     void getPoseAsIsometry3d(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg,

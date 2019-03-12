@@ -151,7 +151,7 @@ protected:
         total_correction_ = Eigen::Isometry3d::Identity();
     }
 
-    const CommandLineConfig cl_cfg_;
+    CommandLineConfig cl_cfg_;
 
     std::unique_ptr<AbstractRegistrator> registr_;
     std::unique_ptr<AbstractOverlapper> overlapper_;

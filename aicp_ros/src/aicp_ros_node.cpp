@@ -107,6 +107,7 @@ int main(int argc, char** argv){
 
     // Advertise services (using service published by anybotics icp_tools ui)
     ros::ServiceServer load_map_server_ = nh.advertiseService("/icp_tools/load_map_from_file", &aicp::AppROS::loadMapFromFileCallBack, app.get());
+    ros::ServiceServer go_back_server_ = nh.advertiseService("/aicp/go_back_request", &aicp::AppROS::goBackRequestCallBack, app.get());
 
     ROS_INFO_STREAM("[Aicp] Waiting for input messages...");
 
