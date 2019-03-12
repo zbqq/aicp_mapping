@@ -17,35 +17,7 @@ App::App(const CommandLineConfig& cl_cfg,
 {
 }
 
-void App::computeRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
-                              pcl::PointCloud<pcl::PointXYZ>& reading,
-                              Eigen::Matrix4f &T)
-{
-    /*===================================
-    =              AICP Core            =
-    ===================================*/
-    string configNameAICP;
-    configNameAICP.append(cl_cfg_.registration_config_file);
 
-    // Auto-tune ICP chain (quantile for the outlier filter)
-    float current_ratio = octree_overlap_/100.0;
-    if (current_ratio < 0.25)
-        current_ratio = 0.25;
-    else if (current_ratio > 0.70)
-        current_ratio = 0.70;
-
-    replaceRatioConfigFile(reg_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
-    registr_->updateConfigParams(configNameAICP);
-
-    /*===================================
-    =          Register Clouds          =
-    ===================================*/
-    registr_->registerClouds(reference, reading, T);
-
-    cout << "========================" << endl
-         << "[AICP Core] Correction:" << endl
-         << "========================" << endl
-         << T << endl;
 }
 
 void App::setReference(AlignedCloudPtr& reading_cloud,
@@ -194,6 +166,37 @@ void App::computeAlignmentRisk(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cl
     cout << "====================================" << endl
          << "[Main] Alignment Risk: " << risk_prediction_ << " (0-1)" << endl
          << "====================================" << endl;
+}
+
+void App::computeRegistration(pcl::PointCloud<pcl::PointXYZ>& reference,
+                              pcl::PointCloud<pcl::PointXYZ>& reading,
+                              Eigen::Matrix4f &T)
+{
+    /*===================================
+    =              AICP Core            =
+    ===================================*/
+    string configNameAICP;
+    configNameAICP.append(cl_cfg_.registration_config_file);
+
+    // Auto-tune ICP chain (quantile for the outlier filter)
+    float current_ratio = octree_overlap_/100.0;
+    if (current_ratio < 0.25)
+        current_ratio = 0.25;
+    else if (current_ratio > 0.70)
+        current_ratio = 0.70;
+
+    replaceRatioConfigFile(reg_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
+    registr_->updateConfigParams(configNameAICP);
+
+    /*===================================
+    =          Register Clouds          =
+    ===================================*/
+    registr_->registerClouds(reference, reading, T);
+
+    cout << "========================" << endl
+         << "[AICP Core] Correction:" << endl
+         << "========================" << endl
+         << T << endl;
 }
 
 void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefiltered,
