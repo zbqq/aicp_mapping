@@ -37,18 +37,6 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Init prior map
     loadMapFromFile(cl_cfg.map_from_file_path);
 
-    // Create debug data folder
-    data_directory_path_ << "/tmp/aicp_data";
-    const char* path = data_directory_path_.str().c_str();
-    boost::filesystem::path dir(path);
-    if(boost::filesystem::exists(path))
-        boost::filesystem::remove_all(path);
-    if(boost::filesystem::create_directory(dir))
-    {
-        cout << "Create AICP debug data directory: " << path << endl
-             << "============================" << endl;
-    }
-
     // Pose publisher
     corrected_pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(cl_cfg_.output_channel,10);
 
@@ -59,11 +47,6 @@ AppROS::AppROS(ros::NodeHandle &nh,
         alignability_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignability",10);
         risk_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignment_risk",10);
     }
-
-    // Instantiate objects
-    registr_ = create_registrator(reg_params_);
-    overlapper_ = create_overlapper(overlap_params_);
-    classifier_ = create_classifier(class_params_);
 }
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)

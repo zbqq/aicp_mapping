@@ -38,20 +38,6 @@ AppLCM::AppLCM(boost::shared_ptr<lcm::LCM> &lcm,
     cout << "============================" << endl
          << "Start..." << endl
          << "============================" << endl;
-
-    // Create debug data folder
-    data_directory_path_ << "/tmp/aicp_data";
-    const char* path = data_directory_path_.str().c_str();
-    boost::filesystem::path dir(path);
-    if(boost::filesystem::exists(path))
-    boost::filesystem::remove_all(path);
-    if(boost::filesystem::create_directory(dir))
-    cerr << "Create AICP debug data directory: " << path << endl;
-
-    // Instantiate objects
-    registr_ = create_registrator(reg_params_);
-    overlapper_ = create_overlapper(overlap_params_);
-    classifier_ = create_classifier(class_params_);
 }
 
 void AppLCM::robotPoseHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const  bot_core::pose_t* msg){

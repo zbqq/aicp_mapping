@@ -15,9 +15,22 @@ App::App(const CommandLineConfig& cl_cfg,
     cl_cfg_(cl_cfg), reg_params_(reg_params),
     overlap_params_(overlap_params), class_params_(class_params)
 {
-}
+    // Create debug data folder
+    data_directory_path_ << "/tmp/aicp_data";
+    const char* path = data_directory_path_.str().c_str();
+    boost::filesystem::path dir(path);
+    if(boost::filesystem::exists(path))
+        boost::filesystem::remove_all(path);
+    if(boost::filesystem::create_directory(dir))
+    {
+        cout << "Create AICP debug data directory: " << path << endl
+             << "============================" << endl;
+    }
 
-
+    // Instantiate objects
+    registr_ = create_registrator(reg_params_);
+    overlapper_ = create_overlapper(overlap_params_);
+    classifier_ = create_classifier(class_params_);
 }
 
 void App::setReference(AlignedCloudPtr& reading_cloud,
@@ -108,7 +121,9 @@ void App::computeOverlap(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_cloud,
 
     if(//(cl_cfg_.load_map_from_file && aligned_clouds_graph_->getNbClouds() == 0) ||
         cl_cfg_.localize_against_prior_map)
+    {
         octree_overlap_ = 50.0;
+    }
     else
     {
         // 1) create octree from reference cloud (wrt robot's point of view)
