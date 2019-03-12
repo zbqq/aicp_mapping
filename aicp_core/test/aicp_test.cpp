@@ -1,50 +1,24 @@
 // Demo program for testing AICP:
-//  1. Reading two point clouds from file (with sensor origin information)
-//  2. Running overlap analysis
-//  3. Running alignability analysis
-//  4  Running risk of alignment failure analysis (pre-trained SVM)
-//  4. Running AICP alignment
-//  5. Writing result to file and console
-//  6. Compare file with expected result
+//  1. Reading two point clouds from .pcd file (with sensor origin information)
+//  2. AICP registration:
+//      a. overlap analysis
+//      b. alignability analysis
+//      c. risk of alignment failure analysis (pre-trained SVM)
+//      d. registration
+//  3. Writing result to file and console
+//  4. Compare file with expected result
 
 // Test data at: <HOME>/drs_testing_data/aicp-data
-// Run: rosrun aicp aicp-test
+// Run: rosrun aicp_core aicp_test
 
-// Get path to AICP base
-#ifdef CONFDIR
-  # define AICP_BASE CONFDIR
-#else
-  # define AICP_BASE "undefined"
-#endif
-
-#include <iostream>
+#include <pwd.h>
 
 // Project lib
-#include "aicp_registration/registration.hpp"
-#include "aicp_registration/common.hpp"
+#include "aicp_registration/app.hpp"
 
-#include "aicp_overlap/overlap.hpp"
-#include "aicp_overlap/common.hpp"
-
-#include "aicp_classification/classification.hpp"
-#include "aicp_classification/common.hpp"
-
-#include "aicp_utils/cloudIO.h"
+#include "aicp_registration/yaml_configurator.hpp"
 #include "aicp_utils/common.hpp"
-//#include "aicp_drawing_utils/drawingUtils.hpp"
-
-// yaml
-#include <yaml-cpp/yaml.h> // read the yaml config
-
-//eigen
-#include <Eigen/Dense>
-
-// pcl
-#include <pcl/common/common.h>
-#include <pcl/common/transforms.h>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
-#include <pcl/io/pcd_io.h>
+#include "aicp_utils/cloudIO.h"
 
 using namespace std;
 using namespace aicp;
@@ -64,29 +38,14 @@ int main (int argc, char** argv)
 
   int number_test_clouds = 16;
 
-  // Overlap parameters
-  float fov_overlap_ = -1.0;
-  float octree_overlap_ = -1.0;
-  // Alignability
-  float alignability_ = -1.0;
-  // Alignment Risk
-  Eigen::MatrixXd risk_prediction_; // ours
-  vector<float> other_predictions_; // state of the art
-
-  // Project Objects
-  RegistrationParams registration_params_;
-  OverlapParams overlap_params_;
-  ClassificationParams classification_params_;
-  std::unique_ptr<AbstractRegistrator> registr_;
-  std::unique_ptr<AbstractOverlapper> overlapper_;
-  std::unique_ptr<AbstractClassification> classifier_;
-
-  // Config file
-  string config_file;
-  config_file.append("/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned_default.yaml");
-
-  string configNameAICP;
-  configNameAICP.append("/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned.yaml");
+  CommandLineConfig cl_cfg;
+  cl_cfg.registration_config_file.append(homedir);
+  cl_cfg.registration_config_file.append("/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned.yaml");
+  cl_cfg.aicp_config_file.append(homedir);
+  cl_cfg.aicp_config_file.append("/code/aicp_base/git/aicp/aicp_core/config/aicp_test_config.yaml");
+  cl_cfg.localize_against_prior_map = false; // otherwise overlap set to high default value
+  cl_cfg.failure_prediction_mode = true; // compute Alignment Risk
+  cl_cfg.verbose = false;
 
   // Expected result file
   std::stringstream expected_file;
@@ -103,131 +62,26 @@ int main (int argc, char** argv)
   /*===================================
   =            YAML Config            =
   ===================================*/
-  string yamlConfig_;
-  YAML::Node yn_;
-  yamlConfig_ = config_file;
-  yn_ = YAML::LoadFile(yamlConfig_);
-
-  YAML::Node registrationNode = yn_["AICP"]["Registration"];
-  for(YAML::const_iterator it=registrationNode.begin();it != registrationNode.end();++it) {
-
-    const string key = it->first.as<string>();
-
-    if(key.compare("type") == 0) {
-      registration_params_.type = it->second.as<string>();
-    }
-    else if(key.compare("sensorRange") == 0) {
-      registration_params_.sensorRange =  it->second.as<float>();
-    }
-    else if(key.compare("sensorAngularView") == 0) {
-      registration_params_.sensorAngularView =  it->second.as<float>();
-    }
+  aicp::YAMLConfigurator yaml_conf;
+  if(!yaml_conf.parse(cl_cfg.aicp_config_file)){
+      cerr << "ERROR: could not parse file " << cl_cfg.aicp_config_file << endl;
+      return -1;
   }
-  if(registration_params_.type.compare("Pointmatcher") == 0) {
+  yaml_conf.printParams();
 
-    YAML::Node pointmatcherNode = registrationNode["Pointmatcher"];
+  // Instantiate AICP app
+  std::shared_ptr<aicp::App> app_test(new aicp::App(cl_cfg,
+                                                    yaml_conf.getRegistrationParams(),
+                                                    yaml_conf.getOverlapParams(),
+                                                    yaml_conf.getClassificationParams()));
 
-    for(YAML::const_iterator it=pointmatcherNode.begin();it != pointmatcherNode.end();++it) {
-      const string key = it->first.as<string>();
-
-      if(key.compare("configFileName") == 0) {
-        registration_params_.pointmatcher.configFileName = it->second.as<string>();
-      }
-    }
+  if(yaml_conf.getRegistrationParams().loadPosesFrom != "pcd"){
+      cerr << "ERROR: load poses from " << yaml_conf.getRegistrationParams().loadPosesFrom
+           << " not valid. Expected load poses from PCD." << endl;
+      return -1;
   }
-  YAML::Node overlapNode = yn_["AICP"]["Overlap"];
-  for(YAML::const_iterator it=overlapNode.begin();it != overlapNode.end();++it) {
-
-    const string key = it->first.as<string>();
-
-    if(key.compare("type") == 0) {
-      overlap_params_.type = it->second.as<string>();
-    }
-  }
-  if(overlap_params_.type.compare("OctreeBased") == 0) {
-
-    YAML::Node octreeBasedNode = overlapNode["OctreeBased"];
-
-    for(YAML::const_iterator it=octreeBasedNode.begin();it != octreeBasedNode.end();++it) {
-      const string key = it->first.as<string>();
-
-      if(key.compare("octomapResolution") == 0) {
-        overlap_params_.octree_based.octomapResolution = it->second.as<float>();
-      }
-    }
-  }
-  YAML::Node classificationNode = yn_["AICP"]["Classifier"];
-  for (YAML::const_iterator it = classificationNode.begin(); it != classificationNode.end(); ++it) {
-    const std::string key = it->first.as<std::string>();
-
-    if (key.compare("type") == 0) {
-      classification_params_.type = it->second.as<std::string>();
-    }
-  }
-
-  if (classification_params_.type.compare("SVM") == 0) {
-
-    YAML::Node svmNode = classificationNode["SVM"];
-
-    for(YAML::const_iterator it=svmNode.begin();it != svmNode.end();++it) {
-      const std::string key = it->first.as<std::string>();
-
-      if(key.compare("threshold") == 0) {
-        classification_params_.svm.threshold = it->second.as<double>();
-      }
-      else if(key.compare("trainingFile") == 0) {
-        classification_params_.svm.trainingFile = expandEnvironmentVariables(it->second.as<std::string>());
-      }
-      else if(key.compare("testingFile") == 0) {
-          classification_params_.svm.testingFile = expandEnvironmentVariables(it->second.as<std::string>());
-      }
-      else if(key.compare("saveFile") == 0) {
-        classification_params_.svm.saveFile = expandEnvironmentVariables(it->second.as<std::string>());
-      }
-      else if(key.compare("saveProbs") == 0) {
-        classification_params_.svm.saveProbs = expandEnvironmentVariables(it->second.as<std::string>());
-      }
-      else if(key.compare("modelLocation") == 0) {
-        classification_params_.svm.modelLocation = expandEnvironmentVariables(it->second.as<std::string>());
-      }
-    }
-  }
-
-  cout << "============================" << endl
-       << "Parsed YAML Config" << endl
-       << "============================" << endl;
-
-  cout << "[Main] Registration Type: "                 << registration_params_.type                          << endl;
-  cout << "[Main] Sensor Range: "                      << registration_params_.sensorRange                   << endl;
-  cout << "[Main] Sensor Angular View: "               << registration_params_.sensorAngularView             << endl;
-
-  if(registration_params_.type.compare("Pointmatcher") == 0) {
-    cout << "[Pointmatcher] Config File Name: "                << registration_params_.pointmatcher.configFileName        << endl;
-  }
-
-  cout << "[Main] Overlap Type: "                   << overlap_params_.type                             << endl;
-
-  if(overlap_params_.type.compare("OctreeBased") == 0) {
-    cout << "[OctreeBased] Octomap Resolution: "    << overlap_params_.octree_based.octomapResolution   << endl;
-  }
-
-  cout << "[Main] Classification Type: "       << classification_params_.type                    << endl;
-
-  if(classification_params_.type.compare("SVM") == 0) {
-    cout << "[SVM] Acceptance Threshold: "    << classification_params_.svm.threshold           << endl;
-    cout << "[SVM] Training File: "           << classification_params_.svm.trainingFile        << endl;
-    cout << "[SVM] Testing File: "            << classification_params_.svm.testingFile         << endl;
-    cout << "[SVM] Saving Model To: "         << classification_params_.svm.saveFile            << endl;
-    cout << "[SVM] Saving Probs To: "         << classification_params_.svm.saveProbs           << endl;
-    cout << "[SVM] Loading Model From: "      << classification_params_.svm.modelLocation       << endl;
-  }
-
-  cout << "============================" << endl;
-
-  // Instantiate objects
-  registr_ = create_registrator(registration_params_);
-  overlapper_ = create_overlapper(overlap_params_);
-  classifier_ = create_classifier(classification_params_);
+  else
+      cout << "[AICP Test] Loading poses from PCD..." << endl;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr reference (new pcl::PointCloud<pcl::PointXYZ>);
   Eigen::Isometry3d reference_pose;
@@ -271,108 +125,44 @@ int main (int argc, char** argv)
 
       getPoseFromPointCloud(*reading, reading_pose);
 
-      /*===================================
-      =        Filter Input Clouds        =
-      ===================================*/
+      cout << "\n" << "-------------------------------------------------------------------------------" << "\n \n";
 
-      pcl::PointCloud<pcl::PointXYZ> overlap_points_ref;
-      pcl::PointCloud<pcl::PointXYZ> overlap_points_read;
-      pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr ref_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-      pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr read_matched_planes (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-      pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr eigenvectors (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-
-      // ------------------
-      // FOV-based Overlap
-      // ------------------
-      fov_overlap_ = overlapFilter(*reference, *reading,
-                                   reference_pose, reading_pose,
-                                   registration_params_.sensorRange , registration_params_.sensorAngularView,
-                                   overlap_points_ref, overlap_points_read);
-      cout << "====================================" << endl
-           << "[Main] FOV-based Overlap: " << fov_overlap_ << " %" << endl
-           << "====================================" << endl;
-
-      // ------------------------------------
-      // Pre-filtering: 1) down-sampling
-      //                2) planes extraction
-      // ------------------------------------
+      /*=====================================
+      =          AICP Registration          =
+      =====================================*/
+      // Pre-filtering
       pcl::PointCloud<pcl::PointXYZ>::Ptr ref_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-      regionGrowingUniformPlaneSegmentationFilter(reference, ref_prefiltered);
+      app_test->filterCloud(reference, ref_prefiltered);
+
       pcl::PointCloud<pcl::PointXYZ>::Ptr read_prefiltered (new pcl::PointCloud<pcl::PointXYZ>);
-      regionGrowingUniformPlaneSegmentationFilter(reading, read_prefiltered);
+      app_test->filterCloud(reading, read_prefiltered);
 
-      // ---------------------
-      // Octree-based Overlap
-      // ---------------------
-      ColorOcTree* ref_tree;
-      ColorOcTree* read_tree = new ColorOcTree(overlap_params_.octree_based.octomapResolution);
+      if(cl_cfg.verbose)
+      {
+          // Save filtered clouds to file
+          pcl::PCDWriter pcd_writer_;
+          stringstream filtered_ref;
+          filtered_ref << app_test->getDataDirectoryPath();
+          filtered_ref << "/reference_prefiltered.pcd";
+          pcd_writer_.write<pcl::PointXYZ> (filtered_ref.str (), *ref_prefiltered, false);
+          stringstream filtered_read;
+          filtered_read << app_test->getDataDirectoryPath();
+          filtered_read << "/reading_prefiltered.pcd";
+          pcd_writer_.write<pcl::PointXYZ> (filtered_read.str (), *read_prefiltered, false);
+      }
 
-      // Create octree from reference cloud (wrt robot point of view),
-      // add the reading cloud and compute overlap
-      ref_tree = overlapper_->computeOverlap(*ref_prefiltered, *read_prefiltered,
-                                             reference_pose, reading_pose,
-                                             read_tree);
-      octree_overlap_ = overlapper_->getOverlap();
-
-      cout << "====================================" << endl
-           << "[Main] Octree-based Overlap: " << octree_overlap_ << " %" << endl
-           << "====================================" << endl;
-
-      // -------------
-      // Alignability
-      // -------------
-      // Alignability computed on points belonging to the region of overlap (overlap_points_A, overlap_points_B)
-      alignability_ = alignabilityFilter(overlap_points_ref, overlap_points_read,
-                                         reference_pose, reading_pose,
-                                         ref_matched_planes, read_matched_planes, eigenvectors);
-      cout << "[Main] Alignability (degenerate if ~ 0): " << alignability_ << " %" << endl;
-
-      /*===================================
-      =           Classification          =
-      ===================================*/
-      // ---------------
-      // Alignment Risk
-      // ---------------
-      Eigen::MatrixXd testing_data(1, 2);
-      testing_data << (float)octree_overlap_, (float)alignability_;
-
-      classifier_->test(testing_data, &risk_prediction_);
-      std::cout << "[Main] Alignment Risk Prediction (0-1): " << risk_prediction_ << std::endl;
-
-      /*===================================
-      =              AICP Core            =
-      ===================================*/
-      // Auto-tune ICP chain (quantile for the outlier filter)
-      float current_ratio = octree_overlap_/100.0;
-      if (current_ratio < 0.25)
-        current_ratio = 0.25;
-      else if (current_ratio > 0.70)
-        current_ratio = 0.70;
-
-      replaceRatioConfigFile(registration_params_.pointmatcher.configFileName, configNameAICP, current_ratio);
-      registr_->updateConfigParams(configNameAICP);
-      //registration_params_.pointmatcher.configFileName = configNameAICP;
-
-      /*===================================
-      =          Register Clouds          =
-      ===================================*/
-      Eigen::Matrix4f T = Eigen::Matrix4f::Identity(4,4);
-
-      registr_->registerClouds(*ref_prefiltered, *read_prefiltered, T);
-
-      cout << "============================" << endl
-           << "Computed 3D Transform:" << endl
-           << "============================" << endl
-           << T << endl;
+      // Registration
+      Eigen::Matrix4f correction = Eigen::Matrix4f::Identity(4,4);
+      app_test->runAicpPipeline(ref_prefiltered, read_prefiltered, reference_pose, reading_pose, correction);
 
       pcl::PointCloud<pcl::PointXYZ>::Ptr output (new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::transformPointCloud (*reading, *output, T);
+      pcl::transformPointCloud (*read_prefiltered, *output, correction);
 
       // Write results to file
       writeResultToFile(out_file.str().c_str(), i, read_prefiltered->size(),
-                        fov_overlap_, octree_overlap_, alignability_,
-                        risk_prediction_, T);
-      // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        app_test->getFOVOverlap(), app_test->getOctreeOverlap(), app_test->getAlignability(),
+                        app_test->getAlignmentRisk(), correction);
+
       cout << "\n" << "-------------------------------------------------------------------------------" << "\n \n";
     }
   }

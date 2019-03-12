@@ -3,9 +3,10 @@ AICP: {
     type: "Pointmatcher", # GICP, Kaess
     sensorRange: 30.0,         # in meters
     sensorAngularView: 270.0,  # in degrees
+    loadPosesFrom: "pcd",
 
     Pointmatcher: {
-      configFileName: "icp_autotuned_default.yaml",
+      configFileName: "/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned_default.yaml",
     }
   },
   Overlap: {

@@ -68,6 +68,27 @@ public:
                          Eigen::Isometry3d& reading_pose,
                          Eigen::Matrix4f &T);
 
+    // Gets
+    float getFOVOverlap() {
+        return fov_overlap_;
+    }
+
+    float getOctreeOverlap() {
+        return octree_overlap_;
+    }
+
+    float getAlignability() {
+        return alignability_;
+    }
+
+    Eigen::MatrixXd& getAlignmentRisk() {
+        return risk_prediction_;
+    }
+
+    const string getDataDirectoryPath(){
+        return data_directory_path_.str();
+    }
+
 private:
     // App specific
     void setReference(AlignedCloudPtr& reading_cloud,
