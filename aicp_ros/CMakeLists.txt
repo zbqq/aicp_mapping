@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS aicp_core
                                         eigen_conversions
                                         pcl_conversions
                                         tf_conversions
+                                        std_srvs
                                         std_msgs
                                         sensor_msgs
                                         geometry_msgs
@@ -27,6 +28,7 @@ catkin_package(
                  eigen_conversions
                  pcl_conversions
                  tf_conversions
+                 std_srvs
                  std_msgs
                  sensor_msgs
                  geometry_msgs
@@ -41,6 +43,7 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED src/app_ros.cpp
                                    src/visualizer_ros.cpp
+                                   src/talker_ros.cpp
                                    src/velodyne_accumulator.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
