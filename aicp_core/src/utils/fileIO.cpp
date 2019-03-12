@@ -184,11 +184,11 @@ void replaceRatioConfigFile(string in_file, string out_file, float ratio)
   out.open(out_file, std::ofstream::out);
   if (!in)
   {
-    cerr << "Could not open config file for params update." << "\n";
+    cerr << "[File IO] Could not open config file for params update." << "\n";
   }
   if (!out)
   {
-    cerr << "Could not open config file for params update." << "\n";
+    cerr << "[File IO] Could not open config file for params update." << "\n";
   }
 
   string word_to_replace = "ratio: ";
