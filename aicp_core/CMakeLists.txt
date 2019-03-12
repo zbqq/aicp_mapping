@@ -97,6 +97,13 @@ target_link_libraries(${AICP_CORE_LIB} yaml-cpp
 
 
 #############
+# Unit test #
+#############
+add_executable(aicp_test test/aicp_test.cpp)
+target_link_libraries(aicp_test ${AICP_CORE_LIB})
+
+
+#############
 ## Install ##
 #############
 install(TARGETS ${TARGETS} ${AICP_CORE_LIB}

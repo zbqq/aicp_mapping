@@ -54,11 +54,11 @@ target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME}
 #############                                       
 # Unit test #
 #############
-#catkin_add_gtest(aicp_test test/aicp_test.cpp)
-add_executable(aicp_test test/aicp_test.cpp)
-target_link_libraries(aicp_test ${PROJECT_NAME}
-                                ${catkin_LIBRARIES}
-                                yaml-cpp)
+#catkin_add_gtest(aicp_test_node test/aicp_test_node.cpp)
+#add_executable(aicp_test_node test/aicp_test_node.cpp)
+#target_link_libraries(aicp_test_node ${PROJECT_NAME}
+#                                     ${catkin_LIBRARIES}
+#                                     yaml-cpp)
 
 
 #############
