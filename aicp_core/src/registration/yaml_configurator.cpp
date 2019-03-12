@@ -39,18 +39,6 @@ namespace aicp {
           else if(key.compare("initialTransform") == 0) {
             registration_params.initialTransform = it->second.as<string>();
           }
-          else if(key.compare("saveCorrectedPose") == 0) {
-            registration_params.saveCorrectedPose =  it->second.as<bool>();
-          }
-          else if(key.compare("saveInitializedReadingCloud") == 0) {
-            registration_params.saveInitializedReadingCloud =  it->second.as<bool>();
-          }
-          else if(key.compare("saveRegisteredReadingCloud") == 0) {
-            registration_params.saveRegisteredReadingCloud =  it->second.as<bool>();
-          }
-          else if(key.compare("enableLcmVisualization") == 0) {
-            registration_params.enableLcmVisualization =  it->second.as<bool>();
-          }
         }
         if(registration_params.type.compare("Pointmatcher") == 0) {
 
@@ -158,10 +146,6 @@ namespace aicp {
         cout << "[Main] Sensor Angular View: "               << registration_params.sensorAngularView             << endl;
         cout << "[Main] Load Poses from: "                   << registration_params.loadPosesFrom                 << endl;
         cout << "[Main] Initial Transform: "                 << registration_params.initialTransform              << endl;
-        cout << "[Main] Save Corrected Pose: "               << registration_params.saveCorrectedPose             << endl;
-        cout << "[Main] Save Initialized Reading Cloud: "    << registration_params.saveInitializedReadingCloud   << endl;
-        cout << "[Main] Save Registered Reading Cloud: "     << registration_params.saveRegisteredReadingCloud    << endl;
-        cout << "[Main] Enable Lcm Visualization: "          << registration_params.enableLcmVisualization        << endl;
 
         if(registration_params.type.compare("Pointmatcher") == 0) {
             cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;

@@ -2,27 +2,21 @@ AICP: {
   Registration: {
     type: "Pointmatcher",
     sensorRange: 100.0,         # in meters
-    sensorAngularView: 360.0,  # in degrees
+    sensorAngularView: 360.0,   # in degrees
     loadPosesFrom: "", # "file" (ground truth poses), "pcd", "" is from log if available
     initialTransform: "", # x[m], y[m], yaw[deg]
                                      # - if "random" initialTransform will be
                                      # sampled from Gaussian distributed perturbations
                                      # with 0.1 m and 10 deg variance magnitude
                                      # - if "" no initial tranform will be applied
-    saveCorrectedPose: true, # idA, idB, x, y, z, w, x, y, z
-                             # (valid if loadPosesFrom)
-    saveInitializedReadingCloud: true,
-    saveRegisteredReadingCloud: true,
-    enableLcmVisualization: true,
 
     Pointmatcher: {
       configFileName: "/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned_default.yaml",
-      printOutputStatistics: false, # TODO (not enabled yet)
+      printOutputStatistics: false, # TODO (not enabled)
     }
   },
   Overlap: {
     type: "OctreeBased",
- #   loadPosesFromFile: "pose_scanner_leica_affine_apartment.txt", # Ground truth poses
 
     OctreeBased: {
       octomapResolution: 0.2,
