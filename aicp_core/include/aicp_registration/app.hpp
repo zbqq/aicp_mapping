@@ -6,6 +6,7 @@
 #include <condition_variable>
 
 #include <Eigen/Dense>
+#include <Eigen/StdVector>
 
 #include "aicp_registration/common.hpp"
 #include "aicp_registration/pointmatcher_registration.hpp"
@@ -210,7 +211,7 @@ protected:
     bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d total_correction_;
-    std::vector<Eigen::Isometry3d> poseNodes_;
+    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d> > poseNodes_;
     // Reference cloud update counters
     int updates_counter_;
     // Current reference pre-filtered

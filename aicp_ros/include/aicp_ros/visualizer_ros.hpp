@@ -13,6 +13,8 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 
+#include <Eigen/StdVector>
+
 namespace aicp {
 
 class ROSVisualizer : public Visualizer
@@ -58,7 +60,7 @@ private:
     // Duplicates the list in collections renderer. assumed to be 3xN colors
     std::vector<double> colors_;
     // Path (vector of poses)
-    std::vector<Eigen::Isometry3d> path_;
+    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> path_;
 
     std::string fixed_frame_; // map or map_test
     std::string odom_frame_;
