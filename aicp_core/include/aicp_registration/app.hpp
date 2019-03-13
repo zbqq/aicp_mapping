@@ -49,8 +49,12 @@ public:
         OverlapParams overlap_params,
         ClassificationParams class_params);
 
-    ~App(){
+    inline virtual ~App(){
+        delete aligned_clouds_graph_;
+        delete prior_map_;
+        delete vis_;
     }
+
     RegistrationParams reg_params_;
     OverlapParams overlap_params_;
     ClassificationParams class_params_;

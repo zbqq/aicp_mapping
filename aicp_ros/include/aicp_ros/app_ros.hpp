@@ -20,7 +20,10 @@ public:
            const RegistrationParams& reg_params,
            const OverlapParams& overlap_params,
            const ClassificationParams& class_params);
-    ~AppROS(){
+
+    inline ~AppROS() {
+        delete accu_;
+        delete vis_ros_;
     }
 
     // Subscriber callabacks

@@ -25,6 +25,10 @@ public:
            OverlapParams overlap_params,
            ClassificationParams class_params);
 
+    inline ~AppLCM() {
+        delete accu_;
+    }
+
     void planarLidarHandler(const lcm::ReceiveBuffer* rbuf,
                             const std::string& channel,
                             const bot_core::planar_lidar_t* msg);
