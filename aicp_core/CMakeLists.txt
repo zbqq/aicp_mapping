@@ -15,7 +15,7 @@ find_package(OpenCV 3.0 REQUIRED)
 # Add include directories
 include_directories(
   include
-  ${Eigen3_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS}
 )
@@ -43,8 +43,7 @@ add_library(aicpUtils SHARED src/utils/common.cpp
                              src/utils/icpMonitor.cpp
                              src/utils/filteringUtils.cpp)
 target_link_libraries(aicpUtils ${libpointmatcher_LIBRARIES}
-                                ${PCL_LIBRARIES}
-                                ${Eigen3_LIBRARIES})
+                                ${PCL_LIBRARIES})
 
 
 ##################
@@ -59,8 +58,7 @@ target_link_libraries(aicpOverlap ${PCL_LIBRARIES}
 # Clasification #
 #################
 add_library(aicpClassification SHARED src/classification/svm.cpp)
-target_link_libraries(aicpClassification ${Eigen3_LIBRARIES}
-                                         ${OpenCV_LIBS})
+target_link_libraries(aicpClassification ${OpenCV_LIBS})
                                          
 add_executable(aicp_classification_main src/classification/main.cpp)
 target_link_libraries(aicp_classification_main aicpClassification
@@ -80,7 +78,6 @@ add_library(aicpRegistration SHARED src/registration/pointmatcher_registration.c
                                     src/registration/aligned_clouds_graph.cpp)
 target_link_libraries(aicpRegistration ${libpointmatcher_LIBRARIES}
                                        ${PCL_LIBRARIES}
-                                       ${Eigen3_LIBRARIES}
                                        yaml-cpp)
 
                                       
@@ -116,8 +113,7 @@ install(DIRECTORY include/aicp_registration/
                   include/aicp_classification/
                   include/aicp_utils/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-        FILES_MATCHING PATTERN "*.hpp"
-        PATTERN ".svn" EXCLUDE)
+        FILES_MATCHING PATTERN "*.hpp")
 
 ###############  
 # Extra Tools #
