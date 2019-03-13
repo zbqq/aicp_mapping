@@ -100,7 +100,6 @@ int main(int argc, char **argv){
     parser.add(ca_cfg.lidar_channel, "l", "lidar_channel", "Input message e.g MULTISENSE_SCAN");
     parser.parse();
 
-
     /*===================================
     =            YAML Config            =
     ===================================*/
@@ -110,6 +109,21 @@ int main(int argc, char **argv){
       return -1;
     }
     yaml_conf.printParams();
+
+    RegistrationParams reg_params = yaml_conf.getRegistrationParams();
+    parser.add(reg_params.pointmatcher.configFileName, "r_conf", "reg_default_config", "Registration default config");
+    if(reg_params.pointmatcher.configFileName.empty()){
+        cerr << "ERROR: Param \"registration_default_config_file not found!\"" << endl;
+    }
+
+    OverlapParams overlap_params = yaml_conf.getOverlapParams();
+
+    ClassificationParams classification_params = yaml_conf.getClassificationParams();
+    parser.add(classification_params.svm.trainingFile, "r_conf", "svm_training_file", "SVM training file");
+    parser.add(classification_params.svm.testingFile, "r_conf", "svm_testing_file", "SVM testing file");
+    parser.add(classification_params.svm.saveFile, "r_conf", "svm_save_file", "SVM save file");
+    parser.add(classification_params.svm.saveProbs, "r_conf", "svm_save_probs", "SVM save probs");
+    parser.add(classification_params.svm.modelLocation, "r_conf", "svm_model_location", "SVM model location");
 
     /*===================================
     =             Create LCM            =
@@ -126,9 +140,9 @@ int main(int argc, char **argv){
     aicp::AppLCM* app = new aicp::AppLCM(lcm,
                                          cl_cfg,
                                          ca_cfg,
-                                         yaml_conf.getRegistrationParams(),
-                                         yaml_conf.getOverlapParams(),
-                                         yaml_conf.getClassificationParams());
+                                         reg_params,
+                                         overlap_params,
+                                         classification_params);
 
     while(0 == lcm->handle());
     delete app;
