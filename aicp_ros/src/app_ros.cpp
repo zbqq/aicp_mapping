@@ -288,18 +288,20 @@ bool AppROS::goBackRequest()
                                       aligned_map_ptr,
                                       Eigen::Isometry3d::Identity());
     }
-    ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
-    ROS_INFO_STREAM("[Aicp] Go back requested! Turn and follow previous path back to origin.");
-    ROS_INFO_STREAM("-----------------------------------------------------------------------");
 
     // Change to localization only settings
     cl_cfg_.localize_against_prior_map = true;
     pose_marker_initialized_ = true;
 
     // Set path back
-    std::vector<Eigen::Isometry3d> path_reversed = vis_ros_->getPath();
+    std::vector<Eigen::Isometry3d> path_reversed = vis_->getPath();
+    std::cout << "path_reversed.size(): " << path_reversed.size() << std::endl;
     std::reverse(path_reversed.begin(),path_reversed.end());
-    cout << "path_reversed.size(): " << path_reversed.size() << endl;
+    ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
+    ROS_INFO_STREAM("[Aicp] Follow path of "
+                    << path_reversed.size()
+                    << " poses back to origin.");
+    ROS_INFO_STREAM("-----------------------------------------------------------------------");
 
     talk_ros_->publishFootstepPlan(path_reversed, ros::Time::now().toNSec() / 1000);
     pcl::PointCloud<pcl::PointXYZ>::Ptr prior_map_ptr = prior_map_->getCloud();
