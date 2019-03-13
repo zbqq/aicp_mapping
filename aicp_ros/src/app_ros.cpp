@@ -35,7 +35,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
     world_to_body_previous_ = Eigen::Isometry3d::Identity();
 
     // Init prior map
-    loadMapFromFile(cl_cfg.map_from_file_path);
+    loadMapFromFile(cl_cfg_.map_from_file_path);
 
     // Pose publisher
     corrected_pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(cl_cfg_.output_channel,10);

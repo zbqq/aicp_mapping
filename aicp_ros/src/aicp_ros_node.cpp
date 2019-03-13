@@ -64,6 +64,8 @@ int main(int argc, char** argv){
     nh.getParam("lidar_channel", va_cfg.lidar_topic);
     nh.getParam("inertial_frame", va_cfg.inertial_frame);
 
+
+
     /*===================================
     =            YAML Config            =
     ===================================*/
@@ -74,15 +76,29 @@ int main(int argc, char** argv){
     }
     yaml_conf.printParams();
 
+    RegistrationParams reg_params = yaml_conf.getRegistrationParams();
+    if(!nh.getParam("registration_default_config_file", reg_params.pointmatcher.configFileName)){
+        ROS_ERROR("Param \"registration_default_config_file not found!\"");
+    }
+
+    OverlapParams overlap_params = yaml_conf.getOverlapParams();
+
+    ClassificationParams classification_params = yaml_conf.getClassificationParams();
+    nh.getParam("trainingFile", classification_params.svm.trainingFile);
+    nh.getParam("testingFile", classification_params.svm.testingFile);
+    nh.getParam("saveFile", classification_params.svm.saveFile);
+    nh.getParam("saveProbs", classification_params.svm.saveProbs);
+    nh.getParam("modelLocation", classification_params.svm.modelLocation);
+
     /*===================================
     =              Start App            =
     ===================================*/
     std::shared_ptr<aicp::AppROS> app(new aicp::AppROS(nh,
                                                        cl_cfg,
                                                        va_cfg,
-                                                       yaml_conf.getRegistrationParams(),
-                                                       yaml_conf.getOverlapParams(),
-                                                       yaml_conf.getClassificationParams()));
+                                                       reg_params,
+                                                       overlap_params,
+                                                       classification_params));
 
     // Subscribers
     ros::Subscriber lidar_sub = nh.subscribe(va_cfg.lidar_topic, 100, &aicp::AppROS::velodyneCallBack, app.get());

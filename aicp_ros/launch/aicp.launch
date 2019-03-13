@@ -3,6 +3,7 @@
 <launch>
 
   <arg name="registration_config_file"     default="$(find aicp_core)/config/icp/icp_autotuned.yaml"/>
+  <arg name="registration_default_config_file" default="$(find aicp_core)/config/icp/icp_autotuned_default.yaml" />
   <arg name="aicp_config_file"             default="$(find aicp_core)/config/aicp_config.yaml"/>
   <arg name="fixed_frame"                  default="map"/>
   <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
@@ -10,11 +11,19 @@
   <arg name="localize_against_prior_map"   default="false"/>
   <arg name="localize_against_built_map"   default="false"/>
 
+  <arg name="trainingFile" default="$(find aicp_core)/data/labels/training_all_labelled_1Sep.txt"/>
+  <arg name="testingFile" default="$(find aicp_core)/data/labels/testing_labelled_27Aug.txt"/>
+  <arg name="saveFile" default="$(find aicp_core)/data/classification/svm_1000training_thresh50_cross_validation_opencv3.xml"/>
+  <arg name="saveProbs" default="$(find aicp_core)/data/classification/probs_opencv3.txt"/>
+  <arg name="modelLocation" default="$(find aicp_core)/data/models/svm_opencv3.xml" />
+
 
   <!-- Run AICP (command line configuration) -->
   <node pkg="aicp_ros" type="aicp_ros_node" name="aicp_ros_node" output="screen">
 
     <param name="registration_config_file"      value="$(arg registration_config_file)" />
+    <param name="registration_default_config_file" value="$(arg registration_default_config_file)" />
+
     <param name="aicp_config_file"              value="$(arg aicp_config_file)" />
     <!-- In ROS should always be set to debug mode -->
     <param name="working_mode"                  value="debug" />
@@ -25,6 +34,13 @@
     <param name="map_from_file_path"            value="$(arg map_from_file_path)" />
     <param name="localize_against_prior_map"    value="$(arg localize_against_prior_map)" />
     <param name="localize_against_built_map"    value="$(arg localize_against_built_map)" /> <!-- implicit loop closure when revisit known place -->
+
+    <param name="trainingFile" value="$(arg trainingFile)" />
+    <param name="testingFile" value="$(arg testingFile)" />
+    <param name="saveFile" value="$(arg saveFile)" />
+    <param name="saveProbs" value="$(arg saveProbs)" />
+    <param name="modelLocation" value="$(arg modelLocation)" />
+
     <!-- Prior map params -->
     <param name="crop_map_around_base"          value="15.0" /> <!-- box dimesions: value*2 x value*2 -->
                                                                 <!-- 15.0 to generate Ground Truth (David IROS19) -->

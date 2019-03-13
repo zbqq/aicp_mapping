@@ -11,7 +11,6 @@ AICP: {
                                      # - if "" no initial tranform will be applied
 
     Pointmatcher: {
-      configFileName: "/home/snobili/code/aicp_base/git/aicp/aicp_core/config/icp/icp_autotuned_default.yaml",
       printOutputStatistics: false, # TODO (not enabled)
     }
   },
@@ -26,12 +25,7 @@ AICP: {
     type: "SVM",
 
     SVM: {
-      threshold: 0.50,
-      trainingFile: "/home/snobili/code/aicp_base/git/aicp/data/labels/training_all_labelled_1Sep.txt",
-      testingFile: "/home/snobili/code/aicp_base/git/aicp/data/labels/testing_labelled_27Aug.txt",
-      saveFile: "/home/snobili/code/aicp_base/git/aicp/data/classification/svm_1000training_thresh50_cross_validation_opencv3.xml",
-      saveProbs: "/home/snobili/code/aicp_base/git/aicp/data/classification/probs_opencv3.txt",
-      modelLocation: "/home/snobili/code/aicp_base/git/aicp/data/models/svm_opencv3.xml",
+      threshold: 0.50
     },
   }
 }

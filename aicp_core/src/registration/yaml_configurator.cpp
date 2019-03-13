@@ -47,10 +47,7 @@ namespace aicp {
           for(YAML::const_iterator it=pointmatcherNode.begin();it != pointmatcherNode.end();++it) {
             const string key = it->first.as<string>();
 
-            if(key.compare("configFileName") == 0) {
-              registration_params.pointmatcher.configFileName = it->second.as<string>();
-            }
-            else if(key.compare("printOutputStatistics") == 0) {
+            if(key.compare("printOutputStatistics") == 0) {
               registration_params.pointmatcher.printOutputStatistics =  it->second.as<bool>();
             }
           }
@@ -104,21 +101,6 @@ namespace aicp {
             if(key.compare("threshold") == 0) {
               classification_params.svm.threshold = it->second.as<double>();
             }
-            else if(key.compare("trainingFile") == 0) {
-              classification_params.svm.trainingFile = expandEnvironmentVariables(it->second.as<std::string>());
-            }
-            else if(key.compare("testingFile") == 0) {
-                classification_params.svm.testingFile = expandEnvironmentVariables(it->second.as<std::string>());
-            }
-            else if(key.compare("saveFile") == 0) {
-              classification_params.svm.saveFile = expandEnvironmentVariables(it->second.as<std::string>());
-            }
-            else if(key.compare("saveProbs") == 0) {
-              classification_params.svm.saveProbs = expandEnvironmentVariables(it->second.as<std::string>());
-            }
-            else if(key.compare("modelLocation") == 0) {
-              classification_params.svm.modelLocation = expandEnvironmentVariables(it->second.as<std::string>());
-            }
           }
         }
 
@@ -148,7 +130,7 @@ namespace aicp {
         cout << "[Main] Initial Transform: "                 << registration_params.initialTransform              << endl;
 
         if(registration_params.type.compare("Pointmatcher") == 0) {
-            cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;
+//            cout << "[Pointmatcher] Config File Name: "                << registration_params.pointmatcher.configFileName        << endl;
             cout << "[Pointmatcher] Print Registration Statistics: "   << registration_params.pointmatcher.printOutputStatistics << endl;
         }
         else if(registration_params.type.compare("GICP") == 0) {
@@ -164,11 +146,11 @@ namespace aicp {
 
         if(classification_params.type.compare("SVM") == 0) {
               cout << "[SVM] Acceptance Threshold: "    << classification_params.svm.threshold           << endl;
-              cout << "[SVM] Training File: "           << classification_params.svm.trainingFile        << endl;
-              cout << "[SVM] Testing File: "            << classification_params.svm.testingFile         << endl;
-              cout << "[SVM] Saving Model To: "         << classification_params.svm.saveFile            << endl;
-              cout << "[SVM] Saving Probs To: "         << classification_params.svm.saveProbs           << endl;
-              cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
+              // cout << "[SVM] Training File: "           << classification_params.svm.trainingFile        << endl;
+              // cout << "[SVM] Testing File: "            << classification_params.svm.testingFile         << endl;
+              // cout << "[SVM] Saving Model To: "         << classification_params.svm.saveFile            << endl;
+              // cout << "[SVM] Saving Probs To: "         << classification_params.svm.saveProbs           << endl;
+              // cout << "[SVM] Loading Model From: "      << classification_params.svm.modelLocation       << endl;
         }
 
         cout << "============================" << endl;
