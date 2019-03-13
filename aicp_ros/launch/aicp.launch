@@ -2,21 +2,22 @@
 
 <launch>
 
-  <arg name="registration_config_file"     default="$(find aicp_core)/config/icp/icp_autotuned.yaml"/>
+  <arg name="registration_config_file"         default="$(find aicp_core)/config/icp/icp_autotuned.yaml"/>
+  <arg name="aicp_config_file"                 default="$(find aicp_core)/config/aicp_config.yaml"/>
+  <arg name="fixed_frame"                      default="map"/>
+  <arg name="map_from_file_path"               default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
+  <arg name="load_map_from_file"               default="false"/>
+  <arg name="localize_against_prior_map"       default="false"/>
+  <arg name="localize_against_built_map"       default="false"/>
+  
+  <!-- Registration params -->
   <arg name="registration_default_config_file" default="$(find aicp_core)/config/icp/icp_autotuned_default.yaml" />
-  <arg name="aicp_config_file"             default="$(find aicp_core)/config/aicp_config.yaml"/>
-  <arg name="fixed_frame"                  default="map"/>
-  <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
-  <arg name="load_map_from_file"           default="false"/>
-  <arg name="localize_against_prior_map"   default="false"/>
-  <arg name="localize_against_built_map"   default="false"/>
-
-  <arg name="trainingFile" default="$(find aicp_core)/data/labels/training_all_labelled_1Sep.txt"/>
-  <arg name="testingFile" default="$(find aicp_core)/data/labels/testing_labelled_27Aug.txt"/>
-  <arg name="saveFile" default="$(find aicp_core)/data/classification/svm_1000training_thresh50_cross_validation_opencv3.xml"/>
-  <arg name="saveProbs" default="$(find aicp_core)/data/classification/probs_opencv3.txt"/>
-  <arg name="modelLocation" default="$(find aicp_core)/data/models/svm_opencv3.xml" />
-
+  <!-- Classification params (Alignment Risk) -->
+  <arg name="trainingFile"                     default="$(find aicp_core)/data/labels/training_all_labelled_1Sep.txt"/>
+  <arg name="testingFile"                      default="$(find aicp_core)/data/labels/testing_labelled_27Aug.txt"/>
+  <arg name="saveFile"                         default="$(find aicp_core)/data/classification/svm_1000training_thresh50_cross_validation_opencv3.xml"/>
+  <arg name="saveProbs"                        default="$(find aicp_core)/data/classification/probs_opencv3.txt"/>
+  <arg name="modelLocation"                    default="$(find aicp_core)/data/models/svm_opencv3.xml" />
 
   <!-- Run AICP (command line configuration) -->
   <node pkg="aicp_ros" type="aicp_ros_node" name="aicp_ros_node" output="screen">
