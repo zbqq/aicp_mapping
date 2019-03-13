@@ -9,7 +9,7 @@ class LCMVisualizer : public Visualizer
 {
 public:
     LCMVisualizer(boost::shared_ptr<lcm::LCM>& lcm);
-//    ~LCMVisualizer();
+    ~LCMVisualizer(){}
 
     // Publish cloud lcm
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -36,6 +36,10 @@ public:
                      int param,
                      string name,
                      int64_t utime);
+
+    // Gets
+    const std::vector<Eigen::Isometry3d>& getPath()
+    {}
 
 private:
     boost::shared_ptr<lcm::LCM> lcm_;

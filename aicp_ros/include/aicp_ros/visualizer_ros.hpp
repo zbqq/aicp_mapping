@@ -22,7 +22,7 @@ class ROSVisualizer : public Visualizer
 public:
 
     ROSVisualizer(ros::NodeHandle& nh, std::string fixed_frame);
-//    ~ROSVisualizer();
+    ~ROSVisualizer(){}
 
     // Publish cloud
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -50,6 +50,11 @@ public:
 
     // Publish tf from fixed_frame to odom
     void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);
+
+    // Gets
+    const std::vector<Eigen::Isometry3d>& getPath(){
+        return path_;
+    }
 
 private:
     ros::NodeHandle& nh_;

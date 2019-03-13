@@ -12,10 +12,8 @@ namespace aicp {
 class Visualizer
 {
 public:
-    Visualizer(){
-
-    }
-//    ~Visualizer();
+    Visualizer(){}
+    virtual ~Visualizer(){}
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                               int param,
@@ -38,6 +36,9 @@ public:
                              int param,
                              std::string name,
                              int64_t utime = -1) = 0;
+
+    // Gets
+    virtual const std::vector<Eigen::Isometry3d>& getPath() = 0;
 
 protected:
     // Set global reference frame to zero origin
