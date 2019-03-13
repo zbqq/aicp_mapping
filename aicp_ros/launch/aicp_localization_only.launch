@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mode: requires a prior map, localizes against it -->
+
+<launch>
+
+  <arg name="fixed_frame"                  default="map"/>
+  <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
+  <arg name="load_map_from_file"           default="true"/>
+  <arg name="localize_against_prior_map"   default="true"/>
+
+  <include file="$(find aicp_ros)/launch/aicp.launch">
+    <arg name="fixed_frame"                value="$(arg fixed_frame)"/>
+    <arg name="map_from_file_path"         value="$(arg map_from_file_path)"/>
+    <arg name="load_map_from_file"         value="$(arg load_map_from_file)"/>
+    <arg name="localize_against_prior_map" value="$(arg localize_against_prior_map)"/>
+  </include>
+  
+  <!-- Initial pose guess -->
+  <!-- - set using set_aicp_initial_guess.py, for specific log -->
+  <!-- - or set using interaction marker from ui -->
+  <node pkg="aicp_ros" name="set_aicp_initial_guess" type="set_aicp_initial_guess.py" args="$(arg fixed_frame)" output="screen"> 
+  </node> 
+
+</launch>

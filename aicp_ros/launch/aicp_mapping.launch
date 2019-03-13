@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mode: requires no prior map. Builds map on the fly and localizes against it -->
+
+<launch>
+
+  <arg name="fixed_frame"                  default="map"/>
+  <arg name="load_map_from_file"           default="false"/>
+  <arg name="localize_against_prior_map"   default="false"/> <!-- ! should always be false in this launch file ! -->
+  <arg name="localize_against_built_map"   default="false"/> <!-- implicit loop closure when revisit known place -->
+
+  <include file="$(find aicp_ros)/launch/aicp.launch">
+    <arg name="load_map_from_file"         value="$(arg load_map_from_file)"/>
+    <arg name="localize_against_prior_map" value="$(arg localize_against_prior_map)"/>
+    <arg name="localize_against_built_map" value="$(arg localize_against_built_map)"/>
+  </include>
+  
+  <group if="$(arg load_map_from_file)">
+    <!-- Initial pose guess -->
+    <!-- - set using set_aicp_initial_guess.py, for specific log -->
+    <!-- - or set using interaction marker from ui -->
+    <node pkg="aicp_ros" name="set_aicp_initial_guess" type="set_aicp_initial_guess.py" args="$(arg fixed_frame)" output="screen"> 
+    </node>
+  </group>
+
+</launch>

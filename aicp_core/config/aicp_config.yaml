@@ -1,0 +1,31 @@
+AICP: {
+  Registration: {
+    type: "Pointmatcher",
+    sensorRange: 100.0,         # in meters
+    sensorAngularView: 360.0,   # in degrees
+    loadPosesFrom: "", # "file" (ground truth poses), "pcd", "" is from log if available
+    initialTransform: "", # x[m], y[m], yaw[deg]
+                                     # - if "random" initialTransform will be
+                                     # sampled from Gaussian distributed perturbations
+                                     # with 0.1 m and 10 deg variance magnitude
+                                     # - if "" no initial tranform will be applied
+
+    Pointmatcher: {
+      printOutputStatistics: false, # TODO (not enabled)
+    }
+  },
+  Overlap: {
+    type: "OctreeBased",
+
+    OctreeBased: {
+      octomapResolution: 0.2,
+    }
+  },
+  Classifier: {
+    type: "SVM",
+
+    SVM: {
+      threshold: 0.50
+    },
+  }
+}
