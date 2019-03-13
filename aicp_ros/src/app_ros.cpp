@@ -295,7 +295,6 @@ bool AppROS::goBackRequest()
 
     // Set path back
     std::vector<Eigen::Isometry3d> path_reversed = vis_->getPath();
-    std::cout << "path_reversed.size(): " << path_reversed.size() << std::endl;
     std::reverse(path_reversed.begin(),path_reversed.end());
     ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
     ROS_INFO_STREAM("[Aicp] Follow path of "
