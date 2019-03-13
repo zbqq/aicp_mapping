@@ -7,7 +7,7 @@
   <author email="snobili@robots.ox.ac.uk">Simona Nobili</author>
   <maintainer email="snobili@robots.ox.ac.uk">Simona Nobili</maintainer>
   <maintainer email="mcamurri@robots.ox.ac.uk">Marco Camurri</maintainer>
-  <license>LGPL-2.1</license>
+  <license>LGPLv2.1</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   
