@@ -294,15 +294,15 @@ bool AppROS::goBackRequest()
     pose_marker_initialized_ = true;
 
     // Set path back
-    std::vector<Eigen::Isometry3d> path_reversed = vis_->getPath();
-    std::reverse(path_reversed.begin(),path_reversed.end());
+    std::vector<Eigen::Isometry3d> path_forward = vis_->getPath();
+
     ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
     ROS_INFO_STREAM("[Aicp] Follow path of "
-                    << path_reversed.size()
+                    << path_forward.size()
                     << " poses back to origin.");
     ROS_INFO_STREAM("-----------------------------------------------------------------------");
 
-    talk_ros_->publishFootstepPlan(path_reversed, ros::Time::now().toNSec() / 1000);
+    talk_ros_->publishFootstepPlan(path_forward, ros::Time::now().toNSec() / 1000, true);
     pcl::PointCloud<pcl::PointXYZ>::Ptr prior_map_ptr = prior_map_->getCloud();
     vis_->publishMap(prior_map_ptr, prior_map_->getUtime(), 0);
 

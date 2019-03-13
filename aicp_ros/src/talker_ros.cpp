@@ -11,7 +11,11 @@ ROSTalker::ROSTalker(ros::NodeHandle& nh, std::string fixed_frame) : nh_(nh),
 }
 
 void ROSTalker::publishFootstepPlan(std::vector<Eigen::Isometry3d>& path,
-                                    int64_t utime){
+                                    int64_t utime,
+                                    bool reverse_path){
+
+    if(reverse_path)
+        reversePath(path);
 
     geometry_msgs::PoseArray path_msg;
     int secs = utime*1E-6;
@@ -35,5 +39,20 @@ void ROSTalker::publishFootstepPlan(std::vector<Eigen::Isometry3d>& path,
     }
 
     footstep_plan_pub_.publish(path_msg);
+}
+
+void ROSTalker::reversePath(std::vector<Eigen::Isometry3d>& path){
+
+    std::reverse(path.begin(),path.end());
+
+    for (size_t i = 0; i < path.size(); ++i){
+        // Turn 90 degrees about z-axis
+        Eigen::Matrix3d rot;
+        rot = Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitX())
+            * Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitY())
+            * Eigen::AngleAxisd(180*M_PI/180, Eigen::Vector3d::UnitZ());
+
+        path[i].linear() = rot * path[i].rotation();
+    }
 }
 }

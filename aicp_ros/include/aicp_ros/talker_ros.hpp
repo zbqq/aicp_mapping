@@ -16,7 +16,9 @@ public:
 
     // Publish footstep plan
     void publishFootstepPlan(std::vector<Eigen::Isometry3d> &path,
-                             int64_t utime);
+                             int64_t utime,
+                             bool reverse_path = false);
+    void reversePath(std::vector<Eigen::Isometry3d>& path);
 
 private:
     ros::NodeHandle& nh_;
