@@ -394,11 +394,13 @@ void App::operator()() {
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = true;
 
+                vis_->publishPose(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
+                                  cloud->getUtime());
                 // Store aligned map and VISUALIZE
                 if(aligned_clouds_graph_->getLastCloud()->isReference())
                 {
-                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                      cloud->getUtime());
+                    // vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                    //                   cloud->getUtime());
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                     // Output map
