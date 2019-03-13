@@ -127,7 +127,7 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
         ROS_WARN_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
 }
 
-void ROSVisualizer::publishPose(Eigen::Isometry3d pose, int param, string name, int64_t utime){
+void ROSVisualizer::publishPoses(Eigen::Isometry3d pose, int param, string name, int64_t utime){
 
     nav_msgs::Path path_msg;
     path_.push_back(pose);

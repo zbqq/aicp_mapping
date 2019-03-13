@@ -45,8 +45,8 @@ public:
                        std::string channel_name);
 
     // Publish corrected pose
-    void publishPose(Eigen::Isometry3d pose,
-                     int param, std::string name, int64_t utime);
+    void publishPoses(Eigen::Isometry3d pose,
+                      int param, std::string name, int64_t utime);
 
     // Publish tf from fixed_frame to odom
     void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);

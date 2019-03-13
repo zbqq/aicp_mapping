@@ -32,10 +32,10 @@ public:
     virtual void publishOctree(octomap::ColorOcTree*& octree,
                                std::string channel_name) = 0;
 
-    virtual void publishPose(Eigen::Isometry3d pose_,
-                             int param,
-                             std::string name,
-                             int64_t utime = -1) = 0;
+    virtual void publishPoses(Eigen::Isometry3d pose_,
+                              int param,
+                              std::string name,
+                              int64_t utime = -1) = 0;
 
     // Gets
     virtual const std::vector<Eigen::Isometry3d>& getPath() = 0;

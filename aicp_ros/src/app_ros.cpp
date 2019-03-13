@@ -86,7 +86,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
                                                           // body -> reference * world -> body
     // Publish initial guess interactive marker
     if (!pose_initialized_)
-        vis_->publishPose(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
+        vis_->publishPoses(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
 
     // Publish fixed_frame to odom tf
     ros::Time msg_time(pose_msg_in->header.stamp.sec, pose_msg_in->header.stamp.nsec);
