@@ -52,7 +52,7 @@ public:
     void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);
 
     // Gets
-    const std::vector<Eigen::Isometry3d>& getPath(){
+    const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& getPath(){
         return path_;
     }
 

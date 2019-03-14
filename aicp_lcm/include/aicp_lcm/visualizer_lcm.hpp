@@ -38,7 +38,7 @@ public:
                      int64_t utime);
 
     // Gets
-    const std::vector<Eigen::Isometry3d>& getPath()
+    const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& getPath()
     {}
 
 private:

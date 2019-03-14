@@ -38,7 +38,7 @@ public:
                               int64_t utime = -1) = 0;
 
     // Gets
-    virtual const std::vector<Eigen::Isometry3d>& getPath() = 0;
+    virtual const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& getPath() = 0;
 
 protected:
     // Set global reference frame to zero origin
