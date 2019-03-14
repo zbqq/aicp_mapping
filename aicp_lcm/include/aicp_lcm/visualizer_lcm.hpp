@@ -32,10 +32,10 @@ public:
                        string channel_name);
 
     // Publish corrected pose lcm
-    void publishPose(Eigen::Isometry3d pose_,
-                     int param,
-                     string name,
-                     int64_t utime);
+    void publishPoses(Eigen::Isometry3d pose_,
+                      int param,
+                      string name,
+                      int64_t utime);
 
     // Gets
     const std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& getPath()
