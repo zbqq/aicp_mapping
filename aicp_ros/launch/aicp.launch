@@ -9,6 +9,7 @@
   <arg name="load_map_from_file"               default="false"/>
   <arg name="localize_against_prior_map"       default="false"/>
   <arg name="localize_against_built_map"       default="false"/>
+  <arg name="merge_aligned_clouds_to_map"      default="true"/>
   
   <!-- Registration params -->
   <arg name="registration_default_config_file" default="$(find aicp_core)/config/icp/icp_autotuned_default.yaml" />
