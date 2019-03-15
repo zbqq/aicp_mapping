@@ -20,6 +20,9 @@ For inter-process communication, the package includes wrappers for:
  - [ROS](http://wiki.ros.org/ROS/Introduction)
  - [LCM](https://lcm-proj.github.io/) (discontinued)
 
+
+***
+
 ### Description
 
 The core AICP strategy is compiled in *aicp_core*.
@@ -40,9 +43,11 @@ The default steps perform frame-to-reference localization and mapping, and inclu
     - Phase 2: operator request and path approval
     - Phase 3: Go Back, Localization only
 
+***
+
 ### Quick Start
 
-Main dependencies:
+#### Main dependencies
 
 * [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds.
 
@@ -54,7 +59,7 @@ Main dependencies:
 
 * [Eigen](https://eigen.tuxfamily.org/dox-devel/index.html), a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
 
-#### Compiling
+#### How To Compile
 
 1. Create folders:
 
@@ -76,7 +81,9 @@ Main dependencies:
 > cd &#126;/aicp_base/catkin_ws
 > catkin build aicp_ros
 
-#### Running - ROS
+#### How To Run
+
+**ROS**
 
 - **User Interface:**
     1. `roscore`
@@ -88,15 +95,17 @@ Main dependencies:
     - **AICP mapping -- frame-to-reference**: `roslaunch aicp_ros aicp_mapping.launch`
     - **AICP localization only -- frame-to-map**: `roslaunch aicp_ros aicp_localization_only.launch`
 
-#### Running - LCM
+**LCM** (discontinued)
 
 Help: `rosrun aicp_lcm aicp_lcm_node -h`
 Example: `rosrun aicp_lcm aicp_lcm_node -s debug -b 80 -f 5`
 
-**Note:**
+***Note:***
 
 * Option _"-s robot"_ is meant to be used if the corrected pose from AICP is fed back into the state estimator. Each corrected pose is published only once as soon as computed.
 * Option _"-s debug"_ is meant to be used during debug. The corrected pose message is published at the same frequency as the pose estimate from the state estimator \(for visualization purposes\).
+
+***
 
 ### Credits
 
@@ -132,6 +141,7 @@ Example: `rosrun aicp_lcm aicp_lcm_node -s debug -b 80 -f 5`
   year = {2018},
 }
 ```
+***
 
 ### License
 
