@@ -1,52 +1,97 @@
-# Auto-Tuned ICP
+# Auto-tuned ICP
 
-Auto-tuned Iterative Closest Point \(AICP\) is a module for non-incremental point cloud registration and localization failure prediction. The registration strategy is based on the libpointmatcher framework \(Pomerleau et al., AR 2012\).
+Auto-tuned Iterative Closest Point \(AICP\) is a module for laser-based localization and mapping \(Nobili et al., ICRA 2017\). The implementation of AICP includes a module for localization failure prediction \(Nobili et al., ICRA 2018\).
+The registration strategy is based on the *libpointmatcher* framework \(Pomerleau et al., AR 2012\).
 
-AICP has been tested on Carnegie Robotics Multisense SL data from the NASA Valkyrie and Boston Dynamics Atlas humanoid robots, as well as the IIT HyQ quadruped and the Clearpath Husky mobile platform. The framework supports Lightweight Communications and Marshalling \(LCM\) integration for real-time message transfering.
+AICP has been tested on:
 
-### Details:
+- **Carnegie Robotics Multisense SL** data from:
+    - NASA Valkyrie humanoid
+    - Boston Dynamics Atlas humanoid
+    - IIT HyQ quadruped
+    - Clearpath Husky mobile platform
+- **Velodyne HDL-64** data from
+    - KITTI dataset (mobile platform)
+- **Velodyne VLP-16** data from
+    - ANYbotics ANYmal quadruped
 
-The algorithm:
+For inter-process communication, the package includes wrappers for:
 
-1. accumulates planar laser scans on a thread and generates 3D point clouds with -b scans
-2. on a second thread, stores the first cloud as the reference cloud
-3. before alignment, overlap and alignability parameters --&gt; risk of alignment \(Nobili et al., ICRA 2018, submitted\) are computed
-4. the reference cloud gets updated with latest accumulated cloud if \(risk of alignment &gt; threshold\)
-5. aligns each new point cloud to the current reference cloud
-6. publishes a corrected body pose
+ - [ROS](http://wiki.ros.org/ROS/Introduction)
+ - [LCM](https://lcm-proj.github.io/) (discontinued)
+
+### Description
+
+The core AICP strategy is compiled in *aicp_core*.
+The default steps perform frame-to-reference localization and mapping, and include:
+
+1. On a thread, AICP accumulates laser scans, i.e. each 3D point cloud processed for registration is constituted of `batch_size` scans
+2. On a second thread, it stores the first point  cloud as the **reference cloud**
+3. Prior to registration, AICP computes an octree-based overlap parameter \(Nobili et al., ICRA 2018\) between the current and reference point clouds, and uses it to **auto-tune** online the outlier rejection filter of the registration strategy
+4. A reference point cloud update can be trigger **either** in a windowed fashion (`reference_update_frequency`) **or** based on the risk of alignment failure prediction (`failure_prediction_mode`)
+5. AICP registers  each new point cloud to the reference point cloud
+6. Finally, AICP publishes a **corrected** body pose estimate at the frequency of the state estimator
+
+#### Additional Functionalities
+
+- **AICP localization only** -- frame-to-map
+- **Go Back to Start** service (described in detail on issue https://github.com/ori-drs/aicp/issues/19#issuecomment-473247145)
+    - Phase 1: SLAM
+    - Phase 2: operator request and path approval
+    - Phase 3: Go Back, Localization only
 
 ### Quick Start
 
-The main dependencies are:
+Main dependencies:
 
-* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds. The most recent revisions of this codebase \(from July 2017 onwards, with the introduction of the Failure Prediction module\), depend on our [own fork of libpointmatcher](https://github.com/oxfordrobotics/libpointmatcher/commit/3393c9327677c649d480799e76159ea223d95004) \(revision 3393c9327677c649d480799e76159ea223d95004 on branch sn-system-covariance\).
+* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds.
 
-* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.8.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
+* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.7.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
 
 * [Octomap](https://github.com/OctoMap/octomap.git), a probabilistic 3D mapping framework based on octrees.
 
-#### Running
+* [OpenCV](https://opencv.org/) -- Open Source Computer Vision Library.
 
-Help: `aicp-registration-online -h`
+* [Eigen](https://eigen.tuxfamily.org/dox-devel/index.html), a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
 
-```
-Usage:
-  aicp-registration-online [opts]
-Options:
-  -h,  --help                     = [false]                 : Display this help message
-  -s,  --working_mode             = ["robot"]               : Robot or Debug? (i.e. robot or debug)
-  -u,  --failure_prediction_mode  = [0]                     : Use: Alignment Risk (0), Degeneracy (1), ICN (2)
-  -v,  --verbose                  = [false]                 : Publish frames and clouds to LCM for debug
-  -c,  --apply_correction         = [false]                 : Initialize AICP with corrected pose? (during debug)
-  -pc, --pose_body_channel        = ["POSE_BODY"]           : Input kinematics-inertia pose estimate
-  -oc, --output_channel           = ["POSE_BODY_CORRECTED"] : Output corrected pose message
-  -l,  --lidar_channel            = ["MULTISENSE_SCAN"]     : Input planar laser scan message
-  -b,  --batch_size               = [240]                   : Number of scans per full 3D point cloud (at 5RPM)
-  -m,  --min_range                = [0.500000]              : Closest accepted lidar range
-  -M,  --max_range                = [15.0000]               : Furthest accepted lidar range
-```
+#### Compiling
 
-Example Usage: `aicp-registration-online -s debug -b 83 -a -v`
+1. Create folders:
+
+> mkdir -p  &#126;/aicp_base/git/ &#126;/aicp_base/catkin_ws/src
+
+2. Set-up catkin workspace:
+
+> source /opt/ros/kinetic/setup.bash
+> cd &#126;/aicp_base/catkin_ws
+> catkin init
+> catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+3. Clone and compile source code:
+
+> cd &#126;/aicp_base/git
+> git clone git@github.com:ori-drs/aicp.git
+> ln -s &#126;/aicp_base/git/* &#126;/aicp_base/catkin_ws/src
+
+> cd &#126;/aicp_base/catkin_ws
+> catkin build aicp_ros
+
+#### Running - ROS
+
+- **User Interface:**
+    1. `roscore`
+    2. EITHER `rosrun rviz rviz -d [PATH_TO]/drs_base/git/aicp/aicp_ros/config/rviz/simple_aicp.rviz`
+    3. OR `roslaunch aicp_ros view_recorded_rosbag.launch`
+- **Log:**
+    - `rosbag play --clock --pause [PATH_TO]/[FILE_NAME].bag`
+- **AICP launch:**
+    - **AICP mapping -- frame-to-reference**: `roslaunch aicp_ros aicp_mapping.launch`
+    - **AICP localization only -- frame-to-map**: `roslaunch aicp_ros aicp_localization_only.launch`
+
+#### Running - LCM
+
+Help: `rosrun aicp_lcm aicp_lcm_node -h`
+Example: `rosrun aicp_lcm aicp_lcm_node -s debug -b 80 -f 5`
 
 **Note:**
 
@@ -55,38 +100,43 @@ Example Usage: `aicp-registration-online -s debug -b 83 -a -v`
 
 ### Credits
 
-This work has been accepted for publication in the Proceedings of 2017 IEEE International Conference on Robotics and Automation \(ICRA\):
-
 ```
 @inproceedings{Nobili17icra,
-  title  = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
+  title = {Overlap-based {ICP} Tuning for Robust Localization of a Humanoid Robot},
   author = {S. Nobili and R. Scona and M. Caravagna and M. Fallon},
   booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
   location = {Singapore},
-  month = may,
-  year   = {2017},
+  month = {May},
+  year = {2017},
 }
 ```
 
-The following paper has been submitted for review to 2018 IEEE International Conference on Robotics and Automation \(ICRA\):
+```
+@inproceedings{NobiliCamurri17rss,
+  title = {Heterogeneous Sensor Fusion for Accurate State Estimation of Dynamic Legged Robots},
+  author = {S. Nobili and M. Camurri and V. Barasuol and M. Focchi and D. Caldwell and C. Semini and M. Fallon},
+  booktitle = {{Robotics: Science and Systems (RSS)}},
+  location = {Boston, MA, USA},
+  month = {July},
+  year = {2017},
+}
+```
 
 ```
 @inproceedings{Nobili18icra,
-  title  = {Predicting Alignment Risk to Prevent Localization Failure},
+  title = {Predicting Alignment Risk to Prevent Localization Failure},
   author = {S. Nobili and G. Tinchev and M. Fallon},
   booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
-  month = may,
-  year   = {2018},
-  note =    {Submitted},
+  location = {Brisbane, Australia},
+  month = {May},
+  year = {2018},
 }
 ```
-
-**Since this work is still under review, github users who have been granted access to this repository are not allowed to share the content. Simona.**
 
 ### License
 
 The License information is available in the LICENSE file contained in this project repository.
 
-Simona Nobili, Nov 2017.  
-Email: simona.nobili@ed.ac.uk, snobili@robots.ox.uk
+Author: Simona Nobili, March 2019.
+Email: snobili@robots.ox.uk, simona.nobili@ed.ac.uk
 
