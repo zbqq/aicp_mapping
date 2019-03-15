@@ -26,6 +26,7 @@ public:
     inline ~AppROS() {
         delete accu_;
         delete vis_ros_;
+        delete talk_ros_;
     }
 
     // Subscriber callabacks
