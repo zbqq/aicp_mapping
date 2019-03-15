@@ -294,7 +294,7 @@ bool AppROS::goBackRequest()
     pose_marker_initialized_ = true;
 
     // Set path back
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> path_forward = vis_->getPath();
+    PathPoses path_forward = vis_->getPath();
 
     ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
     ROS_INFO_STREAM("[Aicp] Follow path of "

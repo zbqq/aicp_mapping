@@ -12,14 +12,15 @@ namespace aicp {
 class ROSTalker
 {
 public:
-
+    typedef std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> PathPoses;
+public:
     ROSTalker(ros::NodeHandle& nh, std::string fixed_frame);
 
     // Publish footstep plan
-    void publishFootstepPlan(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& path,
+    void publishFootstepPlan(PathPoses& path,
                              int64_t utime,
                              bool reverse_path = false);
-    void reversePath(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& path);
+    void reversePath(PathPoses& path);
 
 private:
     ros::NodeHandle& nh_;

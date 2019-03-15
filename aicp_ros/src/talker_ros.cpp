@@ -5,12 +5,12 @@
 namespace aicp {
 
 ROSTalker::ROSTalker(ros::NodeHandle& nh, std::string fixed_frame) : nh_(nh),
-                                                                fixed_frame_(fixed_frame)
+                                                                     fixed_frame_(fixed_frame)
 {
     footstep_plan_pub_ = nh_.advertise<geometry_msgs::PoseArray>("/aicp/footstep_plan_request_list",10);
 }
 
-void ROSTalker::publishFootstepPlan(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& path,
+void ROSTalker::publishFootstepPlan(PathPoses& path,
                                     int64_t utime,
                                     bool reverse_path){
 
@@ -41,7 +41,7 @@ void ROSTalker::publishFootstepPlan(std::vector<Eigen::Isometry3d, Eigen::aligne
     footstep_plan_pub_.publish(path_msg);
 }
 
-void ROSTalker::reversePath(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>& path){
+void ROSTalker::reversePath(PathPoses& path){
 
     std::reverse(path.begin(),path.end());
 
