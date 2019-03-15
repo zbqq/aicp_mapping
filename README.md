@@ -148,5 +148,5 @@ Example: `rosrun aicp_lcm aicp_lcm_node -s debug -b 80 -f 5`
 The License information is available in the LICENSE file contained in this project repository.
 
 Author: Simona Nobili, March 2019.
-Email: snobili@robots.ox.uk, simona.nobili@ed.ac.uk
+Email: snobili@robots.ox.ac.uk, simona.nobili@ed.ac.uk
 
