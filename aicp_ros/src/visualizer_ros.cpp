@@ -48,8 +48,8 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
          0.5, 1.0, 0.5,
          0.5, 0.5, 1.0};
 
-    odom_frame_ = "/odom";
-    base_frame_ = "/base";
+    odom_frame_ = "odom";
+    base_frame_ = "base";
 }
 
 void ROSVisualizer::publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
