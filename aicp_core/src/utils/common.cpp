@@ -22,6 +22,19 @@ Eigen::Isometry3d fromMatrix4fToIsometry3d(Eigen::Matrix4f matrix){
   return isometry;
 }
 
+double angleBetweenVectors2d(Eigen::Vector2d& v1,
+                             Eigen::Vector2d& v2){
+
+    double numerator = (v1.transpose() * v2);
+    std::cout << "numerator: " << numerator << std::endl;
+    double denominator = (v1.norm() * v2.norm());
+    std::cout << "denominator: " << denominator << std::endl;
+    double result = acos(numerator / denominator) * 180.0 / M_PI;
+    std::cout << "result: " << result << std::endl;
+
+    return result;
+}
+
 //extract integers from a string.
 std::string extract_ints(std::ctype_base::mask category, std::string str, std::ctype<char> const& facet)
 {

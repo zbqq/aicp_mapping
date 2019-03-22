@@ -22,6 +22,10 @@
 //convert formats in Eigen
 Eigen::Isometry3d fromMatrix4fToIsometry3d(Eigen::Matrix4f matrix);
 
+//compute angle between two vecotrs (returns degrees)
+double angleBetweenVectors2d(Eigen::Vector2d& v1,
+                             Eigen::Vector2d& v2);
+
 //swapping two values.
 template<typename T>
 inline bool swap_if_gt(T& a, T& b) {
