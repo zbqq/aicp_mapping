@@ -15,7 +15,6 @@ find_package(OpenCV 3.0 REQUIRED)
 # Add include directories
 include_directories(
   include
-  ${libpointmatcher_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS}
@@ -29,8 +28,7 @@ catkin_package(
             aicpClassification
             aicpUtils 
   CATKIN_DEPENDS
-  DEPENDS libpointmatcher
-          PCL
+  DEPENDS PCL
           OCTOMAP
           OpenCV) # dependencies which will be taken outside
   
