@@ -127,20 +127,25 @@ void ROSVisualizer::publishMap(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
         ROS_WARN_STREAM("[ROSVisualizer] Unknown channel. Map not published.");
 }
 
-void ROSVisualizer::publishPoses(Eigen::Isometry3d pose, int param, string name, int64_t utime){
+void ROSVisualizer::publishPoses(Eigen::Isometry3d pose, int param, std::string name, int64_t utime)
+{
+    path_.push_back(pose);
+    publishPoses(path_, param, name, utime);
+}
+
+void ROSVisualizer::publishPoses(PathPoses poses, int param, string name, int64_t utime){
 
     nav_msgs::Path path_msg;
-    path_.push_back(pose);
     int secs = utime*1E-6;
     int nsecs = (utime - (secs*1E6))*1E3;
     path_msg.header.stamp = ros::Time(secs, nsecs);
     path_msg.header.frame_id = fixed_frame_;
 
-    for (size_t i = 0; i < path_.size(); ++i){
+    for (size_t i = 0; i < poses.size(); ++i){
         geometry_msgs::PoseStamped m;
         m.header.stamp = ros::Time(secs, nsecs);
         m.header.frame_id = fixed_frame_;
-        tf::poseEigenToMsg(path_[i], m.pose);
+        tf::poseEigenToMsg(poses[i], m.pose);
         path_msg.poses.push_back(m);
     }
 

@@ -396,9 +396,16 @@ void App::operator()() {
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = true;
 
-                // Path
-                vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
-                                   cloud->getUtime());
+                // Path (save and visualize)
+                // Ensure robot moves between stored poses
+                Eigen::Isometry3d relative_motion = vis_->getPath().back().inverse() *
+                                                    aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
+                double dist = relative_motion.translation().norm();
+                if (dist > 1.0)
+                {
+                    vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
+                                       cloud->getUtime());
+                }
 
                 // Store aligned map and VISUALIZE
                 if(aligned_clouds_graph_->getLastCloud()->isReference())

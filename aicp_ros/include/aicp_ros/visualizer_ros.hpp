@@ -44,8 +44,10 @@ public:
     void publishOctree(octomap::ColorOcTree*& octree,
                        std::string channel_name);
 
-    // Publish corrected pose
+    // Publish corrected poses
     void publishPoses(Eigen::Isometry3d pose,
+                      int param, std::string name, int64_t utime);
+    void publishPoses(PathPoses poses,
                       int param, std::string name, int64_t utime);
 
     // Publish tf from fixed_frame to odom
