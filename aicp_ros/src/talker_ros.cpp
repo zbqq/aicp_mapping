@@ -42,29 +42,22 @@ void ROSTalker::publishFootstepPlan(PathPoses& path,
 
 void ROSTalker::reversePath(PathPoses& path){
 
-//    Eigen::Vector3d v1;
-//    v1 << 1, 0, 0;
-//    Eigen::Vector3d v2;
-//    v2 << 1, 0, 0;
-
-//    Eigen::Matrix3d rotx;
-//    rotx = Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitX())
-//         * Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitY())
-//         * Eigen::AngleAxisd(30*M_PI/180, Eigen::Vector3d::UnitZ());
-//    v2 = rotx * v2;
-
-//    double res = angleBetweenVectors2d(v1, v2);
-//    std::cout << "res: " << res << std::endl;
     std::reverse(path.begin(),path.end());
 
     for (size_t i = 0; i < path.size(); ++i){
-        double angle = 0.0;
+        double angle = 180.0;
+
+        // Compute orientation along trajectory line
         if (i != path.size()-1)
         {
+            // angle between x-axis of current frame
             Eigen::Vector2d v1;
             v1 = path[i].matrix().block<2,1>(0,0);
+            // and trajectory line
             Eigen::Vector2d v2;
-            v2 = path[i+1].matrix().block<2,1>(0,0) - v1;
+            v2 << path[i+1].translation()(0, 0) - path[i].translation()(0, 0),
+                  path[i+1].translation()(1, 0) - path[i].translation()(1, 0);
+
             angle = angleBetweenVectors2d(v1, v2);
         }
 
