@@ -12,7 +12,9 @@
   <buildtool_depend>catkin</buildtool_depend>
   
   <build_depend>yaml-cpp</build_depend>
+  <build_depend>libpointmatcher</build_depend>
   <run_depend>yaml-cpp</run_depend>
+  <run_depend>libpointmatcher</run_depend>
 
   <export>
   </export>
