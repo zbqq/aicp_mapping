@@ -22,7 +22,7 @@ class ROSVisualizer : public Visualizer
 public:
 
     ROSVisualizer(ros::NodeHandle& nh, std::string fixed_frame);
-//    ~ROSVisualizer();
+    ~ROSVisualizer(){}
 
     // Publish cloud
     void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -44,12 +44,19 @@ public:
     void publishOctree(octomap::ColorOcTree*& octree,
                        std::string channel_name);
 
-    // Publish corrected pose
-    void publishPose(Eigen::Isometry3d pose,
-                     int param, std::string name, int64_t utime);
+    // Publish corrected poses
+    void publishPoses(Eigen::Isometry3d pose,
+                      int param, std::string name, int64_t utime);
+    void publishPoses(PathPoses poses,
+                      int param, std::string name, int64_t utime);
 
     // Publish tf from fixed_frame to odom
     void publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time);
+
+    // Gets
+    const PathPoses& getPath(){
+        return path_;
+    }
 
 private:
     ros::NodeHandle& nh_;
@@ -60,7 +67,7 @@ private:
     // Duplicates the list in collections renderer. assumed to be 3xN colors
     std::vector<double> colors_;
     // Path (vector of poses)
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> path_;
+    PathPoses path_;
 
     std::string fixed_frame_; // map or map_test
     std::string odom_frame_;

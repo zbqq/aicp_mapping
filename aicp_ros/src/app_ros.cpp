@@ -29,6 +29,8 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Visualizer
     vis_ = new ROSVisualizer(nh_, cl_cfg_.fixed_frame);
     vis_ros_ = new ROSVisualizer(nh_, cl_cfg_.fixed_frame);
+    // Talker
+    talk_ros_ = new ROSTalker(nh_, cl_cfg_.fixed_frame);
 
     // Init pose to identity
     world_to_body_ = Eigen::Isometry3d::Identity();
@@ -84,7 +86,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
                                                           // body -> reference * world -> body
     // Publish initial guess interactive marker
     if (!pose_initialized_)
-        vis_->publishPose(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
+        vis_->publishPoses(corrected_pose_, 0, "", ros::Time::now().toNSec() / 1000);
 
     // Publish fixed_frame to odom tf
     ros::Time msg_time(pose_msg_in->header.stamp.sec, pose_msg_in->header.stamp.nsec);
@@ -230,8 +232,7 @@ void AppROS::interactionMarkerCallBack(const geometry_msgs::PoseStampedConstPtr&
 
 bool AppROS::loadMapFromFileCallBack(aicp_srv::ProcessFile::Request& request, aicp_srv::ProcessFile::Response& response)
 {
-    response.success = loadMapFromFile(request.file_path);
-    return true;
+    return response.success = loadMapFromFile(request.file_path);
 }
 
 bool AppROS::loadMapFromFile(const std::string& file_path)
@@ -269,6 +270,41 @@ bool AppROS::loadMapFromFile(const std::string& file_path)
 
     map_initialized_ = true;
     vis_->publishMap(map, prior_map_->getUtime(), 0);
+
+    return true;
+}
+
+bool AppROS::goBackRequestCallBack(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response)
+{
+    return response.success = goBackRequest();
+}
+
+bool AppROS::goBackRequest()
+{
+    if (!cl_cfg_.localize_against_prior_map){
+        // Set map to localize against
+        pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_map_ptr = aligned_map_.makeShared();
+        prior_map_ = new AlignedCloud(ros::Time::now().toNSec() / 1000,
+                                      aligned_map_ptr,
+                                      Eigen::Isometry3d::Identity());
+    }
+
+    // Change to localization only settings
+    cl_cfg_.localize_against_prior_map = true;
+    pose_marker_initialized_ = true;
+
+    // Set path back
+    PathPoses path_forward = vis_->getPath();
+
+    ROS_INFO_STREAM("------------------------------- GO BACK -------------------------------");
+    ROS_INFO_STREAM("[Aicp] Follow path of "
+                    << path_forward.size()
+                    << " poses back to origin.");
+    ROS_INFO_STREAM("-----------------------------------------------------------------------");
+
+    talk_ros_->publishFootstepPlan(path_forward, ros::Time::now().toNSec() / 1000, true);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr prior_map_ptr = prior_map_->getCloud();
+    vis_->publishMap(prior_map_ptr, prior_map_->getUtime(), 0);
 
     return true;
 }

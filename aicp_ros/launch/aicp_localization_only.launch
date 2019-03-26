@@ -7,12 +7,14 @@
   <arg name="map_from_file_path"           default="$(find gazebo_worlds_drs)/point_clouds/fire_college.ply"/>
   <arg name="load_map_from_file"           default="true"/>
   <arg name="localize_against_prior_map"   default="true"/>
+  <arg name="merge_aligned_clouds_to_map"  default="true"/>
 
   <include file="$(find aicp_ros)/launch/aicp.launch">
-    <arg name="fixed_frame"                value="$(arg fixed_frame)"/>
-    <arg name="map_from_file_path"         value="$(arg map_from_file_path)"/>
-    <arg name="load_map_from_file"         value="$(arg load_map_from_file)"/>
-    <arg name="localize_against_prior_map" value="$(arg localize_against_prior_map)"/>
+    <arg name="fixed_frame"                 value="$(arg fixed_frame)"/>
+    <arg name="map_from_file_path"          value="$(arg map_from_file_path)"/>
+    <arg name="load_map_from_file"          value="$(arg load_map_from_file)"/>
+    <arg name="localize_against_prior_map"  value="$(arg localize_against_prior_map)"/>
+    <arg name="merge_aligned_clouds_to_map" value="$(arg merge_aligned_clouds_to_map)"/>
   </include>
   
   <!-- Initial pose guess -->

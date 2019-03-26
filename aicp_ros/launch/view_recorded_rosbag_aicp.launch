@@ -15,7 +15,7 @@
 
   <arg name="data_package"            default="gazebo_worlds"/>
   <arg name="world"                   default="empty"/>
-  <arg name="rviz_config_path"        default="$(find aicp)/config/rviz/config_aicp.rviz"/>
+  <arg name="rviz_config_path"        default="$(find aicp_ros)/config/rviz/config_aicp.rviz"/>
   <arg name="rqt_perspective_path"    default="$(find anymal_b_navigation_ui)/config/rqt/rqt.perspective"/>
 
   <!-- User interface -->

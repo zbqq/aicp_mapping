@@ -12,10 +12,10 @@ namespace aicp {
 class Visualizer
 {
 public:
-    Visualizer(){
-
-    }
-//    ~Visualizer();
+    typedef std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> PathPoses;
+public:
+    Visualizer(){}
+    virtual ~Visualizer(){}
 
     virtual void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                               int param,
@@ -34,10 +34,13 @@ public:
     virtual void publishOctree(octomap::ColorOcTree*& octree,
                                std::string channel_name) = 0;
 
-    virtual void publishPose(Eigen::Isometry3d pose_,
-                             int param,
-                             std::string name,
-                             int64_t utime = -1) = 0;
+    virtual void publishPoses(Eigen::Isometry3d pose_,
+                              int param,
+                              std::string name,
+                              int64_t utime = -1) = 0;
+
+    // Gets
+    virtual const PathPoses& getPath() = 0;
 
 protected:
     // Set global reference frame to zero origin

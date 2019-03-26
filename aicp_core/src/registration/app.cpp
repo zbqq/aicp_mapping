@@ -280,8 +280,10 @@ void App::operator()() {
                 // VISUALIZE first reference cloud
                 reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
                 vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
-                vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                  cloud->getUtime());
+
+                // Path
+                vis_->publishPoses(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                                   cloud->getUtime());
 
                 // Store built map
                 aligned_map_ = aligned_map_ + *reference_vis_;
@@ -394,11 +396,22 @@ void App::operator()() {
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
                 updated_correction_ = true;
 
+                // Path (save and visualize)
+                // Ensure robot moves between stored poses
+                Eigen::Isometry3d relative_motion = vis_->getPath().back().inverse() *
+                                                    aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
+                double dist = relative_motion.translation().norm();
+                if (dist > 1.0)
+                {
+                    vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
+                                       cloud->getUtime());
+                }
+
                 // Store aligned map and VISUALIZE
                 if(aligned_clouds_graph_->getLastCloud()->isReference())
                 {
-                    vis_->publishPose(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
-                                      cloud->getUtime());
+                    // vis_->publishPoses(aligned_clouds_graph_->getCurrentReference()->getCorrectedPose(), 0, "",
+                    //                    cloud->getUtime());
                     reference_vis_ = aligned_clouds_graph_->getCurrentReference()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                     // Output map
@@ -409,8 +422,8 @@ void App::operator()() {
                 else if(cl_cfg_.localize_against_prior_map &&
                         (aligned_clouds_graph_->getNbClouds()-1) % cl_cfg_.reference_update_frequency == 0)
                 {
-                    vis_->publishPose(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(),
-                                      0, "", cloud->getUtime());
+                    vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(),
+                                       0, "", cloud->getUtime());
                     reference_vis_ = aligned_clouds_graph_->getLastCloud()->getCloud();
                     vis_->publishCloud(reference_vis_, 0, "", cloud->getUtime());
                     // Add last aligned reference to map

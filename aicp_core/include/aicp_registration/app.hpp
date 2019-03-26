@@ -45,6 +45,8 @@ namespace aicp {
 
 class App{
 public:
+    typedef std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> PathPoses;
+public:
     App(const CommandLineConfig& cl_cfg,
         RegistrationParams reg_params,
         OverlapParams overlap_params,
@@ -151,7 +153,7 @@ protected:
         total_correction_ = Eigen::Isometry3d::Identity();
     }
 
-    const CommandLineConfig cl_cfg_;
+    CommandLineConfig cl_cfg_;
 
     std::unique_ptr<AbstractRegistrator> registr_;
     std::unique_ptr<AbstractOverlapper> overlapper_;
@@ -211,7 +213,7 @@ protected:
     bool force_reference_update_;
     Eigen::Isometry3d corrected_pose_;
     Eigen::Isometry3d total_correction_;
-    std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d> > poseNodes_;
+    PathPoses poseNodes_;
     // Reference cloud update counters
     int updates_counter_;
     // Current reference pre-filtered

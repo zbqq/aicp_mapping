@@ -9,6 +9,7 @@
   <arg name="load_map_from_file"               default="false"/>
   <arg name="localize_against_prior_map"       default="false"/>
   <arg name="localize_against_built_map"       default="false"/>
+  <arg name="merge_aligned_clouds_to_map"      default="true"/>
   
   <!-- Registration params -->
   <arg name="registration_default_config_file" default="$(find aicp_core)/config/icp/icp_autotuned_default.yaml" />
@@ -45,7 +46,7 @@
     <!-- Prior map params -->
     <param name="crop_map_around_base"          value="15.0" /> <!-- box dimesions: value*2 x value*2 -->
                                                                 <!-- 15.0 to generate Ground Truth (David IROS19) -->
-    <param name="merge_aligned_clouds_to_map"   value="true" /> <!-- true to generate Ground Truth (David IROS19) -->
+    <param name="merge_aligned_clouds_to_map"   value="$(arg merge_aligned_clouds_to_map)" /> <!-- true to generate Ground Truth (David IROS19) -->
     <!-- Reference update policy -->
     <param name="failure_prediction_mode"       value="false" />
     <param name="reference_update_frequency"    value="5" />
