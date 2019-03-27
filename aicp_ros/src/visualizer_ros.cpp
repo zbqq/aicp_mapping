@@ -18,6 +18,7 @@ ROSVisualizer::ROSVisualizer(ros::NodeHandle& nh, string fixed_frame) : nh_(nh),
     prior_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/prior_map", 10);
     aligned_map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/aicp/aligned_map", 10);
     pose_pub_ = nh_.advertise<nav_msgs::Path>("/aicp/poses",100);
+    fixed_to_odom_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(fixed_to_odom_prefix_ + fixed_frame_ + "_to_odom", 10);
     colors_ = {
          51/255.0, 160/255.0, 44/255.0,  //0
          166/255.0, 206/255.0, 227/255.0,
@@ -152,7 +153,21 @@ void ROSVisualizer::publishPoses(PathPoses poses, int param, string name, int64_
     pose_pub_.publish(path_msg);
 }
 
-void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_base_eigen, ros::Time msg_time)
+void ROSVisualizer::publishFixedFrameToOdomPose(const Eigen::Isometry3d &fixed_frame_to_base_eigen,
+                                                ros::Time msg_time)
+{
+    Eigen::Isometry3d fixed_frame_to_odom_eigen;
+    this->computeFixedFrameToOdom(fixed_frame_to_base_eigen, fixed_frame_to_odom_eigen);
+
+    tf::poseEigenToTF(fixed_frame_to_odom_eigen, temp_tf_pose_);
+    tf::poseTFToMsg(temp_tf_pose_, fixed_to_odom_msg_.pose.pose);
+    fixed_to_odom_msg_.header.stamp = msg_time;
+    fixed_to_odom_msg_.header.frame_id = odom_frame_;
+    fixed_to_odom_pub_.publish(fixed_to_odom_msg_);
+}
+
+void ROSVisualizer::computeFixedFrameToOdom(const Eigen::Isometry3d &fixed_frame_to_base_eigen,
+                                            Eigen::Isometry3d& fixed_frame_to_odom_eigen)
 {
     // TF listener
     tf::StampedTransform base_to_odom_tf;
@@ -171,8 +186,14 @@ void ROSVisualizer::publishFixedFrameToOdomTF(Eigen::Isometry3d& fixed_frame_to_
     tf::transformTFToEigen(base_to_odom_tf, base_to_odom_eigen);
 
     // Multiply
-    Eigen::Isometry3d fixed_frame_to_odom_eigen;
     fixed_frame_to_odom_eigen = fixed_frame_to_base_eigen * base_to_odom_eigen.inverse();
+}
+
+void ROSVisualizer::publishFixedFrameToOdomTF(const Eigen::Isometry3d& fixed_frame_to_base_eigen,
+                                              ros::Time msg_time)
+{
+    Eigen::Isometry3d fixed_frame_to_odom_eigen;
+    this->computeFixedFrameToOdom(fixed_frame_to_base_eigen, fixed_frame_to_odom_eigen);
 
     // Convert to TF
     tf::StampedTransform fixed_frame_to_odom_tf;
