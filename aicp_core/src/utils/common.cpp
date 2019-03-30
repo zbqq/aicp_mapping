@@ -22,9 +22,8 @@ Eigen::Isometry3d fromMatrix4fToIsometry3d(Eigen::Matrix4f matrix){
   return isometry;
 }
 
-double angleBetweenVectors2d(Eigen::Vector2d& v1,
-                             Eigen::Vector2d& v2){
-
+double angleBetweenVectors2d(const Eigen::Vector2d &v1,
+                             const Eigen::Vector2d &v2){
     return atan2(v1(0)*v2(1) - v1(1)*v2(0), v1(0)*v2(0) + v1(1)*v2(1)) * 180.0 / M_PI;
 }
 
