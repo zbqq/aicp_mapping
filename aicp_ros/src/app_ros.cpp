@@ -53,6 +53,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
     // Write the incoming data to file. This should be false when running live
     if (cl_cfg_.write_input_clouds_to_file)
     {
+        ROS_WARN_STREAM("[Aicp] Writing input clouds to file. Only do this in post processing");
         std::stringstream input_poses_filename;
         input_poses_filename << data_directory_path_.str() << "/input_poses.csv";
 

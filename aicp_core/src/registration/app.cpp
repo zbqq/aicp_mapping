@@ -224,7 +224,9 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
     =          Overlap         =
     ===========================*/
 
+    TimingUtils::tic();
     computeOverlap(reference_prefiltered, reading_prefiltered, reference_pose, reading_pose);
+    TimingUtils::toc("computeOverlap");
 
     /*=================================
     =          Alignment Risk         =
@@ -233,12 +235,14 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
     if (cl_cfg_.failure_prediction_mode)
         computeAlignmentRisk(reference_prefiltered, reading_prefiltered, reference_pose, reading_pose);
 
+    TimingUtils::tic();
     /*================================
     =          Registration          =
     ================================*/
     if(!cl_cfg_.failure_prediction_mode ||                      // if alignment risk disabled
        risk_prediction_(0,0) <= class_params_.svm.threshold)    // or below threshold
         computeRegistration(*reference_prefiltered, *reading_prefiltered, T);
+    TimingUtils::toc("computeRegistration");
 }
 
 
@@ -334,8 +338,9 @@ void App::processCloud(AlignedCloudPtr cloud){
                 first_cloud_initialized_ = true;
             }
             else {
-                TimingUtils::tic();
 
+                TimingUtils::tic();
+                TimingUtils::tic();
                 if (cl_cfg_.verbose)
                 {
                     // Publish original reading cloud
@@ -366,6 +371,7 @@ void App::processCloud(AlignedCloudPtr cloud){
                     filtered_read << "/reading_prefiltered.pcd";
                     pcd_writer_.write<pcl::PointXYZ> (filtered_read.str (), *read_prefiltered, false);
                 }
+                TimingUtils::toc("setAndFilterReading");
 
                 /*=====================================
                 =          AICP Registration          =
@@ -375,6 +381,7 @@ void App::processCloud(AlignedCloudPtr cloud){
 
                 runAicpPipeline(ref_prefiltered, read_prefiltered, ref_pose, read_pose, correction);
 
+                TimingUtils::tic();
                 if(!cl_cfg_.failure_prediction_mode ||                      // if alignment risk disabled
                    risk_prediction_(0,0) <= class_params_.svm.threshold)    // or below threshold
                 {
@@ -425,12 +432,14 @@ void App::processCloud(AlignedCloudPtr cloud){
                     updates_counter_ ++;
                     cout << "[Main] -----> ALIGNMENT RISK REFERENCE UPDATE" << endl;
                 }
+                TimingUtils::toc("updateReference");
 
                 initialT_ = correction * initialT_;
 
                 /*======================================
                 =          Save and Visualize          =
                 ======================================*/
+                TimingUtils::tic();
 
                 // Store chain of corrections for publishing
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
@@ -517,8 +526,8 @@ void App::processCloud(AlignedCloudPtr cloud){
                     aligned_read << "/reading_aligned.pcd";
                     pcd_writer_.write<pcl::PointXYZ> (aligned_read.str (), *aligned_clouds_graph_->getLastCloud()->getCloud(), false);
                 }
-
-                TimingUtils::toc();
+                TimingUtils::toc("postProcessing");
+                TimingUtils::toc("fullLoop");
 
                 cout << "============================" << endl
                      << "[Main] Summary:" << endl
