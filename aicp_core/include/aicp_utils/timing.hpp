@@ -11,7 +11,7 @@ class TimingUtils{
     ~TimingUtils(){}   
 
     static void tic();
-    static void toc();
+    static void toc(std::string message = "");
     static std::string currentDateTime();
 
     static void sleepSeconds(clock_t sec);

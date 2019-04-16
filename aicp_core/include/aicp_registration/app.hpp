@@ -39,6 +39,9 @@ struct CommandLineConfig
     int reference_update_frequency;
     float max_correction_magnitude;
     bool verbose;
+    bool write_input_clouds_to_file;
+    bool process_input_clouds_from_file;
+    string process_input_clouds_folder;
 };
 
 namespace aicp {
@@ -62,6 +65,10 @@ public:
     OverlapParams overlap_params_;
     ClassificationParams class_params_;
     int online_results_line_;
+
+    void processFromFile(std::string file_path);
+
+    void processCloud(AlignedCloudPtr cloud);
 
     // thread function doing actual work
     void operator()();

@@ -91,7 +91,7 @@ bool VelodyneAccumulatorROS::getFinished() const {
     return finished_;
 }
 
-uint64_t VelodyneAccumulatorROS::getFinishedTime() const{
+int64_t VelodyneAccumulatorROS::getFinishedTime() const{
     return utime_;
 }
 

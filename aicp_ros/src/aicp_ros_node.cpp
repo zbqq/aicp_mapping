@@ -31,6 +31,9 @@ int main(int argc, char** argv){
     cl_cfg.pose_body_channel = "/state_estimator/pose_in_odom";
     cl_cfg.output_channel = "/aicp/pose_corrected"; // Create new channel...
     cl_cfg.verbose = false; // enable visualization for debug
+    cl_cfg.write_input_clouds_to_file = false; // write the raw incoming point clouds to a folder, for post processing
+    cl_cfg.process_input_clouds_from_file = false;  // process raw incoming point cloud from a folder
+    cl_cfg.process_input_clouds_folder = "/tmp/aicp_data";
 
     aicp::VelodyneAccumulatorConfig va_cfg;
     va_cfg.batch_size = 80; // 240 is about 1 sweep at 5RPM // 80 is about 1 sweep at 15RPM
@@ -57,6 +60,10 @@ int main(int argc, char** argv){
     nh.getParam("pose_body_channel", cl_cfg.pose_body_channel);
     nh.getParam("output_channel", cl_cfg.output_channel);
     nh.getParam("verbose", cl_cfg.verbose);
+    nh.getParam("write_input_clouds_to_file", cl_cfg.write_input_clouds_to_file);
+    nh.getParam("process_input_clouds_from_file", cl_cfg.process_input_clouds_from_file);
+    nh.getParam("process_input_clouds_folder", cl_cfg.process_input_clouds_folder);
+
 
     nh.getParam("batch_size", va_cfg.batch_size);
     nh.getParam("min_range", va_cfg.min_range);
@@ -100,19 +107,25 @@ int main(int argc, char** argv){
                                                        overlap_params,
                                                        classification_params));
 
-    // Subscribers
-    ros::Subscriber lidar_sub = nh.subscribe(va_cfg.lidar_topic, 100, &aicp::AppROS::velodyneCallBack, app.get());
-    ros::Subscriber pose_sub = nh.subscribe(cl_cfg.pose_body_channel, 100, &aicp::AppROS::robotPoseCallBack, app.get());
-    ros::Subscriber marker_sub = nh.subscribe("/interaction_marker/pose", 100, &aicp::AppROS::interactionMarkerCallBack, app.get());
+    if (!cl_cfg.process_input_clouds_from_file){
 
-    // Advertise services (using service published by anybotics icp_tools ui)
-    ros::ServiceServer load_map_server_ = nh.advertiseService("/icp_tools/load_map_from_file", &aicp::AppROS::loadMapFromFileCallBack, app.get());
-    ros::ServiceServer go_back_server_ = nh.advertiseService("/aicp/go_back_request", &aicp::AppROS::goBackRequestCallBack, app.get());
+        // Subscribers
+        ros::Subscriber lidar_sub = nh.subscribe(va_cfg.lidar_topic, 100, &aicp::AppROS::velodyneCallBack, app.get());
+        ros::Subscriber pose_sub = nh.subscribe(cl_cfg.pose_body_channel, 100, &aicp::AppROS::robotPoseCallBack, app.get());
+        ros::Subscriber marker_sub = nh.subscribe("/interaction_marker/pose", 100, &aicp::AppROS::interactionMarkerCallBack, app.get());
 
-    ROS_INFO_STREAM("[Aicp] Waiting for input messages...");
+        // Advertise services (using service published by anybotics icp_tools ui)
+        ros::ServiceServer load_map_server_ = nh.advertiseService("/icp_tools/load_map_from_file", &aicp::AppROS::loadMapFromFileCallBack, app.get());
+        ros::ServiceServer go_back_server_ = nh.advertiseService("/aicp/go_back_request", &aicp::AppROS::goBackRequestCallBack, app.get());
 
-    app->run();
-    ros::spin();
+        ROS_INFO_STREAM("[Aicp] Waiting for input messages...");
+
+        app->run();
+        ros::spin();
+
+    }else{
+        app->processFromFile(cl_cfg.process_input_clouds_folder);
+    }
 
     return 0;
 }

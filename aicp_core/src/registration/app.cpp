@@ -241,25 +241,65 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
         computeRegistration(*reference_prefiltered, *reading_prefiltered, T);
 }
 
-void App::operator()() {
-    running_ = true;
-    while (running_) {
-        std::unique_lock<std::mutex> lock(worker_mutex_);
-        // Wait for notification from planarLidarHandler
-        worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
-        // Copy current workload from cloud queue to work queue
-        std::list<AlignedCloudPtr> work_queue;
-        {
-            std::unique_lock<std::mutex> lock(data_mutex_);
-            while (!cloud_queue_.empty()) {
-                work_queue.push_back(cloud_queue_.front());
-                cloud_queue_.pop_front();
+
+
+
+void App::processFromFile(std::string file_path){
+
+    // Reach the input poses file:
+    std::stringstream ss;
+    ss << file_path << "/input_poses.csv";
+    ifstream in( ss.str() );
+    vector<vector<double>> fields;
+    if (in) {
+        string line;
+        while (getline(in, line)) {
+            if (line.at(0) == '#'){
+                continue;
+            }
+
+            stringstream sep(line);
+            string field;
+            fields.push_back(vector<double>());
+            while (getline(sep, field, ',')) {
+                fields.back().push_back(stod(field));
             }
         }
+    }
 
-        // Process workload
-        for (auto cloud : work_queue) {
+    // Read each point cloud and consecutively feed to AICP
+    for (auto row : fields) {
+        int counter = int(row[0]);
+        int sec = int(row[1]);
+        int nsec = int(row[2]);
+        int64_t utime = 0;
+
+        Eigen::Isometry3d world_to_body_ = Eigen::Isometry3d::Identity();
+        world_to_body_.translation() << row[3],row[4],row[5];
+        world_to_body_.rotate( Eigen::Quaterniond(row[9],row[6],row[7],row[8]) );
+
+        std::stringstream ss2;
+        ss2 << file_path << "/cloud_" << counter << "_" << sec << "_" << nsec << ".pcd";
+
+        std::cout << ss2.str() << "\n";
+        pcl::PointCloud<pcl::PointXYZ>::Ptr accumulated_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+
+        if (pcl::io::loadPCDFile<pcl::PointXYZ> (ss2.str(), *accumulated_cloud) == -1){
+           std::cout << "Couldn't read file " << ss2.str() << "\n";
+           return;
+        }
+
+        AlignedCloudPtr current_cloud (new AlignedCloud(utime,
+                                                        accumulated_cloud,
+                                                        world_to_body_));
+        processCloud(current_cloud);
+    }
+}
+
+
+void App::processCloud(AlignedCloudPtr cloud){
+
 
             // First point cloud (becomes first reference)
             if(!cl_cfg_.localize_against_prior_map &&
@@ -345,7 +385,7 @@ void App::operator()() {
                          aligned_clouds_graph_->getNbClouds() != 0)
                     {
                         cout << "[Main] -----> WRONG ALIGNMENT: DROPPED POINT CLOUD" << endl;
-                        break;
+                        return;
                     }
 
                     pcl::transformPointCloud (*read_prefiltered, *output, correction);
@@ -493,6 +533,32 @@ void App::operator()() {
                 cout << "Updates: " << updates_counter_ << endl;
             }
             cout << "--------------------------------------------------------------------------------------" << endl;
+
+
+}
+
+
+
+void App::operator()() {
+    running_ = true;
+    while (running_) {
+        std::unique_lock<std::mutex> lock(worker_mutex_);
+        // Wait for notification from planarLidarHandler
+        worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
+
+        // Copy current workload from cloud queue to work queue
+        std::list<AlignedCloudPtr> work_queue;
+        {
+            std::unique_lock<std::mutex> lock(data_mutex_);
+            while (!cloud_queue_.empty()) {
+                work_queue.push_back(cloud_queue_.front());
+                cloud_queue_.pop_front();
+            }
+        }
+
+        // Process workload
+        for (auto cloud : work_queue) {
+            processCloud(cloud);
         }
     }
 }

@@ -7,10 +7,10 @@ void TimingUtils::tic() {
   tictoc_stack.push(clock());   
 }
 
-void TimingUtils::toc() {
+void TimingUtils::toc(std::string message) {
   std::cout << "Time elapsed: "
   << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
-  << " sec"
+  << " sec " << message
   << std::endl;
   tictoc_stack.pop();
 }

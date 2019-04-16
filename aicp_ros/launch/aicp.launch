@@ -20,6 +20,11 @@
   <arg name="saveProbs"                        default="$(find aicp_core)/data/classification/probs_opencv3.txt"/>
   <arg name="modelLocation"                    default="$(find aicp_core)/data/models/svm_opencv3.xml" />
 
+
+  <arg name="write_input_clouds_to_file"       default="false"/>
+  <arg name="process_input_clouds_from_file"   default="false"/>
+  <arg name="process_input_clouds_folder"      default="/tmp/aicp_data/"/>
+
   <!-- Run AICP (command line configuration) -->
   <node pkg="aicp_ros" type="aicp_ros_node" name="aicp_ros_node" output="screen">
 
@@ -60,6 +65,13 @@
     <param name="batch_size"                    value="7" />
   	<!-- Visualize and store -->
     <param name="verbose"                       value="false" />
+
+    <!-- Write out incoming data to file -->
+    <param name="write_input_clouds_to_file"    value="$(arg write_input_clouds_to_file)" />
+    <!-- Read incoming data from file -->
+    <param name="process_input_clouds_from_file" value="$(arg process_input_clouds_from_file)" />
+    <!-- Read incoming data from file -->
+    <param name="process_input_clouds_folder"   value="$(arg process_input_clouds_folder)" />
 
   </node>
 
