@@ -39,7 +39,7 @@ int main(int argc, char** argv){
     va_cfg.batch_size = 80; // 240 is about 1 sweep at 5RPM // 80 is about 1 sweep at 15RPM
     va_cfg.min_range = 0.50; // 1.85; // remove all the short range points
     va_cfg.max_range = 15.0; // we can set up to 30 meters (guaranteed range)
-    va_cfg.lidar_topic ="/velodyne/point_cloud_filtered";
+    va_cfg.lidar_topic ="/point_cloud_filter/velodyne/point_cloud_filtered";
     va_cfg.inertial_frame = "/odom";
 
     nh.getParam("registration_config_file", cl_cfg.registration_config_file);
