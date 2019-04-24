@@ -49,3 +49,4 @@ Eigen::VectorXf get_random_gaussian_variable(float mean, float std_deviation, in
 
 void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw);
 
+Eigen::Quaterniond euler_to_quat(double roll, double pitch, double yaw);
