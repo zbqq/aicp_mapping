@@ -401,7 +401,7 @@ void App::operator()() {
                 Eigen::Isometry3d relative_motion = vis_->getPath().back().inverse() *
                                                     aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
                 double dist = relative_motion.translation().norm();
-                if (dist > 1.0)
+                if (1==1)//dist > 1.0)
                 {
                     vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
                                        cloud->getUtime());
