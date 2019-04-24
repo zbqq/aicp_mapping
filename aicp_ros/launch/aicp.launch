@@ -31,6 +31,10 @@
     <param name="working_mode"                  value="debug" />
     <!-- Fixed frame (default: map, debug: map_test -->
     <param name="fixed_frame"                   value="$(arg fixed_frame)" />
+    <!-- default is /aicp/pose_corrected -->
+    <param name="output_channel"                value="/aicp/pose_corrected" />
+    <param name="lidar_channel"                   value="/point_cloud_filter/velodyne/point_cloud_filtered" />
+
     <!-- Prior map info -->
     <param name="load_map_from_file"            value="$(arg load_map_from_file)" />
     <param name="map_from_file_path"            value="$(arg map_from_file_path)" />
