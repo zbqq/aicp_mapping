@@ -91,7 +91,7 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
     // Publish fixed_frame to odom tf
     ros::Time msg_time(pose_msg_in->header.stamp.sec, pose_msg_in->header.stamp.nsec);
     // vis_ros_->publishFixedFrameToOdomTF(corrected_pose_, msg_time);
-    vis_ros_->publishFixedFrameToOdomPose(corrected_pose_, msg_time);
+    // vis_ros_->publishFixedFrameToOdomPose(corrected_pose_, msg_time);
 
     // Publish /aicp/pose_corrected
     tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
