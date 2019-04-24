@@ -405,6 +405,20 @@ void App::operator()() {
                 {
                     vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
                                        cloud->getUtime());
+                    vis_->publishPriorPoses(aligned_clouds_graph_->getLastCloud()->getPriorPose(), 0, "",
+                                       cloud->getUtime());
+                    vis_->publishOdomPoses(aligned_clouds_graph_->getLastCloud()->getOdomPose(), 0, "",
+                                       cloud->getUtime());
+
+
+                    std::cout << "odom_to_map publish <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                    Eigen::Isometry3d base_to_odom = aligned_clouds_graph_->getLastCloud()->getOdomPose();
+                    Eigen::Isometry3d base_to_map = aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
+
+                    Eigen::Isometry3d odom_to_map = (base_to_map.inverse() * base_to_odom).inverse();
+                    std::cout << odom_to_map.translation().transpose() << " odom_to_map publish\n";
+                    vis_->publishOdomToMapPose(odom_to_map, cloud->getUtime());
+
                 }
 
                 // Store aligned map and VISUALIZE
