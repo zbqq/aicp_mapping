@@ -51,6 +51,19 @@ public:
     void publishPoses(PathPoses poses,
                       int param, std::string name, int64_t utime);
 
+    void publishOdomPoses(Eigen::Isometry3d pose,
+                      int param, std::string name, int64_t utime);
+    void publishOdomPoses(PathPoses poses,
+                      int param, std::string name, int64_t utime);
+
+    void publishPriorPoses(Eigen::Isometry3d pose,
+                      int param, std::string name, int64_t utime);
+    void publishPriorPoses(PathPoses poses,
+                      int param, std::string name, int64_t utime);
+
+    void publishOdomToMapPose(Eigen::Isometry3d pose, int64_t utime);
+
+
     // Publish tf from fixed_frame to odom
     void publishFixedFrameToOdomTF(const Eigen::Isometry3d& fixed_frame_to_base_eigen,
                                    ros::Time msg_time);
@@ -68,11 +81,18 @@ private:
     ros::Publisher prior_map_pub_;
     ros::Publisher aligned_map_pub_;
     ros::Publisher pose_pub_;
+    ros::Publisher odom_pose_pub_;
+    ros::Publisher prior_pose_pub_;
+
     ros::Publisher fixed_to_odom_pub_;
+    ros::Publisher odom_to_map_pub_;
+    
     // Duplicates the list in collections renderer. assumed to be 3xN colors
     std::vector<double> colors_;
     // Path (vector of poses)
     PathPoses path_;
+    PathPoses odom_path_;
+    PathPoses prior_path_;
 
     std::string fixed_frame_; // map or map_test
     std::string odom_frame_;

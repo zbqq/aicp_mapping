@@ -39,6 +39,20 @@ public:
                               std::string name,
                               int64_t utime = -1) = 0;
 
+    virtual void publishOdomPoses(Eigen::Isometry3d pose_,
+                              int param,
+                              std::string name,
+                              int64_t utime = -1) = 0;
+
+    virtual void publishPriorPoses(Eigen::Isometry3d pose_,
+                              int param,
+                              std::string name,
+                              int64_t utime = -1) = 0;
+
+    virtual void publishOdomToMapPose(Eigen::Isometry3d pose_,
+                              int64_t utime = -1) = 0;
+
+
     // Gets
     virtual const PathPoses& getPath() = 0;
 
