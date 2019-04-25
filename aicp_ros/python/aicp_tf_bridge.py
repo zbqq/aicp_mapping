@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-# example showing publishing of a pose and a point cloud
-# then moving the point cloud by moving the pose ... but not republishing 
-# the point cloud
-# this is very useful for SLAM
+# link aicp's correction into tf (instead of localization manager)
 
 import rospy
 from geometry_msgs.msg import TransformStamped
