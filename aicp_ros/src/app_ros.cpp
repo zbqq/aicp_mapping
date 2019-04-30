@@ -55,7 +55,7 @@ AppROS::AppROS(ros::NodeHandle &nh,
     {
         ROS_WARN_STREAM("[Aicp] Writing input clouds to file. Only do this in post processing");
         std::stringstream input_poses_filename;
-        input_poses_filename << data_directory_path_.str() << "/input_poses.csv";
+        input_poses_filename << data_directory_path_.str() << "/aicp_input_poses.csv";
 
         input_poses_file_.open (input_poses_filename.str().c_str() );
         input_poses_file_ << "# counter, sec, nsec, x, y, z, qx, qy, qz, qw\n";

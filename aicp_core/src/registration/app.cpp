@@ -253,7 +253,7 @@ void App::processFromFile(std::string file_path){
 
     // Reach the input poses file:
     std::stringstream ss;
-    ss << file_path << "/input_poses.csv";
+    ss << file_path << "/aicp_input_poses.csv";
     ifstream in( ss.str() );
     vector<vector<double>> fields;
     if (in) {
