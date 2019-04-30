@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# link aicp's correction into tf (instead of localization manager)
+# pass aicp's correction to tf
+# this can be used instead of localization manager.
 
 import rospy
 from geometry_msgs.msg import TransformStamped
@@ -11,9 +12,6 @@ import tf
 import math
 import numpy
 import time
-
-
-
 
 pub = rospy.Publisher("/tf", TFMessage, queue_size=10)
 vis_pub = rospy.Publisher("/visualization_marker", Marker, queue_size=10)
@@ -34,10 +32,6 @@ def handle_odom_to_map(msg):
     tfm.transforms.append(this_t)
 
     pub.publish(tfm)
-
-
-
-
 
 
 rospy.init_node('aicp_tf_bridge')

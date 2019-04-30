@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-# link aicp's correction into tf (instead of localization manager)
+# when playing back a bag, filter out odom-to-map from tf
+# Note: need to replay the bag while remapping /tf to /tf_old
+# rosbag play filename.bag --pause --clock /tf:=/tf_old
 
 import rospy
 from tf2_msgs.msg import TFMessage
