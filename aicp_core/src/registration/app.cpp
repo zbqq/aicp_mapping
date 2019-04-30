@@ -5,6 +5,7 @@
 
 #include "aicp_utils/timing.hpp"
 #include "aicp_utils/common.hpp"
+#include "aicp_utils/poseFileReader.hpp"
 
 namespace aicp {
 
@@ -246,49 +247,25 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
 }
 
 
-
-
-
 void App::processFromFile(std::string file_path){
+    std::cout << "starting processFromFile\n";
 
-    // Reach the input poses file:
+    // Read all poses csv file:
     std::stringstream ss;
     ss << file_path << "/aicp_input_poses.csv";
-    ifstream in( ss.str() );
-    vector<vector<double>> fields;
-    if (in) {
-        string line;
-        while (getline(in, line)) {
-            if (line.at(0) == '#'){
-                continue;
-            }
+    std::vector< IsometryWithTime > world_to_body_poses;
+    PoseFileReader reader;
+    reader.readPoseFile(ss.str(), world_to_body_poses);
 
-            stringstream sep(line);
-            string field;
-            fields.push_back(vector<double>());
-            while (getline(sep, field, ',')) {
-                fields.back().push_back(stod(field));
-            }
-        }
-    }
-
-    // Read each point cloud and consecutively feed to AICP
-    for (auto row : fields) {
-        int counter = int(row[0]);
-        int sec = int(row[1]);
-        int nsec = int(row[2]);
-        int64_t utime = 0;
-
-        Eigen::Isometry3d world_to_body_ = Eigen::Isometry3d::Identity();
-        world_to_body_.translation() << row[3],row[4],row[5];
-        world_to_body_.rotate( Eigen::Quaterniond(row[9],row[6],row[7],row[8]) );
-
+    // Process each cloud successively
+    for (auto pose_with_time : world_to_body_poses) {
         std::stringstream ss2;
-        ss2 << file_path << "/cloud_" << counter << "_" << sec << "_" << nsec << ".pcd";
-
+        ss2 << file_path << "/cloud_" << pose_with_time.counter << "_" << pose_with_time.sec << "_" << pose_with_time.nsec << ".pcd";
         std::cout << ss2.str() << "\n";
-        pcl::PointCloud<pcl::PointXYZ>::Ptr accumulated_cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
+        int64_t utime = pose_with_time.sec*1E6 + pose_with_time.nsec;
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr accumulated_cloud (new pcl::PointCloud<pcl::PointXYZ>);
         if (pcl::io::loadPCDFile<pcl::PointXYZ> (ss2.str(), *accumulated_cloud) == -1){
            std::cout << "Couldn't read file " << ss2.str() << "\n";
            return;
@@ -296,7 +273,7 @@ void App::processFromFile(std::string file_path){
 
         AlignedCloudPtr current_cloud (new AlignedCloud(utime,
                                                         accumulated_cloud,
-                                                        world_to_body_));
+                                                        pose_with_time.pose));
         processCloud(current_cloud);
     }
 }
