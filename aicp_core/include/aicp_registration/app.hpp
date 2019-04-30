@@ -38,6 +38,7 @@ struct CommandLineConfig
     bool failure_prediction_mode;
     int reference_update_frequency;
     float max_correction_magnitude;
+    int max_queue_size;
     bool verbose;
     bool write_input_clouds_to_file;
     bool process_input_clouds_from_file;

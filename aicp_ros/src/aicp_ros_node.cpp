@@ -27,6 +27,7 @@ int main(int argc, char** argv){
     cl_cfg.reference_update_frequency = 5;
     cl_cfg.max_correction_magnitude = 0.5; // Max allowed correction magnitude
                                            // (probably failed alignment otherwise)
+    cl_cfg.max_queue_size = 3; // maximum length of the queue of accumulated point clouds. was 100 previously
 
     cl_cfg.pose_body_channel = "/state_estimator/pose_in_odom";
     cl_cfg.output_channel = "/aicp/pose_corrected"; // Create new channel...
@@ -56,6 +57,7 @@ int main(int argc, char** argv){
     nh.getParam("failure_prediction_mode", cl_cfg.failure_prediction_mode);
     nh.getParam("reference_update_frequency", cl_cfg.reference_update_frequency);
     nh.getParam("max_correction_magnitude", cl_cfg.max_correction_magnitude);
+    nh.getParam("max_queue_size", cl_cfg.max_queue_size);
 
     nh.getParam("pose_body_channel", cl_cfg.pose_body_channel);
     nh.getParam("output_channel", cl_cfg.output_channel);

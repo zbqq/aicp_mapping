@@ -61,6 +61,9 @@
     <param name="reference_update_frequency"    value="5" />
     <!-- Max allowed correction magnitude (probably failed alignment otherwise) -->
     <param name="max_correction_magnitude"      value="1.0" /> <!-- 1.5 to generate Ground Truth (David IROS19) -->
+    <!-- Max length of the queue of accumulated point clouds. was 100 previously -->
+    <param name="max_queue_size"      value="1" />
+
     <!-- 3D point cloud characteristics -->
     <param name="batch_size"                    value="7" />
   	<!-- Visualize and store -->

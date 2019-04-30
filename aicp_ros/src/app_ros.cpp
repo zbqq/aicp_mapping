@@ -221,7 +221,6 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 //            vis_->publishCloud(accumulated_cloud, 10, "/aicp/accumulated_cloud", accu_->getFinishedTime());
 
             // Push this cloud onto the work queue (mutex safe)
-            const int max_queue_size = 3;
             {
                 std::unique_lock<std::mutex> lock(data_mutex_);
 
@@ -238,13 +237,13 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
                 cloud_queue_.push_back(current_cloud);
                 //cout << "[App ROS] cloud_queue_ size: " << cloud_queue_.size() << endl;
 
-                if (cloud_queue_.size() > max_queue_size) {
+                if (cloud_queue_.size() > cl_cfg_.max_queue_size) {
                     cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
                     cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
                     cout << "[App ROS] WARNING: dropping " <<
-                            (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
+                            (cloud_queue_.size()-cl_cfg_.max_queue_size) << " clouds." << endl;
                 }
-                while (cloud_queue_.size() > max_queue_size) {
+                while (cloud_queue_.size() > cl_cfg_.max_queue_size) {
                     cloud_queue_.pop_front();
                 }
             }
