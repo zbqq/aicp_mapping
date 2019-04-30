@@ -56,7 +56,7 @@ private:
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (pre-filtered and global coordinates)
 
-    Eigen::Isometry3d world_to_cloud_odom_;          // odom to base:         world -> cloud (global coordinates)
+    Eigen::Isometry3d world_to_cloud_odom_;          // odom to base:         world -> cloud (global coordinates). this is the unmodified input.
 
     Eigen::Isometry3d world_to_cloud_prior_;         // cloud pose prior:     world -> cloud (global coordinates)
     Eigen::Isometry3d cloud_to_reference_;           // relative transform:   cloud -> reference (global coordinates)

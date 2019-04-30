@@ -10,7 +10,7 @@ AlignedCloud::AlignedCloud(int64_t utime,
     utime_ = utime;
     cloud_ = cloud;
 
-    world_to_cloud_odom_ = prior_pose;                          // prior pose (not updated else where)
+    world_to_cloud_odom_ = prior_pose;                          // prior pose. This is the original odom-to-base and is not updated elsewhere
 
     world_to_cloud_prior_ = prior_pose;                         // prior pose
     cloud_to_reference_ = Eigen::Isometry3d::Identity();        // correction
@@ -25,9 +25,9 @@ AlignedCloud::~AlignedCloud()
 }
 
 
-// Take the roll and pitch from the odom and use it to replace the icp estimate roll and pitch
+// Take the roll and pitch from the odom and use it to replace the roll and pitch estimated by ICP
 // this is to ensure gravity consistency
-// TODO: the cloud_to_reference_ is now inconsistent with these two frames.
+// TODO: the cloud_to_reference_ is currently inconsistent with these two frames.
 void AlignedCloud::removePitchRollCorrection()
 {
     Eigen::Quaterniond q_odom = Eigen::Quaterniond(world_to_cloud_odom_.rotation());
