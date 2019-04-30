@@ -20,6 +20,11 @@
   <arg name="saveProbs"                        default="$(find aicp_core)/data/classification/probs_opencv3.txt"/>
   <arg name="modelLocation"                    default="$(find aicp_core)/data/models/svm_opencv3.xml" />
 
+
+  <arg name="write_input_clouds_to_file"       default="false"/>
+  <arg name="process_input_clouds_from_file"   default="false"/>
+  <arg name="process_input_clouds_folder"      default="/tmp/aicp_data/"/>
+
   <!-- Run AICP (command line configuration) -->
   <node pkg="aicp_ros" type="aicp_ros_node" name="aicp_ros_node" output="screen">
 
@@ -56,10 +61,20 @@
     <param name="reference_update_frequency"    value="5" />
     <!-- Max allowed correction magnitude (probably failed alignment otherwise) -->
     <param name="max_correction_magnitude"      value="1.0" /> <!-- 1.5 to generate Ground Truth (David IROS19) -->
+    <!-- Max length of the queue of accumulated point clouds. was 100 previously -->
+    <param name="max_queue_size"      value="1" />
+
     <!-- 3D point cloud characteristics -->
     <param name="batch_size"                    value="7" />
   	<!-- Visualize and store -->
     <param name="verbose"                       value="false" />
+
+    <!-- Write out incoming data to file -->
+    <param name="write_input_clouds_to_file"    value="$(arg write_input_clouds_to_file)" />
+    <!-- Read incoming data from file -->
+    <param name="process_input_clouds_from_file" value="$(arg process_input_clouds_from_file)" />
+    <!-- Read incoming data from file -->
+    <param name="process_input_clouds_folder"   value="$(arg process_input_clouds_folder)" />
 
   </node>
 

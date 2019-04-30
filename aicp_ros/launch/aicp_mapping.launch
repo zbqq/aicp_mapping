@@ -8,10 +8,19 @@
   <arg name="localize_against_prior_map"   default="false"/> <!-- ! should always be false in this launch file ! -->
   <arg name="localize_against_built_map"   default="false"/> <!-- implicit loop closure when revisit known place -->
 
+  <!-- options for post processing -->
+  <arg name="write_input_clouds_to_file"       default="false"/>
+  <arg name="process_input_clouds_from_file"   default="false"/>
+  <arg name="process_input_clouds_folder"      default="/tmp/aicp_data"/>
+
   <include file="$(find aicp_ros)/launch/aicp.launch">
     <arg name="load_map_from_file"         value="$(arg load_map_from_file)"/>
     <arg name="localize_against_prior_map" value="$(arg localize_against_prior_map)"/>
     <arg name="localize_against_built_map" value="$(arg localize_against_built_map)"/>
+
+    <arg name="write_input_clouds_to_file"     value="$(arg write_input_clouds_to_file)"/>
+    <arg name="process_input_clouds_from_file" value="$(arg process_input_clouds_from_file)"/>
+    <arg name="process_input_clouds_folder"    value="$(arg process_input_clouds_folder)"/>
   </include>
   
   <group if="$(arg load_map_from_file)">

@@ -49,6 +49,20 @@ AppROS::AppROS(ros::NodeHandle &nh,
         alignability_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignability",10);
         risk_pub_ = nh_.advertise<std_msgs::Float32>("/aicp/alignment_risk",10);
     }
+
+    // Write the incoming data to file. This should be false when running live
+    if (cl_cfg_.write_input_clouds_to_file)
+    {
+        ROS_WARN_STREAM("[Aicp] Writing input clouds to file. Only do this in post processing");
+        std::stringstream input_poses_filename;
+        input_poses_filename << data_directory_path_.str() << "/aicp_input_poses.csv";
+
+        input_poses_file_.open (input_poses_filename.str().c_str() );
+        input_poses_file_ << "# counter, sec, nsec, x, y, z, qx, qy, qz, qw\n";
+        input_poses_file_.flush();
+        input_clouds_counter_ = 0;
+    }
+
 }
 
 void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose_msg_in)
@@ -134,6 +148,33 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
     pose_initialized_ = true;
 }
 
+
+void AppROS::writeCloudToFile(AlignedCloudPtr cloud){
+    // Extract the data from AlignedCloud
+    pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud = cloud->getCloud();
+    Eigen::Isometry3d pose = cloud->getPriorPose();
+    Eigen::Quaterniond quat(pose.rotation());
+    int64_t utime = cloud->getUtime();
+    int64_t sec = floor(utime * 1E-6);
+    int64_t nsec = utime - sec* 1E6;
+
+    // Write the base-to-odom estimate
+    std::stringstream ss;
+    ss << input_clouds_counter_ << ", " << sec << ", " << nsec << ", ";
+    ss << pose.translation().x() << ", " << pose.translation().y() << ", " << pose.translation().z() << ", ";
+    ss << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w();
+    input_poses_file_ << ss.str() << "\n";
+    input_poses_file_.flush();
+
+    // Write the point cloud
+    std::stringstream ss2;
+    ss2 << data_directory_path_.str() << "/cloud_" << input_clouds_counter_ << "_" << sec << "_" << nsec << ".pcd";
+    pcd_writer_.write<pcl::PointXYZ> (ss2.str (), *point_cloud, true);
+
+    input_clouds_counter_++;
+}
+
+
 void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_msg_in){
     if (!pose_initialized_){
         ROS_WARN_STREAM("[Aicp] Pose not initialized, waiting for pose prior...");
@@ -180,7 +221,6 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 //            vis_->publishCloud(accumulated_cloud, 10, "/aicp/accumulated_cloud", accu_->getFinishedTime());
 
             // Push this cloud onto the work queue (mutex safe)
-            const int max_queue_size = 3;
             {
                 std::unique_lock<std::mutex> lock(data_mutex_);
 
@@ -190,16 +230,20 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
                                                                 world_to_body_));
                 world_to_body_previous_ = world_to_body_;
 
+                if (cl_cfg_.write_input_clouds_to_file)
+                    writeCloudToFile(current_cloud);
+
                 // Stack current cloud into queue
                 cloud_queue_.push_back(current_cloud);
+                //cout << "[App ROS] cloud_queue_ size: " << cloud_queue_.size() << endl;
 
-                if (cloud_queue_.size() > max_queue_size) {
+                if (cloud_queue_.size() > cl_cfg_.max_queue_size) {
                     cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
                     cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
                     cout << "[App ROS] WARNING: dropping " <<
-                            (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
+                            (cloud_queue_.size()-cl_cfg_.max_queue_size) << " clouds." << endl;
                 }
-                while (cloud_queue_.size() > max_queue_size) {
+                while (cloud_queue_.size() > cl_cfg_.max_queue_size) {
                     cloud_queue_.pop_front();
                 }
             }

@@ -24,10 +24,16 @@ public:
            const ClassificationParams& class_params);
 
     inline ~AppROS() {
+        if (input_poses_file_.is_open()) {
+            input_poses_file_.close();
+        }
+
         delete accu_;
         delete vis_ros_;
         delete talk_ros_;
     }
+
+    void writeCloudToFile(AlignedCloudPtr cloud);
 
     // Subscriber callabacks
     void velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr& laser_msg_in);
@@ -44,6 +50,9 @@ public:
 
 private:
     ros::NodeHandle& nh_;
+
+    std::ofstream input_poses_file_;
+    int input_clouds_counter_;
 
     Eigen::Isometry3d world_to_body_;
     Eigen::Isometry3d world_to_body_previous_;

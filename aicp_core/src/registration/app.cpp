@@ -5,6 +5,7 @@
 
 #include "aicp_utils/timing.hpp"
 #include "aicp_utils/common.hpp"
+#include "aicp_utils/poseFileReader.hpp"
 
 namespace aicp {
 
@@ -224,7 +225,9 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
     =          Overlap         =
     ===========================*/
 
+    TimingUtils::tic();
     computeOverlap(reference_prefiltered, reading_prefiltered, reference_pose, reading_pose);
+    TimingUtils::toc("computeOverlap");
 
     /*=================================
     =          Alignment Risk         =
@@ -233,33 +236,51 @@ void App::runAicpPipeline(pcl::PointCloud<pcl::PointXYZ>::Ptr& reference_prefilt
     if (cl_cfg_.failure_prediction_mode)
         computeAlignmentRisk(reference_prefiltered, reading_prefiltered, reference_pose, reading_pose);
 
+    TimingUtils::tic();
     /*================================
     =          Registration          =
     ================================*/
     if(!cl_cfg_.failure_prediction_mode ||                      // if alignment risk disabled
        risk_prediction_(0,0) <= class_params_.svm.threshold)    // or below threshold
         computeRegistration(*reference_prefiltered, *reading_prefiltered, T);
+    TimingUtils::toc("computeRegistration");
 }
 
-void App::operator()() {
-    running_ = true;
-    while (running_) {
-        std::unique_lock<std::mutex> lock(worker_mutex_);
-        // Wait for notification from planarLidarHandler
-        worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
 
-        // Copy current workload from cloud queue to work queue
-        std::list<AlignedCloudPtr> work_queue;
-        {
-            std::unique_lock<std::mutex> lock(data_mutex_);
-            while (!cloud_queue_.empty()) {
-                work_queue.push_back(cloud_queue_.front());
-                cloud_queue_.pop_front();
-            }
+void App::processFromFile(std::string file_path){
+    std::cout << "starting processFromFile\n";
+
+    // Read all poses csv file:
+    std::stringstream ss;
+    ss << file_path << "/aicp_input_poses.csv";
+    std::vector< IsometryWithTime > world_to_body_poses;
+    PoseFileReader reader;
+    reader.readPoseFile(ss.str(), world_to_body_poses);
+
+    // Process each cloud successively
+    for (auto pose_with_time : world_to_body_poses) {
+        std::stringstream ss2;
+        ss2 << file_path << "/cloud_" << pose_with_time.counter << "_" << pose_with_time.sec << "_" << pose_with_time.nsec << ".pcd";
+        std::cout << ss2.str() << "\n";
+
+        int64_t utime = pose_with_time.sec*1E6 + pose_with_time.nsec;
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr accumulated_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+        if (pcl::io::loadPCDFile<pcl::PointXYZ> (ss2.str(), *accumulated_cloud) == -1){
+           std::cout << "Couldn't read file " << ss2.str() << "\n";
+           return;
         }
 
-        // Process workload
-        for (auto cloud : work_queue) {
+        AlignedCloudPtr current_cloud (new AlignedCloud(utime,
+                                                        accumulated_cloud,
+                                                        pose_with_time.pose));
+        processCloud(current_cloud);
+    }
+}
+
+
+void App::processCloud(AlignedCloudPtr cloud){
+
 
             // First point cloud (becomes first reference)
             if(!cl_cfg_.localize_against_prior_map &&
@@ -294,8 +315,9 @@ void App::operator()() {
                 first_cloud_initialized_ = true;
             }
             else {
-                TimingUtils::tic();
 
+                TimingUtils::tic();
+                TimingUtils::tic();
                 if (cl_cfg_.verbose)
                 {
                     // Publish original reading cloud
@@ -326,6 +348,7 @@ void App::operator()() {
                     filtered_read << "/reading_prefiltered.pcd";
                     pcd_writer_.write<pcl::PointXYZ> (filtered_read.str (), *read_prefiltered, false);
                 }
+                TimingUtils::toc("setAndFilterReading");
 
                 /*=====================================
                 =          AICP Registration          =
@@ -335,6 +358,7 @@ void App::operator()() {
 
                 runAicpPipeline(ref_prefiltered, read_prefiltered, ref_pose, read_pose, correction);
 
+                TimingUtils::tic();
                 if(!cl_cfg_.failure_prediction_mode ||                      // if alignment risk disabled
                    risk_prediction_(0,0) <= class_params_.svm.threshold)    // or below threshold
                 {
@@ -345,7 +369,7 @@ void App::operator()() {
                          aligned_clouds_graph_->getNbClouds() != 0)
                     {
                         cout << "[Main] -----> WRONG ALIGNMENT: DROPPED POINT CLOUD" << endl;
-                        break;
+                        return;
                     }
 
                     pcl::transformPointCloud (*read_prefiltered, *output, correction);
@@ -385,12 +409,14 @@ void App::operator()() {
                     updates_counter_ ++;
                     cout << "[Main] -----> ALIGNMENT RISK REFERENCE UPDATE" << endl;
                 }
+                TimingUtils::toc("updateReference");
 
                 initialT_ = correction * initialT_;
 
                 /*======================================
                 =          Save and Visualize          =
                 ======================================*/
+                TimingUtils::tic();
 
                 // Store chain of corrections for publishing
                 total_correction_ = fromMatrix4fToIsometry3d(initialT_);
@@ -477,8 +503,8 @@ void App::operator()() {
                     aligned_read << "/reading_aligned.pcd";
                     pcd_writer_.write<pcl::PointXYZ> (aligned_read.str (), *aligned_clouds_graph_->getLastCloud()->getCloud(), false);
                 }
-
-                TimingUtils::toc();
+                TimingUtils::toc("postProcessing");
+                TimingUtils::toc("fullLoop");
 
                 cout << "============================" << endl
                      << "[Main] Summary:" << endl
@@ -493,6 +519,32 @@ void App::operator()() {
                 cout << "Updates: " << updates_counter_ << endl;
             }
             cout << "--------------------------------------------------------------------------------------" << endl;
+
+
+}
+
+
+
+void App::operator()() {
+    running_ = true;
+    while (running_) {
+        std::unique_lock<std::mutex> lock(worker_mutex_);
+        // Wait for notification from planarLidarHandler
+        worker_condition_.wait_for(lock, std::chrono::milliseconds(1000));
+
+        // Copy current workload from cloud queue to work queue
+        std::list<AlignedCloudPtr> work_queue;
+        {
+            std::unique_lock<std::mutex> lock(data_mutex_);
+            while (!cloud_queue_.empty()) {
+                work_queue.push_back(cloud_queue_.front());
+                cloud_queue_.pop_front();
+            }
+        }
+
+        // Process workload
+        for (auto cloud : work_queue) {
+            processCloud(cloud);
         }
     }
 }

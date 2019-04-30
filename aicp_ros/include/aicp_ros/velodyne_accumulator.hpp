@@ -17,7 +17,7 @@ struct VelodyneAccumulatorConfig
     int batch_size = 10;
     double max_range = 30;
     double min_range = 0.5;
-    std::string lidar_topic = "/velodyne/point_cloud_filtered";
+    std::string lidar_topic = "/point_cloud_filter/velodyne/point_cloud_filtered";
     std::string inertial_frame = "/odom";
 };
 
@@ -35,7 +35,7 @@ public:
 
     uint16_t getCounter() const;
     bool getFinished() const;
-    uint64_t getFinishedTime() const;
+    int64_t getFinishedTime() const;
 
     const PointCloud& getCloud();
     void clearCloud();
@@ -53,7 +53,7 @@ private:
     // implicitly discarding intensities from the clouds
     PointCloud point_cloud_;
     PointCloud accumulated_point_cloud_;
-    uint64_t utime_;
+    int64_t utime_;
 
     ros::NodeHandle& nh_;
     ros::Subscriber lidar_sub_;
