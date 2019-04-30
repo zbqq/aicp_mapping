@@ -90,7 +90,8 @@ void AppROS::robotPoseCallBack(const geometry_msgs::PoseWithCovarianceStampedCon
 
     // Publish fixed_frame to odom tf
     ros::Time msg_time(pose_msg_in->header.stamp.sec, pose_msg_in->header.stamp.nsec);
-    vis_ros_->publishFixedFrameToOdomTF(corrected_pose_, msg_time);
+    // vis_ros_->publishFixedFrameToOdomTF(corrected_pose_, msg_time);
+    // vis_ros_->publishFixedFrameToOdomPose(corrected_pose_, msg_time);
 
     // Publish /aicp/pose_corrected
     tf::poseEigenToTF(corrected_pose_, temp_tf_pose_);
@@ -179,7 +180,7 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
 //            vis_->publishCloud(accumulated_cloud, 10, "/aicp/accumulated_cloud", accu_->getFinishedTime());
 
             // Push this cloud onto the work queue (mutex safe)
-            const int max_queue_size = 100;
+            const int max_queue_size = 3;
             {
                 std::unique_lock<std::mutex> lock(data_mutex_);
 
@@ -193,6 +194,8 @@ void AppROS::velodyneCallBack(const sensor_msgs::PointCloud2::ConstPtr &laser_ms
                 cloud_queue_.push_back(current_cloud);
 
                 if (cloud_queue_.size() > max_queue_size) {
+                    cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
+                    cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\n";
                     cout << "[App ROS] WARNING: dropping " <<
                             (cloud_queue_.size()-max_queue_size) << " clouds." << endl;
                 }

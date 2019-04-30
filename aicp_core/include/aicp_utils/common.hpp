@@ -22,6 +22,10 @@
 //convert formats in Eigen
 Eigen::Isometry3d fromMatrix4fToIsometry3d(Eigen::Matrix4f matrix);
 
+//compute angle between two vecotrs (returns degrees)
+double angleBetweenVectors2d(const Eigen::Vector2d& v1,
+                             const Eigen::Vector2d& v2);
+
 //swapping two values.
 template<typename T>
 inline bool swap_if_gt(T& a, T& b) {
@@ -45,3 +49,4 @@ Eigen::VectorXf get_random_gaussian_variable(float mean, float std_deviation, in
 
 void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw);
 
+Eigen::Quaterniond euler_to_quat(double roll, double pitch, double yaw);

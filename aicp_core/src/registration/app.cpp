@@ -401,10 +401,31 @@ void App::operator()() {
                 Eigen::Isometry3d relative_motion = vis_->getPath().back().inverse() *
                                                     aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
                 double dist = relative_motion.translation().norm();
-                if (dist > 1.0)
+                if (dist > 1.0)//(1==1)// use threshold to reduce number of nearby markers. this shouldnt be done here
                 {
                     vis_->publishPoses(aligned_clouds_graph_->getLastCloud()->getCorrectedPose(), 0, "",
                                        cloud->getUtime());
+                    vis_->publishPriorPoses(aligned_clouds_graph_->getLastCloud()->getPriorPose(), 0, "",
+                                       cloud->getUtime());
+                    vis_->publishOdomPoses(aligned_clouds_graph_->getLastCloud()->getOdomPose(), 0, "",
+                                       cloud->getUtime());
+
+
+                    std::cout << "odom_to_map publish <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                    Eigen::Isometry3d odom_to_base = aligned_clouds_graph_->getLastCloud()->getOdomPose();
+                    Eigen::Isometry3d map_to_base = aligned_clouds_graph_->getLastCloud()->getCorrectedPose();
+
+                    Eigen::Isometry3d odom_to_map = (map_to_base * odom_to_base.inverse()).inverse();
+                    vis_->publishOdomToMapPose(odom_to_map, cloud->getUtime());
+
+                    Eigen::Quaterniond q_corr = Eigen::Quaterniond(odom_to_map.rotation());
+                    double r_corr, p_corr, y_corr;
+                    quat_to_euler(q_corr, r_corr, p_corr, y_corr);
+                    std::cout << odom_to_map.translation().transpose() << " odom_to_map publish\n";
+                    std::cout << r_corr*180/M_PI << " " 
+                              << p_corr*180/M_PI << " " 
+                              << y_corr*180/M_PI << " rpy\n";
+
                 }
 
                 // Store aligned map and VISUALIZE

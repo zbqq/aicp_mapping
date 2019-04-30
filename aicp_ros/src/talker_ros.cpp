@@ -1,6 +1,5 @@
 #include "aicp_ros/talker_ros.hpp"
-
-//#include <eigen_conversions/eigen_msg.h>
+#include "aicp_utils/common.hpp"
 
 namespace aicp {
 
@@ -46,11 +45,27 @@ void ROSTalker::reversePath(PathPoses& path){
     std::reverse(path.begin(),path.end());
 
     for (size_t i = 0; i < path.size(); ++i){
-        // Turn 90 degrees about z-axis
+        double angle = 180.0;
+
+        // Compute orientation along trajectory line
+        if (i != path.size()-1)
+        {
+            // angle between x-axis of current frame
+            Eigen::Vector2d v1;
+            v1 = path[i].matrix().block<2,1>(0,0);
+            // and trajectory line
+            Eigen::Vector2d v2;
+            v2 << path[i+1].translation()(0, 0) - path[i].translation()(0, 0),
+                  path[i+1].translation()(1, 0) - path[i].translation()(1, 0);
+
+            angle = angleBetweenVectors2d(v1, v2);
+        }
+
+        // Turn about z-axis
         Eigen::Matrix3d rot;
         rot = Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitX())
             * Eigen::AngleAxisd(0*M_PI/180, Eigen::Vector3d::UnitY())
-            * Eigen::AngleAxisd(180*M_PI/180, Eigen::Vector3d::UnitZ());
+            * Eigen::AngleAxisd(angle*M_PI/180, Eigen::Vector3d::UnitZ());
 
         path[i].linear() = rot * path[i].rotation();
     }

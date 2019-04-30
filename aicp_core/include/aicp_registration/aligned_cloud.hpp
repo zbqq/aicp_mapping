@@ -18,6 +18,8 @@ public:
                  Eigen::Isometry3d prior_pose);
     ~AlignedCloud();
 
+    void removePitchRollCorrection();
+
     void updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                      bool is_reference);
     void updateCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
@@ -31,6 +33,7 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr getCloud(){ return cloud_; }
     int getNbPoints(){ return cloud_->size(); }
 
+    Eigen::Isometry3d getOdomPose(){ return world_to_cloud_odom_; }
     Eigen::Isometry3d getPriorPose(){ return world_to_cloud_prior_; }
     Eigen::Isometry3d getCorrection(){ return cloud_to_reference_; }
     Eigen::Isometry3d getCorrectedPose(){ return world_to_cloud_corrected_; }
@@ -52,6 +55,8 @@ private:
     int64_t utime_; // Cloud timestamp (microseconds)
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_; // Cloud (pre-filtered and global coordinates)
+
+    Eigen::Isometry3d world_to_cloud_odom_;          // odom to base:         world -> cloud (global coordinates). this is the unmodified input.
 
     Eigen::Isometry3d world_to_cloud_prior_;         // cloud pose prior:     world -> cloud (global coordinates)
     Eigen::Isometry3d cloud_to_reference_;           // relative transform:   cloud -> reference (global coordinates)
