@@ -3,6 +3,8 @@
 Auto-tuned Iterative Closest Point \(AICP\) is a module for laser-based localization and mapping \(Nobili et al., ICRA 2017\). The implementation of AICP includes a module for localization failure prediction \(Nobili et al., ICRA 2018\).
 The registration strategy is based on the *libpointmatcher* framework \(Pomerleau et al., AR 2012\).
 
+Demonstration Video with ANYMal:
+
 [![Watch the video](https://img.youtube.com/vi/9XMpm4VTBxU/maxresdefault.jpg)](https://youtu.be/9XMpm4VTBxU)
 
 
