@@ -88,7 +88,7 @@ The default steps perform frame-to-reference localization and mapping, and inclu
 - **User Interface:**
     1. `roscore`
     2. EITHER `rosrun rviz rviz -d [PATH_TO]/drs_base/git/aicp/aicp_ros/config/rviz/simple_aicp.rviz`
-    3. OR `roslaunch aicp_ros view_recorded_rosbag.launch`
+    3. OR `roslaunch aicp_ros view_recorded_rosbag_aicp_simple.launch`
 - **Log:**
     - `rosbag play --clock --pause [PATH_TO]/[FILE_NAME].bag`
 - **AICP launch:**
@@ -104,6 +104,19 @@ Example: `rosrun aicp_lcm aicp_lcm_node -s debug -b 80 -f 5`
 
 * Option _"-s robot"_ is meant to be used if the corrected pose from AICP is fed back into the state estimator. Each corrected pose is published only once as soon as computed.
 * Option _"-s debug"_ is meant to be used during debug. The corrected pose message is published at the same frequency as the pose estimate from the state estimator \(for visualization purposes\).
+
+
+#### Misc
+
+Required Topics (ROS):
+
+* Point Cloud from a 3D Lidar, ideally transformed into the base frame
+* Relative odometry estimate. This is the estimate of the LIDAR frame in a fixed frame. This should have low drift
+
+To filter an ANYmal rosbag to contain only the required topics
+
+* rosbag filter in.bag out.bag "topic=='/tf' or topic=='/state_estimator/pose_in_odom' or topic=='/point_cloud_filter/velodyne/point_cloud_filtered' or topic=='/tf_static'"
+
 
 ***
 
