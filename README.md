@@ -100,7 +100,8 @@ The default steps perform frame-to-reference localization and mapping, and inclu
     - **AICP localization only -- frame-to-map**: `roslaunch aicp_ros aicp_localization_only.launch`
 - **Log:**
     - `rosbag play --clock --pause yourbagfile.bag`
-    - [You can download the bag file from the experiment in the video here](ftp://ftp.robots.ox.ac.uk/pub/outgoing/aicp/anymal_2019-04-17-12-59-42_filtered_aicp_input.bag)
+    - You can download the bag file from the experiment in the video here:
+      - ftp://ftp.robots.ox.ac.uk/pub/outgoing/aicp/anymal_2019-04-17-12-59-42_filtered_aicp_input.bag
 
 
 
