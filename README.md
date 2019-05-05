@@ -95,11 +95,14 @@ The default steps perform frame-to-reference localization and mapping, and inclu
     1. `roscore`
     2. EITHER `rosrun rviz rviz -d [PATH_TO]/drs_base/git/aicp/aicp_ros/config/rviz/simple_aicp.rviz`
     3. OR `roslaunch aicp_ros view_recorded_rosbag_aicp_simple.launch`
-- **Log:**
-    - `rosbag play --clock --pause [PATH_TO]/[FILE_NAME].bag`
 - **AICP launch:**
     - **AICP mapping -- frame-to-reference**: `roslaunch aicp_ros aicp_mapping.launch`
     - **AICP localization only -- frame-to-map**: `roslaunch aicp_ros aicp_localization_only.launch`
+- **Log:**
+    - `rosbag play --clock --pause yourbagfile.bag`
+    - [You can download the bag file from the experiment in the video here](ftp://ftp.robots.ox.ac.uk/pub/outgoing/aicp/anymal_2019-04-17-12-59-42_filtered_aicp_input.bag)
+
+
 
 **LCM** (discontinued)
 
