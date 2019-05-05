@@ -43,11 +43,7 @@ The default steps perform frame-to-reference localization and mapping, and inclu
 
 #### Additional Functionalities
 
-- **AICP localization only** -- frame-to-map
-- **Go Back to Start** service (described in detail on issue https://github.com/ori-drs/aicp/issues/19#issuecomment-473247145)
-    - Phase 1: SLAM
-    - Phase 2: operator request and path approval
-    - Phase 3: Go Back, Localization only
+- **AICP localization only** -- frame-to-map localization. This localizes against a fixed input map
 
 ***
 
