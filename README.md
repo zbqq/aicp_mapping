@@ -69,23 +69,29 @@ The default steps perform frame-to-reference localization and mapping, and inclu
 
 1. Create folders:
 
-> mkdir -p  &#126;/aicp_base/git/ &#126;/aicp_base/catkin_ws/src
+```
+mkdir -p  ~/aicp_base/git/ ~/aicp_base/catkin_ws/src
+```
 
 2. Set-up catkin workspace:
 
-> source /opt/ros/kinetic/setup.bash
-> cd &#126;/aicp_base/catkin_ws
-> catkin init
-> catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
+source /opt/ros/kinetic/setup.bash
+cd ~/aicp_base/catkin_ws
+catkin init
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
 
 3. Clone and compile source code:
 
-> cd &#126;/aicp_base/git
-> git clone git@github.com:ori-drs/aicp.git
-> ln -s &#126;/aicp_base/git/* &#126;/aicp_base/catkin_ws/src
+```
+cd ~/aicp_base/git
+git clone git@github.com:ori-drs/aicp.git
+ln -s ~/aicp_base/git/* ~/aicp_base/catkin_ws/src
 
-> cd &#126;/aicp_base/catkin_ws
-> catkin build aicp_ros
+cd ~/aicp_base/catkin_ws
+catkin build aicp_ros
+```
 
 #### How To Run
 
