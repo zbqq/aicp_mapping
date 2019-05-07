@@ -72,7 +72,7 @@ mkdir -p  ~/aicp_base/git/ ~/aicp_base/catkin_ws/src
 2. Set-up catkin workspace:
 
 ```
-source /opt/ros/kinetic/setup.bash
+source /opt/ros/melodic/setup.bash
 cd ~/aicp_base/catkin_ws
 catkin init
 catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
