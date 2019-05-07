@@ -43,50 +43,30 @@ The default steps perform frame-to-reference localization and mapping, and inclu
 
 #### Additional Functionalities
 
-- **AICP localization only** -- frame-to-map localization. This localizes against a fixed input map
+- **Localization only mode** -- This localizes against a fixed input map
 
 ***
 
 ### Quick Start
 
-#### Main dependencies
+#### Dependencies
 
-* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds.
+TODO: add complete list of apt install packages
 
-* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.7.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
-
-* [Octomap](https://github.com/OctoMap/octomap.git), a probabilistic 3D mapping framework based on octrees.
-
-* [OpenCV](https://opencv.org/) -- Open Source Computer Vision Library.
-
-* [Eigen](https://eigen.tuxfamily.org/dox-devel/index.html), a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
+```
+sudo apt-get install libpointmatcher-dev libpointmatcher1
+```
 
 #### How To Compile
 
-1. Create folders:
+The code is cloned and built in the standard manner for a ROS package. 
 
-```
-mkdir -p  ~/aicp_base/git/ ~/aicp_base/catkin_ws/src
-```
+Tips:
+* We currently support ROS Melodic / Ubuntu 18.04. The code is also compatiable with ROS Kinetic / Ubuntu 16.04.
+* Configure your workspace to be in Release mode:
 
-2. Set-up catkin workspace:
-
-```
-source /opt/ros/melodic/setup.bash
-cd ~/aicp_base/catkin_ws
-catkin init
+``` 
 catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
-```
-
-3. Clone and compile source code:
-
-```
-cd ~/aicp_base/git
-git clone git@github.com:ori-drs/aicp.git
-ln -s ~/aicp_base/git/* ~/aicp_base/catkin_ws/src
-
-cd ~/aicp_base/catkin_ws
-catkin build aicp_ros
 ```
 
 #### How To Run
@@ -129,8 +109,18 @@ To filter an ANYmal rosbag to contain only the required topics
 
 * rosbag filter in.bag out.bag "topic=='/tf' or topic=='/state_estimator/pose_in_odom' or topic=='/point_cloud_filter/velodyne/point_cloud_filtered' or topic=='/tf_static'"
 
+#### Main dependencies
 
-***
+* [libpointmatcher](https://github.com/ethz-asl/libpointmatcher.git), a modular library implementing the Iterative Closest Point \(ICP\) algorithm for aligning point clouds.
+
+* [Point Cloud Library \(PCL\)](https://github.com/pointcloudlibrary/pcl) revision pcl-1.7.0, a standalone, large scale, open project for 2D/3D image and point cloud processing.
+
+* [Octomap](https://github.com/OctoMap/octomap.git), a probabilistic 3D mapping framework based on octrees.
+
+* [OpenCV](https://opencv.org/) -- Open Source Computer Vision Library.
+
+* [Eigen](https://eigen.tuxfamily.org/dox-devel/index.html), a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
+
 
 ### Credits
 
